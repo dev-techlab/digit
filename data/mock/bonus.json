@@ -1,0 +1,52 @@
+[
+  {
+    "id": "invite-friends",
+    "title": "Invite Friends & Earn",
+    "description": "First purchase $20+, both get 5.00 SC",
+    "tags": ["LONG-TERM", "REFERRAL"],
+    "active": true,
+    "banner": { "type": "placeholder" },
+    "schedule": { "icon": "calendar", "text": "Every Day" },
+    "status": "none"
+  },
+  {
+    "id": "daily-checkin",
+    "title": "Daily Check-in Rewards",
+    "description": "Claim your daily bonus!",
+    "tags": [],
+    "active": true,
+    "banner": {
+      "type": "gradient",
+      "gradient": "from-fuchsia-600 via-rose-600 to-orange-600",
+      "badgeIcon": "coin",
+      "badgeText": "+10K"
+    },
+    "schedule": { "icon": "clock", "text": "", "countdownSeconds": 86338 },
+    "status": "claimable"
+  },
+  {
+    "id": "first-deposit",
+    "title": "First Deposit Bonus",
+    "description": "Get up to 15% extra SC on your first deposit",
+    "tags": ["FIRST DEPOSIT"],
+    "active": true,
+    "banner": {
+      "type": "gradient",
+      "gradient": "from-emerald-600 via-teal-600 to-cyan-700",
+      "badgeIcon": "percent",
+      "badgeText": "+15%"
+    },
+    "schedule": { "icon": "calendar", "text": "One-Time" },
+    "status": "claimed"
+  },
+  {
+    "id": "vip-milestone",
+    "title": "VIP Milestone Bonus",
+    "description": "Reach the next VIP tier to unlock this reward",
+    "tags": ["VIP"],
+    "active": false,
+    "banner": { "type": "placeholder" },
+    "schedule": { "icon": "calendar", "text": "Reach Next Tier" },
+    "status": "locked"
+  }
+]

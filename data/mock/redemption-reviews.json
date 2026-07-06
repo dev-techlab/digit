@@ -1,0 +1,29 @@
+[
+  {
+    "id": "rr-1",
+    "orderNo": "RDM202607010003",
+    "amount": "45.25",
+    "provider": "Golden Dragon",
+    "status": "reviewing",
+    "visible": true,
+    "submittedAt": "2026-07-01T10:00:00Z"
+  },
+  {
+    "id": "rr-2",
+    "orderNo": "RDM202606270011",
+    "amount": "20.00",
+    "provider": "Fire Phoenix",
+    "status": "approved",
+    "visible": true,
+    "submittedAt": "2026-06-27T16:30:00Z"
+  },
+  {
+    "id": "rr-3",
+    "orderNo": "RDM202606210019",
+    "amount": "12.50",
+    "provider": "Dragon Cash",
+    "status": "rejected",
+    "visible": true,
+    "submittedAt": "2026-06-21T08:12:00Z"
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "inviteCode": "DL8F2K91",
+  "inviteLink": "https://digitlink.mobi/?inviteCode=DL8F2K91",
+  "totalInvited": 6,
+  "totalCommission": "42.50",
+  "pendingCommission": "8.00",
+  "invitees": [
+    { "username": "rC***91", "joinedAt": "2026-06-20T00:00:00Z", "reward": "5.00", "status": "claimed" },
+    { "username": "mJ***04", "joinedAt": "2026-06-22T00:00:00Z", "reward": "5.00", "status": "claimed" },
+    { "username": "tK***77", "joinedAt": "2026-06-27T00:00:00Z", "reward": "8.00", "status": "pending" }
+  ]
+}

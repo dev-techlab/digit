@@ -1,0 +1,58 @@
+[
+  {
+    "orderNo": "DL202607010001",
+    "username": "player_2481",
+    "amount": "100.00",
+    "payAmount": "100.00",
+    "actualDepositAmount": "115.00",
+    "paymentMethod": "Bitcoin Lightning Network",
+    "fee": "0.00",
+    "feeMode": "waiver",
+    "feeWaived": true,
+    "scBonus": "15.00",
+    "status": "completed",
+    "createTime": "2026-06-29T14:22:00Z"
+  },
+  {
+    "orderNo": "DL202606280007",
+    "username": "player_2481",
+    "amount": "50.00",
+    "payAmount": "50.00",
+    "actualDepositAmount": "60.00",
+    "paymentMethod": "Debit Card",
+    "fee": "2.50",
+    "feeMode": "standard",
+    "feeWaived": false,
+    "scBonus": "10.00",
+    "status": "completed",
+    "createTime": "2026-06-28T09:03:00Z"
+  },
+  {
+    "orderNo": "DL202606250014",
+    "username": "player_2481",
+    "amount": "20.00",
+    "payAmount": "20.00",
+    "actualDepositAmount": "0.00",
+    "paymentMethod": "ACH Bank Transfer",
+    "fee": "0.00",
+    "feeMode": "standard",
+    "feeWaived": false,
+    "scBonus": "0.00",
+    "status": "pending",
+    "createTime": "2026-06-25T18:47:00Z"
+  },
+  {
+    "orderNo": "DL202606200022",
+    "username": "player_2481",
+    "amount": "500.00",
+    "payAmount": "500.00",
+    "actualDepositAmount": "0.00",
+    "paymentMethod": "Cash App",
+    "fee": "0.00",
+    "feeMode": "standard",
+    "feeWaived": false,
+    "scBonus": "0.00",
+    "status": "failed",
+    "createTime": "2026-06-20T11:15:00Z"
+  }
+]

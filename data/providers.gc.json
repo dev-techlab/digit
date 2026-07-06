@@ -1,0 +1,86 @@
+[
+  {
+    "id": 60,
+    "name": "Fire Phoenix",
+    "providerCode": "huofeng",
+    "launchUrlTemplate": "https://fpc-mob.com/MobFPLobby/v2.0/index.html",
+    "iconUrl": "https://static.digitlink.mobi/img/p/fp.png",
+    "status": 1,
+    "sort": 2,
+    "createType": 1,
+    "depositTiers": [
+      {
+        "amount": "1000.00",
+        "bonusAmount": "300.00"
+      },
+      {
+        "amount": "2000.00",
+        "bonusAmount": "500.00"
+      },
+      {
+        "amount": "5000.00",
+        "bonusAmount": "1000.00"
+      },
+      {
+        "amount": "10000.00",
+        "bonusAmount": "1500.00"
+      },
+      {
+        "amount": "50000.00",
+        "bonusAmount": "5000.00"
+      }
+    ],
+    "operate": 0,
+    "needInitBalance": 0,
+    "canManualInput": 1,
+    "providerType": "GC",
+    "autoLogin": true,
+    "iframeSupported": false,
+    "isMachineSupported": 0,
+    "redeemField": 2,
+    "invalidPasswordState": 0,
+    "canChangePassword": 1
+  },
+  {
+    "id": 62,
+    "name": "Dragon Cash",
+    "providerCode": "gd",
+    "launchUrlTemplate": "https://dragoncash.mobi",
+    "iconUrl": "https://static.digitlink.mobi/img/p/89bd977d77cbf505_1770633290701.jpg",
+    "status": 1,
+    "sort": 5,
+    "createType": 1,
+    "depositTiers": [
+      {
+        "amount": "1000.00",
+        "bonusAmount": "0.00"
+      },
+      {
+        "amount": "2000.00",
+        "bonusAmount": "5.00"
+      },
+      {
+        "amount": "5000.00",
+        "bonusAmount": "10.00"
+      },
+      {
+        "amount": "10000.00",
+        "bonusAmount": "15.00"
+      },
+      {
+        "amount": "50000.00",
+        "bonusAmount": "0.00"
+      }
+    ],
+    "operate": 0,
+    "needInitBalance": 0,
+    "canManualInput": 1,
+    "providerType": "GC",
+    "autoLogin": true,
+    "iframeSupported": false,
+    "isMachineSupported": 0,
+    "redeemField": 2,
+    "invalidPasswordState": 0,
+    "canChangePassword": 1
+  }
+]

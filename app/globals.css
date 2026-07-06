@@ -1,0 +1,122 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root,
+html[data-theme='dark'] {
+  --bg-primary: #052d27;
+  --bg-secondary: #0a0a0a;
+  --bg-tertiary: rgba(255, 255, 255, 0.06);
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --card-bg: rgba(255, 255, 255, 0.05);
+  --card-bg-solid: rgba(20, 20, 20, 0.85);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --divider-color: rgba(255, 255, 255, 0.08);
+  --input-bg: rgba(255, 255, 255, 0.04);
+  --input-border: rgba(255, 255, 255, 0.08);
+  --header-bar-scrim: rgba(7, 40, 31, 0.74);
+  --drawer-bg: #102618;
+  --modal-bg: #12241f;
+}
+
+html[data-theme='light'] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f7;
+  --bg-tertiary: #ebebeb;
+  --text-primary: #000000;
+  --text-secondary: rgba(0, 0, 0, 0.55);
+  --card-bg: rgba(255, 255, 255, 0.7);
+  --card-bg-solid: #ffffff;
+  --card-border: rgba(0, 0, 0, 0.08);
+  --divider-color: rgba(0, 0, 0, 0.1);
+  --input-bg: rgba(245, 245, 247, 0.8);
+  --input-border: rgba(0, 0, 0, 0.12);
+  --header-bar-scrim: rgba(240, 253, 244, 0.82);
+  --drawer-bg: rgba(240, 253, 244, 0.97);
+  --modal-bg: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  overscroll-behavior-y: none;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  max-width: 560px;
+  margin-inline: auto;
+  min-height: 100dvh;
+  position: relative;
+  /* Transparent so the fixed .app-starfield background (rendered in the shell)
+     shows through behind the centered content column; html keeps the base color. */
+  background: transparent;
+}
+
+/* Three width tiers:
+   - phone   (<768px):    560px centered card, bottom tab bar
+   - tablet  (768-1023px): 720px centered card, bottom tab bar (more
+     breathing room than phone, but still the bottom-nav shell — the
+     source app itself doesn't switch shells until 1024px)
+   - desktop (1024px+):   cap lifted; the shell (see (shell)/layout.tsx)
+     takes over sizing via a persistent sidebar + centered content column */
+@media (min-width: 768px) {
+  body {
+    max-width: 720px;
+  }
+}
+
+@media (min-width: 1024px) {
+  body {
+    max-width: none;
+    margin-inline: 0;
+  }
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+.glass {
+  background: var(--card-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--card-border);
+}
+
+/* Decorative starfield background (see components/shell/Starfield.tsx).
+   Dark theme only — hidden in light so the light base color shows cleanly. */
+.app-starfield {
+  transition: opacity 0.3s ease;
+}
+html[data-theme='light'] .app-starfield {
+  opacity: 0;
+}
+
+/* Opt-in thin scrollbar for scroll regions that need a visible track
+   (e.g. the Terms and Rules gate), overriding the global hide above. */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--card-border) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  display: block;
+  width: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--card-border);
+  border-radius: 999px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
