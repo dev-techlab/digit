@@ -1,14 +1,13 @@
-import { config } from 'dotenv';
+import './scripts/load-env';
 import { defineConfig } from 'drizzle-kit';
 
-// drizzle-kit runs outside Next.js, so it doesn't get Next's automatic env
-// loading. Load the same files Next would, most-specific first (dotenv never
-// overwrites an already-set var, so earlier files win).
-config({ path: '.env.local' });
-config({ path: '.env.development' });
-
 if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL is not set — add it to .env.local or .env.development');
+  const mode = process.env.NODE_ENV ?? 'development';
+  throw new Error(
+    mode === 'production'
+      ? 'DATABASE_URL is not set — export it in the deploy environment, or add it to .env.production.local (gitignored)'
+      : 'DATABASE_URL is not set — add it to .env.local or .env.development'
+  );
 }
 
 export default defineConfig({

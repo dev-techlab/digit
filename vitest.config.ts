@@ -21,6 +21,9 @@ export default defineConfig({
     alias: {
       // `server-only` throws outside RSC; stub it so server modules are testable.
       'server-only': path.resolve(__dirname, 'tests/stubs/server-only.ts'),
+      // `next/headers` cookies() throws outside a request scope; stub it so
+      // lib/data.ts exercises its "no session" fallback path under test.
+      'next/headers': path.resolve(__dirname, 'tests/stubs/next-headers.ts'),
       '@': path.resolve(__dirname),
     },
   },

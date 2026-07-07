@@ -3,6 +3,7 @@
  * jsonTransport fallback. No SMTP creds or network needed.
  *   pnpm test:mail
  */
+import './load-env';
 import { writeFileSync } from 'node:fs';
 import { sendEmailNow, renderEmail, isSmtpConfigured, type MailPayload } from '@/lib/mail';
 

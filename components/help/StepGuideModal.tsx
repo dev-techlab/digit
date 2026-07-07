@@ -41,7 +41,7 @@ export function StepGuideModal({ item, onClose }: { item: HelpItem | null; onClo
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative z-10 flex w-full max-w-md animate-modalScaleIn flex-col rounded-2xl border border-[var(--card-border)] bg-[var(--drawer-bg)] p-5 shadow-2xl">
+      <div className="relative z-10 flex max-h-[90dvh] w-full max-w-md animate-modalScaleIn flex-col overflow-y-auto rounded-2xl border border-[var(--card-border)] bg-[var(--drawer-bg)] p-5 shadow-2xl">
         {/* Title */}
         <div className="mb-4 flex items-start justify-between gap-3">
           <h2 className="flex-1 text-center text-lg font-bold leading-snug">{item.title}</h2>
@@ -73,7 +73,7 @@ export function StepGuideModal({ item, onClose }: { item: HelpItem | null; onClo
             <ChevronLeft size={18} />
           </button>
 
-          <div className="mx-auto flex min-h-[340px] w-[78%] flex-col items-center justify-center gap-4 rounded-2xl border border-[var(--card-border)] bg-white/[0.04] p-6 text-center">
+          <div className="mx-auto flex min-h-[280px] w-[78%] flex-col items-center justify-center gap-4 rounded-2xl border border-[var(--card-border)] bg-white/[0.04] p-6 text-center">
             <HelpItemIconBadge icon={item.icon} size="lg" />
             <span className="rounded-pill bg-white/10 px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
               Step {index + 1} of {steps.length}

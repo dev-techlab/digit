@@ -39,7 +39,7 @@ describe('media upload → update → delete', () => {
     expect(await onDisk(up.r2Key)).toBe(true);
     expect(up.url).toContain(`/media/${up.r2Key}`);
     expect(up.sizeBytes).toBe(PNG.length);
-    expect(await getMediaUrl(up.id)).toBe(up.url);
+    expect((await getMediaUrl(up.id))?.url).toBe(up.url);
 
     // stash for later assertions
     (globalThis as any).__mediaId = up.id;

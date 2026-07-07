@@ -42,7 +42,7 @@ export async function Footer() {
     (settings['site.logo_url'] as string) ?? 'https://digitlink.mobi/img/icons/icon-192x192.png';
 
   return (
-    <footer className="mt-8 border-t border-[var(--card-border)] px-6 py-8 text-center">
+    <footer className="mb-6 mt-8 border-t border-[var(--card-border)] px-6 py-8 text-center">
       <div className="mx-auto mb-3 h-16 w-16">
         <Image src={logoUrl} alt={siteName} width={64} height={64} unoptimized />
       </div>
@@ -59,7 +59,7 @@ export async function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={s.label}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--card-border)]/40 text-[var(--text-secondary)] transition hover:bg-brand/15 hover:text-brand"
+                className="bg-[var(--card-border)]/40 flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-brand/15 hover:text-brand"
               >
                 <Icon size={18} />
               </a>

@@ -7,6 +7,7 @@
  * Roles must already exist (seeded). Re-running with the same email just adds
  * any missing roles (idempotent).
  */
+import './load-env';
 import { createAdmin, rolesForAdmin } from '@/lib/admin-service';
 
 function parseArgs(argv: string[]) {

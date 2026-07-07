@@ -6,6 +6,7 @@
  *
  * Mapping source of truth: DB_DIAGRAM.md §5 (mock → table) and §7 (RBAC seed).
  */
+import './load-env';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';

@@ -3,6 +3,7 @@
  *   pnpm worker
  * Registers all cron schedules + queue handlers from lib/jobs.
  */
+import './load-env';
 import { startWorker } from '@/lib/jobs';
 
 startWorker().catch((err) => {
