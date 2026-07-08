@@ -73,10 +73,7 @@ export function ProviderCard({ provider }: { provider: GameProvider }) {
           <button
             onClick={() => launch('login')}
             disabled={action !== 'idle'}
-            className={cn(
-              'flex items-center justify-center gap-1.5 rounded-pill py-2 text-xs font-bold disabled:opacity-70',
-              isGC ? 'bg-amber-400 text-black' : 'bg-brand-solid text-white shadow-glowBrand'
-            )}
+            className="flex items-center justify-center gap-1.5 rounded-pill bg-brand-solid py-2 text-xs font-bold text-white shadow-glowBrand disabled:opacity-70"
           >
             {action === 'login' ? (
               <Loader2 size={13} className="animate-spin" />
