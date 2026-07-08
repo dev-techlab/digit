@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { MapPinOff } from 'lucide-react';
+import { APP_NAME } from '@/lib/constants';
 
-export const metadata = { title: 'Region Not Available · Digit Link' };
+export const metadata = { title: `Region Not Available · ${APP_NAME}` };
 
 export default function AccessDeniedPage() {
   return (
@@ -11,7 +12,7 @@ export default function AccessDeniedPage() {
       </div>
       <h1 className="text-xl font-bold">Region Not Available</h1>
       <p className="max-w-xs text-sm text-[var(--text-secondary)]">
-        Digit Link isn&apos;t currently available in your region due to local regulations.
+        {APP_NAME} isn&apos;t currently available in your region due to local regulations.
       </p>
       <Link href="/game" className="text-sm font-semibold text-brand">
         Back to Home

@@ -2744,7 +2744,7 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "'digitlink-media'"
+          "default": "'octanlink-media'"
         },
         "kind": {
           "name": "kind",

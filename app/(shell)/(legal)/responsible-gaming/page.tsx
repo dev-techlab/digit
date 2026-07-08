@@ -1,12 +1,13 @@
 import { LegalPageLayout } from '@/components/legal/LegalPageLayout';
+import { APP_NAME } from '@/lib/constants';
 
-export const metadata = { title: 'Responsible Social Gameplay · Digit Link' };
+export const metadata = { title: `Responsible Social Gameplay · ${APP_NAME}` };
 
 export default function ResponsibleGamingPage() {
   return (
     <LegalPageLayout title="Responsible Social Gameplay">
       <p>
-        Digit Link is committed to promoting responsible social gameplay. Our games are intended for
+        {APP_NAME} is committed to promoting responsible social gameplay. Our games are intended for
         entertainment purposes and should never be viewed as a way to make money.
       </p>
       <h2 className="font-semibold text-[var(--text-primary)]">Play Within Your Means</h2>

@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/lib/auth-context';
 
-const STORAGE_KEY = 'digitlink:terms-accepted';
+const STORAGE_KEY = 'octanlink:terms-accepted';
 
 const GENERAL_RULES = [
   'You must be at least 21 years old and not a political figure to participate in the game.',

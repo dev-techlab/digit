@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { X, Download } from 'lucide-react';
+import { APP_NAME } from '@/lib/constants';
 
 export function PwaInstallBanner() {
   const [dismissed, setDismissed] = useState(true);
@@ -22,7 +23,7 @@ export function PwaInstallBanner() {
       <Download size={18} className="shrink-0 text-brand" />
       <div className="flex-1 text-sm">
         <p className="font-semibold">Install PWA</p>
-        <p className="text-xs text-[var(--text-secondary)]">Add Digit Link to your home screen</p>
+        <p className="text-xs text-[var(--text-secondary)]">Add {APP_NAME} to your home screen</p>
       </div>
       <button onClick={dismiss} aria-label="Dismiss" className="rounded-full p-1 hover:bg-white/10">
         <X size={16} />

@@ -28,7 +28,7 @@ export function BottomNav() {
               <Icon
                 size={22}
                 strokeWidth={active ? 2.4 : 1.8}
-                className={cn(active && 'drop-shadow-[0_0_8px_rgba(0,214,50,0.6)]')}
+                className={cn(active && 'drop-shadow-[0_0_8px_rgba(0,145,255,0.6)]')}
               />
               <span>{label}</span>
             </Link>

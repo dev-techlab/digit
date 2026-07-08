@@ -12,6 +12,7 @@ import { useAuthModal } from '@/lib/auth-modal-context';
 import { useSidebar } from '@/lib/sidebar-context';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/cn';
+import { APP_NAME } from '@/lib/constants';
 
 export function DesktopSidebar() {
   const pathname = usePathname();
@@ -42,14 +43,14 @@ export function DesktopSidebar() {
         <Link href="/game" className="flex items-center gap-2 overflow-hidden">
           <Image
             src="https://digitlink.mobi/img/icons/icon-192x192.png"
-            alt="Digit Link"
+            alt={APP_NAME}
             width={28}
             height={28}
             unoptimized
             className="shrink-0 rounded-md"
           />
           {!collapsed && (
-            <span className="truncate text-sm font-black uppercase tracking-wide">Digit Link</span>
+            <span className="truncate text-sm font-black uppercase tracking-wide">{APP_NAME}</span>
           )}
         </Link>
         <button

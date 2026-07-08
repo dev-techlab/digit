@@ -1,7 +1,8 @@
 import { getRedemptionReviews } from '@/lib/data';
 import { RedemptionReviewList } from '@/components/orders/RedemptionReviewList';
+import { APP_NAME } from '@/lib/constants';
 
-export const metadata = { title: 'Redemption Reviews · Digit Link' };
+export const metadata = { title: `Redemption Reviews · ${APP_NAME}` };
 
 export default async function RedemptionReviewsPage() {
   const reviews = await getRedemptionReviews();

@@ -1,6 +1,7 @@
 import { LegalPageLayout } from '@/components/legal/LegalPageLayout';
+import { APP_NAME } from '@/lib/constants';
 
-export const metadata = { title: 'Sweeps Rules · Digit Link' };
+export const metadata = { title: `Sweeps Rules · ${APP_NAME}` };
 
 export default function SweepsRulesPage() {
   return (
@@ -12,7 +13,7 @@ export default function SweepsRulesPage() {
       <h2 className="font-semibold text-[var(--text-primary)]">1. Eligibility</h2>
       <p>
         Open to legal residents of eligible jurisdictions who are at least 18 years old. Employees
-        of Digit Link and their immediate family members are not eligible to participate.
+        of {APP_NAME} and their immediate family members are not eligible to participate.
       </p>
       <h2 className="font-semibold text-[var(--text-primary)]">2. Free Entry (AMOE)</h2>
       <p>

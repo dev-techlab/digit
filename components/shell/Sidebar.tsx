@@ -37,6 +37,7 @@ import { ChangePasswordModal } from '@/components/profile/ChangePasswordModal';
 import { LanguageModal } from '@/components/profile/LanguageModal';
 import { cn } from '@/lib/cn';
 import type { WalletBalance } from '@/lib/types';
+import { APP_NAME } from '@/lib/constants';
 
 type ModalKey =
   'deposit' | 'withdraw' | 'avatar' | 'bindPhone' | 'changePassword' | 'language' | null;
@@ -157,13 +158,13 @@ export function Sidebar({
           <Link href="/game" onClick={onClose} className="flex items-center gap-2">
             <Image
               src="https://digitlink.mobi/img/icons/icon-192x192.png"
-              alt="Digit Link"
+              alt={APP_NAME}
               width={26}
               height={26}
               unoptimized
               className="rounded-md"
             />
-            <span className="text-sm font-black uppercase tracking-wide">Digit-Link</span>
+            <span className="text-sm font-black uppercase tracking-wide">{APP_NAME}</span>
           </Link>
           <button
             onClick={() => setActiveModal('language')}

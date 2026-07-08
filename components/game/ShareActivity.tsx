@@ -212,7 +212,7 @@ export function ShareActivity({ referral }: { referral: ReferralSummary }) {
               <Button
                 fullWidth
                 onClick={() => setShareOpen(true)}
-                className="bg-gradient-to-r from-brand-solid to-[#2fbf71] py-4 text-base"
+                className="bg-gradient-to-r from-brand-solid to-[#1d4ed8] py-4 text-base"
               >
                 <Link2 size={18} />
                 Share invitation link
@@ -262,7 +262,7 @@ function TabButton({
       className={cn(
         'flex items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-bold transition-all',
         active
-          ? 'bg-gradient-to-r from-brand-solid to-[#2fbf71] text-white shadow-glowBrand'
+          ? 'bg-gradient-to-r from-brand-solid to-[#1d4ed8] text-white shadow-glowBrand'
           : 'border border-[var(--card-border)] bg-[var(--card-bg)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
       )}
     >

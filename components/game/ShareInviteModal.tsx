@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Send, Facebook, Twitter, MessageCircle, Link2, Check } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { APP_NAME } from '@/lib/constants';
 
-const SHARE_MESSAGE = 'Join me on Digit Link and we both get rewarded!';
+const SHARE_MESSAGE = `Join me on ${APP_NAME} and we both get rewarded!`;
 
 export function ShareInviteModal({
   open,

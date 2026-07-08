@@ -49,11 +49,11 @@ async function main() {
   }
 
   console.log('\n— Admin login —');
-  const superId = await verifyAdminLogin('admin@digitlink.mobi', 'admin1234');
+  const superId = await verifyAdminLogin('admin@octanlink.com', 'admin1234');
   check('super admin login (correct pw)', !!superId);
   check(
     'login rejects wrong password',
-    (await verifyAdminLogin('admin@digitlink.mobi', 'nope')) === null
+    (await verifyAdminLogin('admin@octanlink.com', 'nope')) === null
   );
   check(
     'login rejects unknown email',
@@ -66,9 +66,9 @@ async function main() {
   check('super can settings.manage', await can(superId!, 'settings.manage'));
 
   console.log('\n— Role scoping (finance / support / admin) —');
-  const finId = await verifyAdminLogin('finance@digitlink.mobi', 'admin1234');
-  const supId = await verifyAdminLogin('support@digitlink.mobi', 'admin1234');
-  const opsId = await verifyAdminLogin('ops@digitlink.mobi', 'admin1234');
+  const finId = await verifyAdminLogin('finance@octanlink.com', 'admin1234');
+  const supId = await verifyAdminLogin('support@octanlink.com', 'admin1234');
+  const opsId = await verifyAdminLogin('ops@octanlink.com', 'admin1234');
   check('finance can orders.read', await can(finId!, 'orders.read'));
   check('finance CANNOT admins.manage', !(await can(finId!, 'admins.manage')));
   check('finance CANNOT settings.manage', !(await can(finId!, 'settings.manage')));

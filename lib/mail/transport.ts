@@ -30,5 +30,5 @@ export function getTransport(): Transporter {
   return globalForMail.mailTransport;
 }
 
-export const MAIL_FROM = process.env.MAIL_FROM || 'Digit Link <no-reply@digitlink.mobi>';
-export const MAIL_ADMIN = process.env.MAIL_ADMIN || 'admin@digitlink.mobi';
+export const MAIL_FROM = process.env.MAIL_FROM || 'Octan Link <no-reply@octanlink.com>';
+export const MAIL_ADMIN = process.env.MAIL_ADMIN || 'admin@octanlink.com';

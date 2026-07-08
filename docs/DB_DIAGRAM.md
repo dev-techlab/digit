@@ -889,7 +889,7 @@ base + key.
 |---|---|---|---|
 | `id` | uuid | PK | |
 | `r2_key` | text | UNIQUE, NOT NULL | object key in the bucket, e.g. `avatars/{uuid}.webp` |
-| `bucket` | text | NOT NULL DEFAULT 'digitlink-media' | R2 bucket name |
+| `bucket` | text | NOT NULL DEFAULT 'octanlink-media' | R2 bucket name |
 | `kind` | media_kind | NOT NULL | logical use → upload folder & size policy |
 | `content_type` | text | NOT NULL | `image/webp`, `image/png`… |
 | `size_bytes` | integer | NOT NULL | |
@@ -1243,7 +1243,7 @@ Every image lives in **R2** (S3-compatible); Postgres stores only the object key
 R2_ACCOUNT_ID=
 R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
-R2_BUCKET=digitlink-media
+R2_BUCKET=octanlink-media
 R2_PUBLIC_BASE_URL=https://media.digitlink.mobi   # public bucket / CDN domain
 ```
 SDK: `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` pointed at the R2

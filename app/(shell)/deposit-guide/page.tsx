@@ -1,5 +1,6 @@
 import { CreditCard, Bitcoin, Wallet, CheckCircle2 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
+import { APP_NAME } from '@/lib/constants';
 
 const STEPS = [
   {
@@ -24,7 +25,7 @@ const STEPS = [
   },
 ];
 
-export const metadata = { title: 'Deposit Guide · Digit Link' };
+export const metadata = { title: `Deposit Guide · ${APP_NAME}` };
 
 export default function DepositGuidePage() {
   return (

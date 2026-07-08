@@ -1,3 +1,5 @@
+import { APP_NAME } from '@/lib/constants';
+
 export type HelpTab = 'general' | 'deposit' | 'withdraw';
 export type HelpItemIcon = 'play' | 'coins' | 'btc' | 'pyusd';
 export type HelpSectionIcon = 'video' | 'faq' | 'guide';
@@ -53,7 +55,7 @@ const BTC_LIGHTNING_PAY: HelpStep[] = [
   },
   {
     title: 'Copy the Lightning invoice',
-    description: 'On Digit Link, copy the Lightning Network invoice for your deposit.',
+    description: `On ${APP_NAME}, copy the Lightning Network invoice for your deposit.`,
   },
   {
     title: 'Paste the invoice',
@@ -81,12 +83,12 @@ const PYUSD_GET: HelpStep[] = [
 const PYUSD_PAY: HelpStep[] = [
   {
     title: 'Copy the PYUSD address',
-    description: 'On Digit Link, copy the PYUSD deposit address shown for your order.',
+    description: `On ${APP_NAME}, copy the PYUSD deposit address shown for your order.`,
   },
   { title: 'Open Transfer → Send', description: 'In your PYUSD wallet, tap Transfer, then Send.' },
   {
     title: 'Paste the address',
-    description: 'Paste the Digit Link address and enter the amount to send.',
+    description: `Paste the ${APP_NAME} address and enter the amount to send.`,
   },
   {
     title: 'Review and confirm',
@@ -101,7 +103,7 @@ const PYUSD_HASH: HelpStep[] = [
   },
   {
     title: 'Select the transfer',
-    description: 'Tap the PYUSD transfer you just sent to Digit Link.',
+    description: `Tap the PYUSD transfer you just sent to ${APP_NAME}.`,
   },
   {
     title: 'View on blockchain',
@@ -109,7 +111,7 @@ const PYUSD_HASH: HelpStep[] = [
   },
   {
     title: 'Copy the hash',
-    description: 'Copy the transaction hash (TxID) and paste it into Digit Link.',
+    description: `Copy the transaction hash (TxID) and paste it into ${APP_NAME}.`,
   },
 ];
 
@@ -130,7 +132,7 @@ const BTC_ADDRESS_CASHAPP: HelpStep[] = [
   {
     title: 'Copy your Bitcoin Network address',
     description:
-      'Tap the copy icon next to the Bitcoin Network address and paste it into Digit Link.',
+      `Tap the copy icon next to the Bitcoin Network address and paste it into ${APP_NAME}.`,
   },
 ];
 
@@ -145,11 +147,11 @@ const PYUSD_ADDRESS: HelpStep[] = [
   },
   {
     title: 'Select the right network',
-    description: 'Confirm the network matches the one Digit Link expects.',
+    description: `Confirm the network matches the one ${APP_NAME} expects.`,
   },
   {
     title: 'Copy your PYUSD address',
-    description: 'Copy the receive address and paste it into the Digit Link withdraw form.',
+    description: `Copy the receive address and paste it into the ${APP_NAME} withdraw form.`,
   },
 ];
 

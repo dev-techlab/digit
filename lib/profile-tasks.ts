@@ -12,7 +12,7 @@ export interface ProfileTaskMeta {
 
 /**
  * The onboarding tasks surfaced in the "Complete Your Profile" reward flow.
- * Ordered — tasks unlock sequentially, matching the live Digit Link app.
+ * Ordered — tasks unlock sequentially, matching the live Octan Link app.
  */
 export const PROFILE_TASKS: ProfileTaskMeta[] = [
   {

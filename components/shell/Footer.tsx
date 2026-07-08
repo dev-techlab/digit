@@ -13,6 +13,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { getSettings, getSocialLinks } from '@/lib/settings';
+import { APP_NAME } from '@/lib/constants';
 
 const LINKS = [
   { href: '/terms', label: 'Terms & Conditions' },
@@ -37,7 +38,7 @@ const SOCIAL_ICONS: Record<string, LucideIcon> = {
 
 export async function Footer() {
   const [settings, socials] = await Promise.all([getSettings(), getSocialLinks()]);
-  const siteName = (settings['site.name'] as string) ?? 'Digit Link';
+  const siteName = (settings['site.name'] as string) ?? APP_NAME;
   const logoUrl =
     (settings['site.logo_url'] as string) ?? 'https://digitlink.mobi/img/icons/icon-192x192.png';
 
@@ -68,7 +69,7 @@ export async function Footer() {
         </nav>
       )}
       <p className="mx-auto mt-3 max-w-md text-xs leading-relaxed text-[var(--text-secondary)]">
-        At Digit Link, we offer free casino-style entertainment to players in the United States
+        At {APP_NAME}, we offer free casino-style entertainment to players in the United States
         (exclusions apply). With our sweepstakes model, you have the chance to win free coins that
         can be used across all games in our collection. Test your luck on our exciting video slots
         and card games.
@@ -102,7 +103,7 @@ export async function Footer() {
       </p>
 
       <p className="mt-4 text-[11px] text-[var(--text-secondary)]">
-        Copyright © 2026 Digit Link. All rights reserved.
+        Copyright © 2026 {APP_NAME}. All rights reserved.
       </p>
     </footer>
   );

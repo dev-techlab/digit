@@ -397,7 +397,7 @@ CREATE TABLE "roles" (
 CREATE TABLE "media_assets" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"r2_key" text NOT NULL,
-	"bucket" text DEFAULT 'digitlink-media' NOT NULL,
+	"bucket" text DEFAULT 'octanlink-media' NOT NULL,
 	"kind" "media_kind" NOT NULL,
 	"content_type" text NOT NULL,
 	"size_bytes" integer NOT NULL,

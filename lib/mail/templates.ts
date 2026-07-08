@@ -1,8 +1,9 @@
 import type { MailPayload, RenderedEmail } from './types';
+import { APP_NAME } from '@/lib/constants';
 
-const BRAND = '#43ad6b';
-const BG = '#052d27';
-const CARD = '#0d3a30';
+const BRAND = '#2563eb';
+const BG = '#03182a';
+const CARD = '#0d2a45';
 
 /** Escape user-supplied text before interpolating into HTML. */
 function esc(s: string): string {
@@ -28,13 +29,13 @@ function layout(bodyHtml: string): string {
   return `<!doctype html><html><body style="margin:0;padding:0;background:${BG};color:#e8f5ee;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
   <div style="max-width:520px;margin:0 auto;padding:32px 20px">
     <div style="text-align:center;margin-bottom:20px">
-      <span style="font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;font-size:18px">Digit Link</span>
+      <span style="font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;font-size:18px">${APP_NAME}</span>
     </div>
     <div style="background:${CARD};border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:28px">
       ${bodyHtml}
     </div>
     <p style="text-align:center;color:rgba(232,245,238,.5);font-size:12px;margin-top:20px;line-height:1.5">
-      Digit Link · This is an automated message.<br>If you didn't expect this email you can safely ignore it.
+      ${APP_NAME} · This is an automated message.<br>If you didn't expect this email you can safely ignore it.
     </p>
   </div>
 </body></html>`;
@@ -49,15 +50,15 @@ export function renderEmail(p: MailPayload): RenderedEmail {
         ? `<p style="color:rgba(232,245,238,.6);font-size:13px">This invitation expires ${esc(p.expiresAt)}.</p>`
         : '';
       return {
-        subject: 'You have been invited to the Digit Link admin panel',
+        subject: `You have been invited to the ${APP_NAME} admin panel`,
         html: layout(
           `<h1 style="margin:0 0 16px;font-size:20px;color:#fff">Admin invitation</h1>
-           <p style="margin:0 0 16px;line-height:1.6">${who} to join the Digit Link admin panel${role}. Click below to accept and set your password.</p>
+           <p style="margin:0 0 16px;line-height:1.6">${who} to join the ${APP_NAME} admin panel${role}. Click below to accept and set your password.</p>
            <div style="text-align:center;margin:22px 0">${button(p.inviteUrl, 'Accept invitation')}</div>
            ${expiry}
            <p style="color:rgba(232,245,238,.6);font-size:13px;word-break:break-all">Or paste this link into your browser:<br>${esc(p.inviteUrl)}</p>`
         ),
-        text: `${who} to join the Digit Link admin panel${p.role ? ` as ${p.role}` : ''}.\n\nAccept: ${p.inviteUrl}\n${p.expiresAt ? `\nThis invitation expires ${p.expiresAt}.` : ''}`,
+        text: `${who} to join the ${APP_NAME} admin panel${p.role ? ` as ${p.role}` : ''}.\n\nAccept: ${p.inviteUrl}\n${p.expiresAt ? `\nThis invitation expires ${p.expiresAt}.` : ''}`,
       };
     }
 
@@ -86,7 +87,7 @@ export function renderEmail(p: MailPayload): RenderedEmail {
         ? `<p style="color:rgba(232,245,238,.6);font-size:13px">This link expires in ${p.expiresMinutes} minutes.</p>`
         : '';
       return {
-        subject: 'Verify your Digit Link email',
+        subject: `Verify your ${APP_NAME} email`,
         html: layout(
           `<h1 style="margin:0 0 16px;font-size:20px;color:#fff">Confirm your email</h1>
            <p style="margin:0 0 16px">${hi}</p>
@@ -105,7 +106,7 @@ export function renderEmail(p: MailPayload): RenderedEmail {
         ? `<div style="text-align:center;margin:22px 0">${button(p.actionUrl, p.actionLabel || 'Open admin panel')}</div>`
         : '';
       return {
-        subject: `[Digit Link] ${p.title}`,
+        subject: `[${APP_NAME}] ${p.title}`,
         html: layout(
           `<h1 style="margin:0 0 16px;font-size:20px;color:#fff">${esc(p.title)}</h1>
            ${paragraphs(p.message)}

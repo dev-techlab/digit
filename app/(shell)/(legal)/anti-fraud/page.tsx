@@ -1,12 +1,13 @@
 import { LegalPageLayout } from '@/components/legal/LegalPageLayout';
+import { APP_NAME } from '@/lib/constants';
 
-export const metadata = { title: 'Anti-Fraud Policy · Digit Link' };
+export const metadata = { title: `Anti-Fraud Policy · ${APP_NAME}` };
 
 export default function AntiFraudPage() {
   return (
     <LegalPageLayout title="Anti-Fraud Policy">
       <p>
-        Digit Link is committed to protecting our players and platform from fraud, including account
+        {APP_NAME} is committed to protecting our players and platform from fraud, including account
         takeover, payment fraud, bonus abuse, and the use of multiple accounts.
       </p>
       <h2 className="font-semibold text-[var(--text-primary)]">Identity Verification</h2>

@@ -6,6 +6,7 @@ import { BalanceCapsule } from '@/components/wallet/BalanceCapsule';
 import { Sidebar } from './Sidebar';
 import { useAuth } from '@/lib/auth-context';
 import type { WalletBalance } from '@/lib/types';
+import { APP_NAME } from '@/lib/constants';
 
 export function Header({ wallet }: { wallet: WalletBalance }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -36,7 +37,7 @@ export function Header({ wallet }: { wallet: WalletBalance }) {
         {/* Mobile / tablet: left-side account trigger */}
         {trigger('p-1.5 lg:hidden')}
         <span className="text-sm font-black uppercase tracking-wide text-[var(--text-primary)] lg:hidden">
-          Digit Link
+          {APP_NAME}
         </span>
         <div className="flex items-center gap-2 lg:gap-3">
           <BalanceCapsule wallet={wallet} />

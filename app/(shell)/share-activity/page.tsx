@@ -1,7 +1,8 @@
 import { getReferral } from '@/lib/data';
 import { ShareActivity } from '@/components/game/ShareActivity';
+import { APP_NAME } from '@/lib/constants';
 
-export const metadata = { title: 'Share & Earn · Digit Link' };
+export const metadata = { title: `Share & Earn · ${APP_NAME}` };
 
 export default async function ShareActivityPage() {
   const referral = await getReferral();

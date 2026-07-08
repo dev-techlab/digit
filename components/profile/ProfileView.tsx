@@ -26,6 +26,7 @@ import { SecuritySettingsModal } from './SecuritySettingsModal';
 import { InstallPwaModal } from './InstallPwaModal';
 import { AvatarEditorModal } from './AvatarEditorModal';
 import type { WalletBalance } from '@/lib/types';
+import { APP_NAME } from '@/lib/constants';
 
 type ModalKey =
   'bindPhone' | 'changePassword' | 'language' | 'security' | 'installPwa' | 'avatar' | null;
@@ -42,7 +43,7 @@ export function ProfileView({ wallet }: { wallet: WalletBalance }) {
         <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white/5 text-3xl">
           👤
         </div>
-        <h1 className="text-lg font-bold">Welcome to Digit Link</h1>
+        <h1 className="text-lg font-bold">Welcome to {APP_NAME}</h1>
         <p className="mt-1 text-sm text-[var(--text-secondary)]">
           Sign in to view your balance, orders and rewards
         </p>

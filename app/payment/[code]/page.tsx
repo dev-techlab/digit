@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { APP_NAME } from '@/lib/constants';
 
-export const metadata = { title: 'Payment Result · Digit Link' };
+export const metadata = { title: `Payment Result · ${APP_NAME}` };
 
 function resolveStatus(code: string): 'success' | 'failed' | 'pending' {
   if (code.toLowerCase().includes('fail')) return 'failed';

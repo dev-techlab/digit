@@ -338,15 +338,15 @@ async function seedBanners() {
 
 async function seedSettings() {
   const rows: (typeof s.siteSettings.$inferInsert)[] = [
-    { key: 'site.name', value: 'Digit Link', type: 'string', group: 'branding' },
+    { key: 'site.name', value: 'Octan Link', type: 'string', group: 'branding' },
     {
       key: 'site.logo_url',
       value: 'https://digitlink.mobi/img/icons/icon-192x192.png',
       type: 'image',
       group: 'branding',
     },
-    { key: 'site.url', value: 'https://digitlink.mobi', type: 'url', group: 'general' },
-    { key: 'support.email', value: 'support@digitlink.mobi', type: 'string', group: 'contact' },
+    { key: 'site.url', value: 'https://octanlink.com', type: 'url', group: 'general' },
+    { key: 'support.email', value: 'support@octanlink.com', type: 'string', group: 'contact' },
     { key: 'support.livechat_enabled', value: 'true', type: 'boolean', group: 'feature' },
     { key: 'currency.gc_label', value: 'Gold Coins', type: 'string', group: 'branding' },
     { key: 'currency.sc_label', value: 'Sweepstakes Coins', type: 'string', group: 'branding' },
@@ -365,14 +365,14 @@ async function seedSettings() {
 
 async function seedSocialLinks() {
   const rows: (typeof s.socialLinks.$inferInsert)[] = [
-    { platform: 'telegram', label: 'Telegram', url: 'https://t.me/digitlink', sort: 0 },
-    { platform: 'facebook', label: 'Facebook', url: 'https://facebook.com/digitlink', sort: 1 },
-    { platform: 'instagram', label: 'Instagram', url: 'https://instagram.com/digitlink', sort: 2 },
-    { platform: 'twitter', label: 'X (Twitter)', url: 'https://x.com/digitlink', sort: 3 },
-    { platform: 'youtube', label: 'YouTube', url: 'https://youtube.com/@digitlink', sort: 4 },
-    { platform: 'tiktok', label: 'TikTok', url: 'https://tiktok.com/@digitlink', sort: 5 },
+    { platform: 'telegram', label: 'Telegram', url: 'https://t.me/octanlink', sort: 0 },
+    { platform: 'facebook', label: 'Facebook', url: 'https://facebook.com/octanlink', sort: 1 },
+    { platform: 'instagram', label: 'Instagram', url: 'https://instagram.com/octanlink', sort: 2 },
+    { platform: 'twitter', label: 'X (Twitter)', url: 'https://x.com/octanlink', sort: 3 },
+    { platform: 'youtube', label: 'YouTube', url: 'https://youtube.com/@octanlink', sort: 4 },
+    { platform: 'tiktok', label: 'TikTok', url: 'https://tiktok.com/@octanlink', sort: 5 },
     { platform: 'whatsapp', label: 'WhatsApp', url: 'https://wa.me/10000000000', sort: 6 },
-    { platform: 'email', label: 'Email', url: 'mailto:support@digitlink.mobi', sort: 7 },
+    { platform: 'email', label: 'Email', url: 'mailto:support@octanlink.mobi', sort: 7 },
   ];
   for (const r of rows) await db.insert(s.socialLinks).values(r).onConflictDoNothing();
   console.log(`  social_links: ${rows.length}`);
@@ -523,10 +523,10 @@ async function seedRbac() {
   // credential to production.
   const { password, rotate } = seedAdminPassword();
   const seedAdmins = [
-    { username: 'superadmin', email: 'admin@digitlink.mobi', roles: ['super_admin'] },
-    { username: 'opsadmin', email: 'ops@digitlink.mobi', roles: ['admin'] },
-    { username: 'finance1', email: 'finance@digitlink.mobi', roles: ['finance'] },
-    { username: 'support1', email: 'support@digitlink.mobi', roles: ['support'] },
+    { username: 'superadmin', email: 'admin@octanlink.com', roles: ['super_admin'] },
+    { username: 'opsadmin', email: 'ops@octanlink.com', roles: ['admin'] },
+    { username: 'finance1', email: 'finance@octanlink.com', roles: ['finance'] },
+    { username: 'support1', email: 'support@octanlink.com', roles: ['support'] },
   ];
   for (const a of seedAdmins) {
     await createAdmin({

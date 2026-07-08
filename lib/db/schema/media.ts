@@ -6,7 +6,7 @@ import { users } from './users';
 export const mediaAssets = pgTable('media_assets', {
   id: uuid('id').primaryKey().defaultRandom(),
   r2Key: text('r2_key').notNull().unique(),
-  bucket: text('bucket').notNull().default('digitlink-media'),
+  bucket: text('bucket').notNull().default('octanlink-media'),
   kind: mediaKindEnum('kind').notNull(),
   contentType: text('content_type').notNull(),
   sizeBytes: integer('size_bytes').notNull(),

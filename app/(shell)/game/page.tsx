@@ -3,8 +3,9 @@ import { ProviderGrid } from '@/components/game/ProviderGrid';
 import { BannerCarousel } from '@/components/game/BannerCarousel';
 import { GcNotice } from '@/components/game/GcNotice';
 import { PwaInstallBanner } from '@/components/shell/PwaInstallBanner';
+import { APP_NAME } from '@/lib/constants';
 
-export const metadata = { title: 'Game Center · Digit Link' };
+export const metadata = { title: `Game Center · ${APP_NAME}` };
 
 export default async function GamePage() {
   const [scProviders, gcProviders] = await Promise.all([

@@ -1,6 +1,7 @@
 import { PostalRequestForm } from '@/components/orders/PostalRequestForm';
+import { APP_NAME } from '@/lib/constants';
 
-export const metadata = { title: 'Postal Request Code · Digit Link' };
+export const metadata = { title: `Postal Request Code · ${APP_NAME}` };
 
 export default function PostalRequestPage() {
   return (

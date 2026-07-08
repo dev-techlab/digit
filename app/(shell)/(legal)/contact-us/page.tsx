@@ -2,13 +2,14 @@ import { Mail, MessageCircle } from 'lucide-react';
 import { LegalPageLayout } from '@/components/legal/LegalPageLayout';
 import { Card } from '@/components/ui/Card';
 import { getSettings } from '@/lib/settings';
+import { APP_NAME } from '@/lib/constants';
 
-export const metadata = { title: 'Contact Us · Digit Link' };
+export const metadata = { title: `Contact Us · ${APP_NAME}` };
 export const dynamic = 'force-dynamic';
 
 export default async function ContactUsPage() {
   const settings = await getSettings();
-  const supportEmail = (settings['support.email'] as string) ?? 'support@digitlink.mobi';
+  const supportEmail = (settings['support.email'] as string) ?? 'support@octanlink.com';
   return (
     <LegalPageLayout title="Contact Us">
       <p>Have a question or need help with your account? Reach out to our support team.</p>

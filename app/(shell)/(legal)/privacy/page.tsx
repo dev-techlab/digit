@@ -1,12 +1,13 @@
 import { LegalPageLayout } from '@/components/legal/LegalPageLayout';
+import { APP_NAME } from '@/lib/constants';
 
-export const metadata = { title: 'Privacy Policy · Digit Link' };
+export const metadata = { title: `Privacy Policy · ${APP_NAME}` };
 
 export default function PrivacyPage() {
   return (
     <LegalPageLayout title="Privacy Policy">
       <p>
-        This Privacy Policy explains how Digit Link collects, uses, and protects your personal
+        This Privacy Policy explains how {APP_NAME} collects, uses, and protects your personal
         information when you use the Platform.
       </p>
       <h2 className="font-semibold text-[var(--text-primary)]">1. Information We Collect</h2>

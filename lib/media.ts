@@ -26,7 +26,7 @@ function extFor(contentType: string): string {
   return EXT_BY_TYPE[contentType] ?? 'bin';
 }
 
-const BUCKET = process.env.R2_BUCKET ?? 'digitlink-media';
+const BUCKET = process.env.R2_BUCKET ?? 'octanlink-media';
 
 export interface UploadMediaInput {
   buffer: Buffer;

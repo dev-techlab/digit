@@ -27,9 +27,9 @@ const config: Config = {
       },
       colors: {
         brand: {
-          DEFAULT: '#00d632',
-          glow: '#00d632',
-          solid: '#43ad6b',
+          DEFAULT: '#0091ff',
+          glow: '#0091ff',
+          solid: '#2563eb',
         },
         success: '#43ad6b',
         danger: '#ff3b30',
@@ -64,7 +64,7 @@ const config: Config = {
         glass: '20px',
       },
       boxShadow: {
-        glowBrand: '0 0 0 3px rgba(0,214,50,0.18), 0 4px 12px rgba(0,0,0,0.22)',
+        glowBrand: '0 0 0 3px rgba(0,145,255,0.18), 0 4px 12px rgba(0,0,0,0.22)',
         glowSuccess: '0 0 0 1px rgba(34,197,94,0.2), 0 4px 20px rgba(34,197,94,0.15)',
         glowDanger: '0 0 0 4px rgba(255,59,48,0.1)',
       },

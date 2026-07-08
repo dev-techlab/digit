@@ -4,7 +4,7 @@
 
 :root,
 html[data-theme='dark'] {
-  --bg-primary: #052d27;
+  --bg-primary: #041c30;
   --bg-secondary: #0a0a0a;
   --bg-tertiary: rgba(255, 255, 255, 0.06);
   --text-primary: #ffffff;
@@ -15,9 +15,9 @@ html[data-theme='dark'] {
   --divider-color: rgba(255, 255, 255, 0.08);
   --input-bg: rgba(255, 255, 255, 0.04);
   --input-border: rgba(255, 255, 255, 0.08);
-  --header-bar-scrim: rgba(7, 40, 31, 0.74);
-  --drawer-bg: #102618;
-  --modal-bg: #12241f;
+  --header-bar-scrim: rgba(6, 28, 46, 0.74);
+  --drawer-bg: #0e2136;
+  --modal-bg: #10222f;
 }
 
 html[data-theme='light'] {
@@ -32,8 +32,8 @@ html[data-theme='light'] {
   --divider-color: rgba(0, 0, 0, 0.1);
   --input-bg: rgba(245, 245, 247, 0.8);
   --input-border: rgba(0, 0, 0, 0.12);
-  --header-bar-scrim: rgba(240, 253, 244, 0.82);
-  --drawer-bg: rgba(240, 253, 244, 0.97);
+  --header-bar-scrim: rgba(239, 246, 255, 0.82);
+  --drawer-bg: rgba(239, 246, 255, 0.97);
   --modal-bg: #ffffff;
 }
 

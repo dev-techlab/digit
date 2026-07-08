@@ -7,7 +7,7 @@ beforeAll(requireSeed);
 describe('getSettings — typed parsing', () => {
   it('parses values by their declared type', async () => {
     const settings = await getSettings();
-    expect(settings['site.name']).toBe('Digit Link'); // string
+    expect(settings['site.name']).toBe('Octan Link'); // string
     expect(settings['support.livechat_enabled']).toBe(true); // boolean
     expect(settings['referral.reward_sc']).toBe(5); // number
     expect(typeof settings['site.logo_url']).toBe('string'); // image → url string

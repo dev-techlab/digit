@@ -1,8 +1,9 @@
 import { getTransactions } from '@/lib/data';
 import { TransactionsView } from '@/components/orders/TransactionsView';
 import { PageHeader } from '@/components/shell/PageHeader';
+import { APP_NAME } from '@/lib/constants';
 
-export const metadata = { title: 'Transactions · Digit Link' };
+export const metadata = { title: `Transactions · ${APP_NAME}` };
 
 export default async function OrdersPage({ searchParams }: { searchParams: { type?: string } }) {
   const transactions = await getTransactions();

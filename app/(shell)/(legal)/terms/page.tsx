@@ -1,12 +1,13 @@
 import { LegalPageLayout } from '@/components/legal/LegalPageLayout';
+import { APP_NAME } from '@/lib/constants';
 
-export const metadata = { title: 'Terms & Conditions · Digit Link' };
+export const metadata = { title: `Terms & Conditions · ${APP_NAME}` };
 
 export default function TermsPage() {
   return (
     <LegalPageLayout title="Terms & Conditions">
       <p>
-        These Terms & Conditions (&quot;Terms&quot;) govern your access to and use of Digit Link
+        These Terms & Conditions (&quot;Terms&quot;) govern your access to and use of {APP_NAME}
         (the &quot;Platform&quot;). By creating an account or using the Platform, you agree to be
         bound by these Terms.
       </p>
