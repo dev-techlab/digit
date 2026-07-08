@@ -1,7 +1,7 @@
 /**
  * Live audit: exercises admin login + the RBAC matrix + probes suspected
  * loopholes against the real DB. Read-only except for temporary rows it cleans
- * up. Run: pnpm tsx --env-file=.env.development scripts/audit-live.ts
+ * up. Run: pnpm tsx --env-file=.env scripts/audit-live.ts
  */
 import { and, eq, gt, isNull } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';

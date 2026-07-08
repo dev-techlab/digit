@@ -9,8 +9,9 @@ build
 # testing
 coverage
 
-# env files — local/secret overrides only; .env.development, .env.production,
-# and .env.example are intentionally NOT ignored so mode defaults stay in the repo
+# env files — real config/secrets for whatever machine runs the app (dev
+# laptop or prod server). .env.example is intentionally NOT ignored — it's
+# the committed, secret-free template; copy it to .env and fill in real values.
 .env
 .env.local
 .env.*.local

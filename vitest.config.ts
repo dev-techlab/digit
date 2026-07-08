@@ -2,10 +2,8 @@ import path from 'node:path';
 import { config as dotenv } from 'dotenv';
 import { defineConfig } from 'vitest/config';
 
-// Load env before anything imports lib/db (which reads DATABASE_URL at module
-// init). Same precedence as drizzle.config: .env.local first, then .env.development.
-dotenv({ path: '.env.local' });
-dotenv({ path: '.env.development' });
+// Load env before anything imports lib/db (which reads DATABASE_URL at module init).
+dotenv();
 
 export default defineConfig({
   test: {
