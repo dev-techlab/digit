@@ -5,5 +5,6 @@ export * from './finance';
 export * from './engagement';
 export * from './content';
 export * from './rbac';
+export * from './agent';
 export * from './media';
 export * from './relations';

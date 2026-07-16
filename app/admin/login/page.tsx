@@ -1,8 +1,8 @@
-import { AdminLoginView } from '@/components/admin/AdminLoginView';
+import { AgentLoginView } from '@/components/agent/AgentLoginView';
 import { APP_NAME } from '@/lib/constants';
 
-export const metadata = { title: `Admin Login · ${APP_NAME}` };
+export const metadata = { title: `Agent Login · ${APP_NAME}` };
 
 export default function AdminLoginPage() {
-  return <AdminLoginView />;
+  return <AgentLoginView />;
 }

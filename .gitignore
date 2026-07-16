@@ -38,3 +38,6 @@ yarn-error.log*
 
 # Local-disk media (dev storage driver fallback)
 /public/media/
+
+
+/.playwright-mcp/*
