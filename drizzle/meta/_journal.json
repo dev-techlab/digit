@@ -36,6 +36,13 @@
       "when": 1784224966826,
       "tag": "0004_talented_dormammu",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784227402450,
+      "tag": "0005_open_jigsaw",
+      "breakpoints": true
     }
   ]
 }

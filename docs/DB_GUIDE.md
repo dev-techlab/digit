@@ -42,6 +42,7 @@ drizzle/                        ← versioned migrations (like database/migratio
 | Run pending migrations | `pnpm db:migrate` | `php artisan migrate` |
 | Push schema directly (dev only) | `pnpm db:push` | `migrate:fresh`-ish, no file |
 | Seed demo data | `pnpm agent:seed` | `php artisan db:seed` |
+| Sync game platforms from the live provider API | `pnpm platforms:sync` | external-API seeder |
 | **Test every model (CRUD + constraints)** | `pnpm db:test` | `php artisan test` (DB feature tests) |
 | Browse data | `pnpm db:studio` | Telescope/phpMyAdmin-ish |
 

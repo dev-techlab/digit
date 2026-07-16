@@ -25,7 +25,8 @@
     "admin:create": "tsx scripts/create-admin.ts",
     "test:mail": "tsx scripts/test-mail.ts",
     "agent:seed": "tsx scripts/seed-agent.ts",
-    "db:test": "tsx scripts/test-db.ts"
+    "db:test": "tsx scripts/test-db.ts",
+    "platforms:sync": "tsx scripts/sync-platforms.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1078.0",

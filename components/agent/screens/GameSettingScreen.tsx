@@ -1,9 +1,52 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Copy, Eye, RefreshCw, Gamepad2 } from 'lucide-react';
+import { Copy, Eye, RefreshCw } from 'lucide-react';
 import { api, Btn, Field, fmtDateTime, Modal, TextInput, Toggle } from '../ui';
 import { cn } from '@/lib/cn';
+
+const AVATAR_GRADIENTS = [
+  'from-blue-400 to-indigo-500',
+  'from-emerald-400 to-green-600',
+  'from-amber-400 to-orange-500',
+  'from-rose-400 to-red-500',
+  'from-violet-400 to-purple-600',
+  'from-cyan-400 to-sky-600',
+];
+
+/** Platform icon with graceful fallback: real CDN icon → branded letter avatar. */
+function PlatformIcon({ name, iconUrl }: { name: string; iconUrl: string | null }) {
+  const [failed, setFailed] = useState(false);
+  if (iconUrl && !failed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={iconUrl}
+        alt=""
+        loading="lazy"
+        onError={() => setFailed(true)}
+        className="h-9 w-9 shrink-0 rounded-full object-cover"
+      />
+    );
+  }
+  const hash = [...name].reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+  const initials = name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+  return (
+    <span
+      className={cn(
+        'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold text-white',
+        AVATAR_GRADIENTS[hash % AVATAR_GRADIENTS.length]
+      )}
+    >
+      {initials}
+    </span>
+  );
+}
 
 interface PlatformRow {
   id: string;
@@ -99,9 +142,7 @@ export function GameSettingScreen() {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-400">
-                  <Gamepad2 size={18} />
-                </span>
+                <PlatformIcon name={p.name} iconUrl={p.iconUrl} />
                 <span className="font-semibold text-slate-800">{p.name}</span>
               </div>
               <Toggle checked={p.enabled} onChange={(v) => void toggle(p, v)} />
