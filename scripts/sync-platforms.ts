@@ -30,7 +30,7 @@ interface ApiProvider {
 
 const ENDPOINT =
   process.env.PROVIDER_API_BASE_URL ??
-  'https://digitlink.mobi/prod-api/member/game/available-providers';
+  'http://localhost:3200/prod-api/member/game/available-providers';
 
 const normalize = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '');
 const slugify = (name: string) =>

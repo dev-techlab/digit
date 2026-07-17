@@ -73,16 +73,20 @@ async function seedProviders() {
         })
         .onConflictDoNothing();
 
-      for (const [i, tier] of (p.depositTiers ?? []).entries()) {
-        await db
-          .insert(s.providerDepositTiers)
-          .values({
+      // Tiers have only a random-uuid PK, so onConflict can't dedupe — guard on
+      // "already seeded for this provider" to keep re-runs idempotent.
+      const existingTiers = await db.query.providerDepositTiers.findFirst({
+        where: (t, { eq: e }) => e(t.providerId, p.id),
+      });
+      if (!existingTiers) {
+        for (const [i, tier] of (p.depositTiers ?? []).entries()) {
+          await db.insert(s.providerDepositTiers).values({
             providerId: p.id,
             amount: tier.amount,
             bonusAmount: tier.bonusAmount,
             sort: i,
-          })
-          .onConflictDoNothing();
+          });
+        }
       }
     }
     console.log(`  providers[${file}]: ${rows.length}`);

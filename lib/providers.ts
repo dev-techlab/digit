@@ -4,7 +4,7 @@ import type { GameProvider } from './types';
 
 const LIVE_ENDPOINT =
   process.env.PROVIDER_API_BASE_URL ??
-  'https://digitlink.mobi/prod-api/member/game/available-providers';
+  'http://localhost:3200/prod-api/member/game/available-providers';
 
 function cachePath(providerType: 'SC' | 'GC') {
   return path.join(process.cwd(), 'data', `providers.${providerType.toLowerCase()}.json`);

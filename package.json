@@ -26,7 +26,9 @@
     "test:mail": "tsx scripts/test-mail.ts",
     "agent:seed": "tsx scripts/seed-agent.ts",
     "db:test": "tsx scripts/test-db.ts",
-    "platforms:sync": "tsx scripts/sync-platforms.ts"
+    "platforms:sync": "tsx scripts/sync-platforms.ts",
+    "platforms:seed": "tsx scripts/seed-platforms.ts",
+    "icons:localize": "node scripts/localize-icons.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1078.0",

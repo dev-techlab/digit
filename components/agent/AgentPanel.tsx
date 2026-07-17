@@ -30,6 +30,7 @@ import {
   Plus,
   Smile,
   ChevronLeft,
+  LayoutGrid,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -37,6 +38,7 @@ import { api } from './ui';
 import { DashboardScreen } from './screens/DashboardScreen';
 import { WalletScreen } from './screens/WalletScreen';
 import { GameSettingScreen } from './screens/GameSettingScreen';
+import { PlatformCatalogScreen } from './screens/PlatformCatalogScreen';
 import { AgentListScreen } from './screens/AgentListScreen';
 import { MemberScreen } from './screens/MemberScreen';
 import { KioskScreen } from './screens/KioskScreen';
@@ -65,6 +67,7 @@ type ScreenKey =
   | 'dashboard'
   | 'wallet'
   | 'game-setting'
+  | 'game-platforms'
   | 'sale-agents'
   | 'members'
   | 'sub-agents'
@@ -85,6 +88,7 @@ const SCREENS: Record<ScreenKey, { title: string; render: () => JSX.Element }> =
   dashboard: { title: 'Dashboard', render: () => <DashboardScreen /> },
   wallet: { title: 'My Wallet', render: () => <WalletScreen /> },
   'game-setting': { title: 'Game Setting', render: () => <GameSettingScreen /> },
+  'game-platforms': { title: 'Game Platforms', render: () => <PlatformCatalogScreen /> },
   'sale-agents': { title: 'Sale Agent List', render: () => <AgentListScreen type="sale" /> },
   members: { title: 'Member List', render: () => <MemberScreen /> },
   'sub-agents': { title: 'Sub Agent List', render: () => <AgentListScreen type="sub" /> },
@@ -234,6 +238,7 @@ export function AgentPanel() {
       {accountOpen && (
         <div className="space-y-0.5">
           <NavItem indent icon={Gamepad2} label="Game Setting" screen="game-setting" />
+          <NavItem indent icon={LayoutGrid} label="Game Platforms" screen="game-platforms" />
           <NavItem indent icon={UserRound} label="Sale Agent List" screen="sale-agents" />
           <NavItem indent icon={Wine} label="Member List" screen="members" />
           <NavItem indent icon={UserRound} label="Sub Agent List" screen="sub-agents" />
