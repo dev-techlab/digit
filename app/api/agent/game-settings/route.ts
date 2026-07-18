@@ -53,6 +53,9 @@ export async function GET(req: Request) {
 export async function PUT(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (agent.type !== 'store') {
+    return NextResponse.json({ error: 'Only the store account can manage game settings' }, { status: 403 });
+  }
 
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);
   const platformId = typeof body.platformId === 'string' ? body.platformId : '';

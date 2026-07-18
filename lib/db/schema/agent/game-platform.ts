@@ -2,8 +2,8 @@ import { pgTable, uuid, text, boolean, timestamp, integer } from 'drizzle-orm/pg
 
 /**
  * Game platform catalog (Orion Stars, Juwa, Fire Kirin, ...).
- * Synced from the live provider API (`PROVIDER_API_BASE_URL`) via
- * `pnpm platforms:sync` — see scripts/sync-platforms.ts.
+ * Synced from the live provider API (admin-managed `provider.api_base_url`
+ * setting) via `pnpm platforms:sync` — see scripts/sync-platforms.ts.
  */
 export const gamePlatforms = pgTable('game_platforms', {
   id: uuid('id').primaryKey().defaultRandom(),

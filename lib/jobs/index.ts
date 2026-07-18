@@ -2,6 +2,7 @@ import type { Job } from 'pg-boss';
 import { getBoss } from './boss';
 import { deliver } from '@/lib/mail/deliver';
 import type { MailPayload } from '@/lib/mail/types';
+import { syncGamePlatforms } from '@/lib/provider-api';
 
 /**
  * Job registry. Cron-scheduled jobs from DB_DIAGRAM §9 plus on-demand queues.
@@ -19,7 +20,10 @@ export const JOBS: JobDef[] = [
     name: 'providers.sync',
     cron: '0 */6 * * *',
     handler: async () => {
-      // TODO: refresh game_providers from PROVIDER_API_BASE_URL (see lib/providers.ts)
+      const result = await syncGamePlatforms();
+      console.log(
+        `[providers.sync] ${result.updated} updated, ${result.inserted} inserted, ${result.total} total`
+      );
     },
   },
   {

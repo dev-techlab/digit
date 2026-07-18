@@ -316,20 +316,26 @@ Response shape (confirmed live, 48 SC providers / 2 GC providers at time of writ
 }
 ```
 
-### 8.2 "Fetch once, static JSON from then on"
+### 8.2 "Fetch once, DB from then on" *(superseded — see note)*
 
-Implement a small cache-through helper instead of calling the live API on every request:
+> **Current implementation:** the original plan below (disk-JSON cache-through
+> read on every request) was superseded by seeding the live snapshot straight
+> into the `game_providers` table; the app now reads via
+> `lib/data.ts#getProviders()` (a plain DB query), never touching the network
+> at request time. `data/providers.{sc,gc}.json` remain as the committed seed
+> fixtures. The upstream endpoint itself moved from an env var to the
+> admin-managed `site_settings` row `provider.api_base_url` (see
+> `lib/settings.ts#getProviderApiBaseUrl`), consumed by `pnpm platforms:sync`
+> (`scripts/sync-platforms.ts`) and the manual refresh script
+> `scripts/fetch-providers.ts` (`pnpm fetch:providers`).
 
 ```
-data/providers.sc.json      ← committed seed fixture (real snapshot, captured during this research)
-data/providers.gc.json      ← committed seed fixture
-lib/providers.ts            ← readCachedProviders(type) : tries data/providers.<type>.json first;
-                               only calls the live endpoint if the file is missing (never on a normal request)
-scripts/fetch-providers.mjs ← manual refresh script (`pnpm fetch:providers`) that re-hits the
-                               live endpoint and overwrites the seed JSON on demand
+data/providers.sc.json     ← committed seed fixture (real snapshot, captured during this research)
+data/providers.gc.json     ← committed seed fixture
+scripts/fetch-providers.ts ← manual refresh script (`pnpm fetch:providers`) that re-hits the
+                              live endpoint and overwrites the seed JSON on demand
+scripts/sync-platforms.ts  ← syncs the agent-panel `game_platforms` catalog from the same endpoint
 ```
-
-The Game page's server component calls `readCachedProviders('SC' | 'GC')`, which is disk-backed — so after the first pull, the app runs entirely off the static JSON and never depends on `digitlink.mobi` being reachable again, matching "get and static json call next time."
 
 ### 8.3 Everything else → mock fixtures
 

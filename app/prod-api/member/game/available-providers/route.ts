@@ -12,8 +12,9 @@ export const dynamic = 'force-dynamic';
  *
  * Serves the provider catalog straight from the DB (`game_providers` +
  * `provider_deposit_tiers`) in the exact response shape the upstream API
- * returns, so `PROVIDER_API_BASE_URL` can point at this app itself instead of
- * the third-party (geo-blocked) host. Icon URLs are the self-hosted
+ * returns, so the admin-managed `provider.api_base_url` setting (see
+ * lib/provider-api.ts) can point at this app itself instead of the
+ * third-party (geo-blocked) host. Icon URLs are the self-hosted
  * `/providers/*` paths.
  */
 export async function GET(req: Request) {

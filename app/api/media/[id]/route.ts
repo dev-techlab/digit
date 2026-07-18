@@ -12,6 +12,8 @@ import {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const MAX_BYTES = 10 * 1024 * 1024; // 10MB — matches POST /api/media
+
 type Ctx = { params: { id: string } };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -37,6 +39,13 @@ export async function PUT(req: Request, { params }: Ctx) {
   if (!UUID_RE.test(params.id)) return notFound();
   try {
     await requirePermission(adminId, 'media.upload');
+
+    // Reject oversized bodies before buffering the whole multipart into memory.
+    const declaredLen = Number(req.headers.get('content-length') ?? 0);
+    if (declaredLen > MAX_BYTES + 8192) {
+      return NextResponse.json({ error: 'File too large (max 10MB)' }, { status: 413 });
+    }
+
     const form = await req.formData();
     const file = form.get('file');
     if (!(file instanceof File)) {
@@ -47,6 +56,9 @@ export async function PUT(req: Request, { params }: Ctx) {
         { error: `Unsupported content type "${file.type}"` },
         { status: 415 }
       );
+    }
+    if (file.size > MAX_BYTES) {
+      return NextResponse.json({ error: 'File too large (max 10MB)' }, { status: 413 });
     }
     const buffer = Buffer.from(await file.arrayBuffer());
     const result = await replaceMedia(params.id, {

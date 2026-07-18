@@ -364,7 +364,23 @@ async function seedSettings() {
       .values({ ...r, isPublic: true })
       .onConflictDoNothing();
   }
-  console.log(`  site_settings: ${rows.length}`);
+
+  // Internal/integration settings — admin-managed but never exposed via the
+  // public getSettings() (is_public stays false).
+  const internalRows: (typeof s.siteSettings.$inferInsert)[] = [
+    {
+      key: 'provider.api_base_url',
+      value: 'https://digitlink.mobi/prod-api/member/game/available-providers',
+      type: 'url',
+      group: 'integration',
+      label: 'Provider catalog API base URL',
+    },
+  ];
+  for (const r of internalRows) {
+    await db.insert(s.siteSettings).values(r).onConflictDoNothing();
+  }
+
+  console.log(`  site_settings: ${rows.length + internalRows.length}`);
 }
 
 async function seedSocialLinks() {

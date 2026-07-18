@@ -35,6 +35,9 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (agent.type !== 'store') {
+    return NextResponse.json({ error: 'Only the store account can manage platforms' }, { status: 403 });
+  }
 
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);
   const name = str(body.name);
@@ -67,6 +70,9 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (agent.type !== 'store') {
+    return NextResponse.json({ error: 'Only the store account can manage platforms' }, { status: 403 });
+  }
 
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);
   const id = str(body.id);
@@ -106,6 +112,9 @@ export async function PUT(req: Request) {
 export async function DELETE(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (agent.type !== 'store') {
+    return NextResponse.json({ error: 'Only the store account can manage platforms' }, { status: 403 });
+  }
 
   const id = new URL(req.url).searchParams.get('id') ?? '';
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });

@@ -426,7 +426,8 @@ Replaces the in-memory `MockUser` in `lib/auth-context.tsx` plus the auth modals
 
 ### 3.3 `game_providers` — *reference data (live API cache)*
 Direct row-for-row mapping of the `GameProvider` interface. Seeded from the live
-public API (`PROVIDER_API_BASE_URL`) exactly as `lib/providers.ts` does today.
+public API at the admin-managed `provider.api_base_url` setting (see
+`lib/settings.ts#getProviderApiBaseUrl`).
 
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
