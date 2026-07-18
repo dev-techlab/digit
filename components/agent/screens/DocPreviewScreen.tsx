@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ArrowUp,
   ZoomIn,
@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Btn, Card } from '../ui';
 import { cn } from '@/lib/cn';
+import { APP_NAME } from '@/lib/constants';
 import { MANUAL_PAGES, MANUAL_TITLE, type ManualBlock } from './manual-content';
 
 function Block({ block, onJump }: { block: ManualBlock; onJump?: (page: number) => void }) {
@@ -88,18 +89,56 @@ function Block({ block, onJump }: { block: ManualBlock; onJump?: (page: number) 
 }
 
 export function DocPreviewScreen() {
-  const [page, setPage] = useState(1); // 1-based
+  const [page, setPage] = useState(1); // 1-based — the page most in view
   const [zoom, setZoom] = useState(100);
   const [tocOpen, setTocOpen] = useState(false);
   const viewerRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const pageRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const total = MANUAL_PAGES.length;
-  const current = MANUAL_PAGES[page - 1];
+
+  // Track which stacked page section is under a reference line near the top
+  // of the viewer as the user scrolls, so the page indicator / TOC / dots
+  // stay in sync without needing the Next/Prev buttons. (Intersection ratio
+  // relative to each section's own height doesn't work here — most pages
+  // are several times taller than the viewport, so they'd never cross a
+  // meaningful visibility threshold.)
+  useEffect(() => {
+    const root = bodyRef.current;
+    if (!root) return;
+    let raf = 0;
+    const recompute = () => {
+      raf = 0;
+      const refLine = root.getBoundingClientRect().top + 96;
+      let bestPage = 1;
+      let bestTop = -Infinity;
+      for (let n = 1; n <= total; n++) {
+        const el = pageRefs.current[n];
+        if (!el) continue;
+        const top = el.getBoundingClientRect().top;
+        if (top <= refLine && top > bestTop) {
+          bestTop = top;
+          bestPage = n;
+        }
+      }
+      setPage(bestPage);
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(recompute);
+    };
+    root.addEventListener('scroll', onScroll, { passive: true });
+    recompute();
+    return () => {
+      root.removeEventListener('scroll', onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [total]);
 
   const goTo = (n: number) => {
-    setPage(Math.min(total, Math.max(1, n)));
+    const target = Math.min(total, Math.max(1, n));
+    setPage(target);
     setTocOpen(false);
-    bodyRef.current?.scrollTo({ top: 0 });
+    pageRefs.current[target]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const fullscreen = () => {
@@ -187,45 +226,57 @@ export function DocPreviewScreen() {
           )}
         </div>
 
-        {/* Page body */}
-        <div ref={bodyRef} className="flex-1 overflow-auto bg-slate-200/70 p-3 sm:p-6">
-          <div
-            className="mx-auto w-full max-w-3xl origin-top bg-white px-5 py-8 shadow-md sm:px-10 sm:py-12"
-            style={{ zoom: zoom / 100 }}
-          >
-            {page === 1 ? (
-              <div className="flex flex-col items-center gap-6 py-8 text-center">
-                <span className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-green-400 to-green-600 text-5xl font-bold text-white sm:h-28 sm:w-28 sm:text-6xl">
-                  D
-                </span>
-                <div>
-                  <p className="font-serif text-3xl font-bold text-[#00462D] sm:text-4xl">
-                    DLink <span className="font-mono font-medium">Agents</span>
-                  </p>
-                  <p className="mt-2 font-serif text-3xl font-bold text-[#00462D] sm:text-4xl">
-                    System Manual
-                  </p>
-                </div>
-                <div className="w-full max-w-xl text-left">
-                  {current.blocks.map((b, i) => (
-                    <Block key={i} block={b} />
-                  ))}
-                </div>
+        {/* Page body — every page stacked so scrolling moves through the
+            document naturally; the toolbar/TOC/dots stay in sync via the
+            IntersectionObserver above rather than needing Next/Prev clicks. */}
+        <div ref={bodyRef} className="flex-1 space-y-4 overflow-auto bg-slate-200/70 p-3 sm:space-y-6 sm:p-6">
+          {MANUAL_PAGES.map((pg, i) => {
+            const n = i + 1;
+            return (
+              <div
+                key={pg.title}
+                ref={(el) => {
+                  pageRefs.current[n] = el;
+                }}
+                data-page={n}
+                className="mx-auto w-full max-w-3xl origin-top bg-white px-5 py-8 shadow-md sm:px-10 sm:py-12"
+                style={{ zoom: zoom / 100 }}
+              >
+                {n === 1 ? (
+                  <div className="flex flex-col items-center gap-6 py-8 text-center">
+                    <span className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-400 to-blue-600 text-5xl font-bold text-white sm:h-28 sm:w-28 sm:text-6xl">
+                      {APP_NAME[0]}
+                    </span>
+                    <div>
+                      <p className="font-serif text-3xl font-bold text-[#00462D] sm:text-4xl">
+                        DLink <span className="font-mono font-medium">Agents</span>
+                      </p>
+                      <p className="mt-2 font-serif text-3xl font-bold text-[#00462D] sm:text-4xl">
+                        System Manual
+                      </p>
+                    </div>
+                    <div className="w-full max-w-xl text-left">
+                      {pg.blocks.map((b, j) => (
+                        <Block key={j} block={b} />
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <h2 className="mb-4 border-b border-[#d9e2ec] pb-2 text-xl font-bold text-[#005C3E]">
+                      {pg.title}
+                    </h2>
+                    {pg.blocks.map((b, j) => (
+                      <Block key={j} block={b} onJump={n === 2 ? goTo : undefined} />
+                    ))}
+                  </>
+                )}
+                <p className="mt-10 border-t border-slate-100 pt-3 text-center text-xs text-slate-300">
+                  {MANUAL_TITLE} · Page {n} of {total}
+                </p>
               </div>
-            ) : (
-              <>
-                <h2 className="mb-4 border-b border-[#d9e2ec] pb-2 text-xl font-bold text-[#005C3E]">
-                  {current.title}
-                </h2>
-                {current.blocks.map((b, i) => (
-                  <Block key={i} block={b} onJump={page === 2 ? goTo : undefined} />
-                ))}
-              </>
-            )}
-            <p className="mt-10 border-t border-slate-100 pt-3 text-center text-xs text-slate-300">
-              {MANUAL_TITLE} · Page {page} of {total}
-            </p>
-          </div>
+            );
+          })}
         </div>
 
         {/* Page dots */}

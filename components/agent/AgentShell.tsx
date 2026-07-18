@@ -224,7 +224,7 @@ export function AgentShell({ children }: { children: React.ReactNode }) {
 
   const brand = (
     <div className="flex items-center gap-2.5 px-5 py-4">
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-green-400 to-green-600 text-base font-bold text-white">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 text-base font-bold text-white">
         {APP_NAME[0]}
       </span>
       {!collapsed && <span className="text-lg font-bold text-slate-800">{APP_NAME}</span>}

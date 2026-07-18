@@ -3,12 +3,15 @@
 import { useEffect, useState } from 'react';
 import { Info } from 'lucide-react';
 import { api, Btn, Card } from '../ui';
+import { RichTextEditor } from '../RichTextEditor';
+import { cn } from '@/lib/cn';
 
 export function TermsScreen() {
   const [terms, setTerms] = useState<{ en: string | null; es: string | null } | null>(null);
   const [locale, setLocale] = useState<'en' | 'es'>('en');
   const [content, setContent] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
+  const [view, setView] = useState<'edit' | 'preview'>('edit');
 
   useEffect(() => {
     api<{ terms: { en: string | null; es: string | null } }>('/api/agent/terms').then((d) => {
@@ -55,26 +58,53 @@ export function TermsScreen() {
         Editing terms for your store. Players in your store see this (or fall back to upstream /
         global if you leave it empty).
       </p>
-      <div className="mt-5 flex gap-5 border-b border-slate-100 text-sm font-semibold">
-        {(['en', 'es'] as const).map((l) => (
-          <button
-            key={l}
-            onClick={() => switchLocale(l)}
-            className={
-              locale === l ? 'border-b-2 border-blue-500 pb-2 text-blue-500' : 'pb-2 text-slate-600'
-            }
-          >
-            {l.toUpperCase()}
-          </button>
-        ))}
+      <div className="mt-5 flex items-center justify-between gap-5 border-b border-slate-100">
+        <div className="flex gap-5 text-sm font-semibold">
+          {(['en', 'es'] as const).map((l) => (
+            <button
+              key={l}
+              onClick={() => switchLocale(l)}
+              className={
+                locale === l ? 'border-b-2 border-blue-500 pb-2 text-blue-500' : 'pb-2 text-slate-600'
+              }
+            >
+              {l.toUpperCase()}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1 rounded-lg bg-slate-100 p-1 text-sm font-medium">
+          {(['edit', 'preview'] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={cn(
+                'rounded-md px-3 py-1 capitalize',
+                view === v ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'
+              )}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
       </div>
-      <textarea
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        rows={16}
-        placeholder="Enter terms content (HTML supported)…"
-        className="mt-4 w-full rounded-lg border border-slate-200 p-4 font-mono text-sm text-slate-700 outline-none focus:border-blue-400"
-      />
+      {view === 'edit' ? (
+        <RichTextEditor
+          value={content}
+          onChange={setContent}
+          placeholder="Enter terms content…"
+        />
+      ) : (
+        <div className="mt-4 min-h-[22rem] rounded-lg border border-slate-200 px-4 py-3 text-sm leading-relaxed text-slate-700">
+          {content ? (
+            <div
+              className="[&_a]:text-blue-500 [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-slate-200 [&_blockquote]:pl-3 [&_blockquote]:text-slate-500 [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:mt-3 [&_h3]:text-base [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6"
+              dangerouslySetInnerHTML={{ __html: content }}
+            />
+          ) : (
+            <p className="text-slate-300">Nothing to preview yet.</p>
+          )}
+        </div>
+      )}
       <div className="mt-4 flex gap-3">
         <Btn onClick={save}>Save</Btn>
         <Btn variant="ghost" onClick={inherit}>
