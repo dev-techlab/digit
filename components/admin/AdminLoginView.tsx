@@ -35,13 +35,16 @@ export function AdminLoginView() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setFormError(data.error ?? 'Invalid credentials');
+        setLoading(false);
         return;
       }
-      router.push('/admin');
-      router.refresh();
+      // Deliberately don't reset `loading` on the success path — this component
+      // renders <BrandLoader /> while loading, and clearing it here would remount
+      // the login form mid-navigation and cancel the pending route change (the
+      // agent-panel login uses the same pattern for the same reason).
+      router.replace('/admin');
     } catch {
       setFormError('Something went wrong. Please try again.');
-    } finally {
       setLoading(false);
     }
   };

@@ -67,11 +67,31 @@ export async function verifyAgentLogin(username: string, password: string) {
     .from(s.agents)
     .where(eq(s.agents.username, username))
     .limit(1);
-  if (!agent || agent.status !== 'active') return null;
-  const ok = await bcrypt.compare(password, agent.passwordHash);
+  if (agent) {
+    if (agent.status !== 'active') return null;
+    const ok = await bcrypt.compare(password, agent.passwordHash);
+    if (!ok) return null;
+    await db.update(s.agents).set({ lastLoginAt: new Date() }).where(eq(s.agents.id, agent.id));
+    return agent.id;
+  }
+
+  // Store administrators are extra staff logins for a store (no row of their
+  // own in `agents`, and `agent_sessions.agent_id` has no separate identity
+  // for them) — authenticate them, then resolve the session to their store's
+  // agent id so they get that store's full 'store'-type access.
+  const [admin] = await db
+    .select({
+      storeId: s.storeAdministrators.storeId,
+      passwordHash: s.storeAdministrators.passwordHash,
+      status: s.storeAdministrators.status,
+    })
+    .from(s.storeAdministrators)
+    .where(eq(s.storeAdministrators.username, username))
+    .limit(1);
+  if (!admin || admin.status !== 'active') return null;
+  const ok = await bcrypt.compare(password, admin.passwordHash);
   if (!ok) return null;
-  await db.update(s.agents).set({ lastLoginAt: new Date() }).where(eq(s.agents.id, agent.id));
-  return agent.id;
+  return admin.storeId;
 }
 
 export async function createAgentSession(agentId: string, meta?: { userAgent?: string }) {

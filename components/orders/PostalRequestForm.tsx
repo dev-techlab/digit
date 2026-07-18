@@ -9,6 +9,27 @@ import { Input } from '@/components/ui/Input';
 export function PostalRequestForm() {
   const [code, setCode] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/postal-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? 'Failed to submit request');
+      setSubmitted(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to submit request');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (submitted) {
     return (
@@ -41,8 +62,9 @@ export function PostalRequestForm() {
         value={code}
         onChange={(e) => setCode(e.target.value)}
       />
-      <Button fullWidth disabled={!code} onClick={() => setSubmitted(true)}>
-        Submit Request
+      {error && <p className="text-sm text-danger">{error}</p>}
+      <Button fullWidth disabled={!code || submitting} onClick={submit}>
+        {submitting ? 'Submitting…' : 'Submit Request'}
       </Button>
     </Card>
   );

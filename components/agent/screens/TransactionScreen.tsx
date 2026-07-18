@@ -9,6 +9,7 @@ import {
   fmtDateTime,
   fmtMoney,
   Modal,
+  Pagination,
   ResetBtn,
   SearchBtn,
   Select,
@@ -58,17 +59,19 @@ export function TransactionScreen() {
   const [auditStatus, setAuditStatus] = useState('pending');
   const [search, setSearch] = useState('');
   const [type, setType] = useState('');
+  const [page, setPage] = useState(1);
   const [report, setReport] = useState<ReportData | null>(null);
+  const PAGE_SIZE = 20;
 
   const load = useCallback(
-    () =>
+    (p = page) =>
       api<{ transactions: TxRow[]; summary: Summary }>(
-        `/api/agent/transactions?search=${encodeURIComponent(search)}&type=${type}`
+        `/api/agent/transactions?search=${encodeURIComponent(search)}&type=${type}&page=${p}&pageSize=${PAGE_SIZE}`
       ).then((d) => {
         setRows(d.transactions);
         setSummary(d.summary);
       }),
-    [search, type]
+    [search, type, page]
   );
   const loadAudits = useCallback(
     (st = auditStatus) =>
@@ -143,12 +146,18 @@ export function TransactionScreen() {
               <option value="bonus">Bonus</option>
               <option value="transfer">Transfer</option>
             </Select>
-            <SearchBtn onClick={() => void load()} />
+            <SearchBtn
+              onClick={() => {
+                setPage(1);
+                void load(1);
+              }}
+            />
             <ResetBtn
               onClick={() => {
                 setSearch('');
                 setType('');
-                void load();
+                setPage(1);
+                void load(1);
               }}
             />
           </Card>
@@ -200,6 +209,15 @@ export function TransactionScreen() {
                 </tr>
               ))}
             </Table>
+            <Pagination
+              total={summary?.total ?? 0}
+              page={page}
+              pageSize={PAGE_SIZE}
+              onPage={(p) => {
+                setPage(p);
+                void load(p);
+              }}
+            />
           </Card>
         </>
       ) : (

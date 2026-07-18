@@ -25,6 +25,7 @@ export interface RegisterUserInput {
   username?: string;
   password?: string;
   phone?: string;
+  inviteCode?: string;
 }
 
 /**
@@ -39,8 +40,17 @@ export async function registerUser(
   const username = input.username?.trim() || `player_${randomBytes(3).toString('hex')}`;
   const password = input.password || randomBytes(6).toString('base64url');
 
-  const existing = await db.query.users.findFirst({ where: (t, { eq }) => eq(t.username, username) });
+  const existing = await db.query.users.findFirst({
+    where: (t, { eq }) => eq(t.username, username),
+  });
   if (existing) throw new UserConflictError('Username already taken');
+
+  const referrer = input.inviteCode?.trim()
+    ? await db.query.users.findFirst({
+        where: (t, { eq }) => eq(t.inviteCode, input.inviteCode!.trim()),
+        columns: { id: true },
+      })
+    : null;
 
   const passwordHash = await bcrypt.hash(password, 10);
   const [user] = await db
@@ -52,9 +62,20 @@ export async function registerUser(
       phone: input.phone ?? null,
       phoneBound: !!input.phone,
       inviteCode: `DL${randomBytes(4).toString('hex').toUpperCase()}`,
+      referredByUserId: referrer?.id ?? null,
     })
     .returning();
   await db.insert(s.wallets).values({ userId: user.id }).onConflictDoNothing();
+
+  if (referrer) {
+    await db.insert(s.referralCommissions).values({
+      referrerUserId: referrer.id,
+      inviteeUserId: user.id,
+      inviteeDisplay: username,
+      joinedAt: new Date(),
+    });
+  }
+
   return { id: user.id, username, password, generated };
 }
 
@@ -62,7 +83,9 @@ export async function registerUser(
 export async function createUserSession(userId: string, meta?: { userAgent?: string }) {
   const token = newSessionToken();
   const expiresAt = new Date(Date.now() + USER_SESSION_TTL_S * 1000);
-  await db.insert(s.sessions).values({ userId, token, expiresAt, userAgent: meta?.userAgent ?? null });
+  await db
+    .insert(s.sessions)
+    .values({ userId, token, expiresAt, userAgent: meta?.userAgent ?? null });
   return { token, expiresAt };
 }
 
@@ -92,8 +115,10 @@ export interface UserProfile {
   username: string;
   nickname: string;
   avatarEmoji: string;
+  avatarUrl: string | null;
   phoneBound: boolean;
   kycStatus: string;
+  pwaInstalled: boolean;
 }
 
 /** Public-safe profile for the authenticated user (never returns the hash). */
@@ -105,8 +130,10 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
       username: true,
       nickname: true,
       avatarEmoji: true,
+      avatarUrl: true,
       phoneBound: true,
       kycStatus: true,
+      pwaInstalled: true,
     },
   });
   return u ?? null;
@@ -119,4 +146,14 @@ export async function userIdByPhone(phone: string): Promise<string | null> {
     columns: { id: true },
   });
   return u?.id ?? null;
+}
+
+/** Set a new password (post OTP-verified reset). Revokes existing sessions. */
+export async function setUserPassword(userId: string, newPassword: string): Promise<void> {
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await db.update(s.users).set({ passwordHash }).where(eq(s.users.id, userId));
+  await db
+    .update(s.sessions)
+    .set({ revokedAt: new Date() })
+    .where(and(eq(s.sessions.userId, userId), isNull(s.sessions.revokedAt)));
 }

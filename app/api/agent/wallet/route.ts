@@ -8,14 +8,10 @@ import { getAgentFromRequest } from '@/lib/agent-auth';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+class InsufficientBalanceError extends Error {}
+
 const DEPOSIT_METHODS = ['paypal_pyusd', 'cashapp_usdc', 'bitcoin', 'bitcoin_lightning'] as const;
-const WITHDRAW_METHODS = [
-  'paypal_pyusd',
-  'cashapp_usdc',
-  'bitcoin',
-  'bank_card',
-  'ach',
-] as const;
+const WITHDRAW_METHODS = ['paypal_pyusd', 'cashapp_usdc', 'bitcoin', 'bank_card', 'ach'] as const;
 
 /** GET /api/agent/wallet — balances, settings, invite link, funding logs + daily report. */
 export async function GET(req: Request) {
@@ -88,7 +84,10 @@ export async function PUT(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (agent.type !== 'store') {
-    return NextResponse.json({ error: 'Only the store account can manage the wallet' }, { status: 403 });
+    return NextResponse.json(
+      { error: 'Only the store account can manage the wallet' },
+      { status: 403 }
+    );
   }
 
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);
@@ -101,8 +100,7 @@ export async function PUT(req: Request) {
   const patch: Partial<typeof s.storeSettings.$inferInsert> = { updatedAt: new Date() };
   if (typeof body.storeName === 'string') patch.storeName = body.storeName.slice(0, 20);
   if (body.dailyMaxRedeem != null) patch.dailyMaxRedeem = String(Number(body.dailyMaxRedeem));
-  if (body.dailyMaxWithdraw != null)
-    patch.dailyMaxWithdraw = String(Number(body.dailyMaxWithdraw));
+  if (body.dailyMaxWithdraw != null) patch.dailyMaxWithdraw = String(Number(body.dailyMaxWithdraw));
   if (body.phoneBindRewardSc != null)
     patch.phoneBindRewardSc = String(Number(body.phoneBindRewardSc));
   if (typeof body.logoUrl === 'string') {
@@ -131,37 +129,43 @@ export async function POST(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (agent.type !== 'store') {
-    return NextResponse.json({ error: 'Only the store account can manage the wallet' }, { status: 403 });
+    return NextResponse.json(
+      { error: 'Only the store account can manage the wallet' },
+      { status: 403 }
+    );
   }
 
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);
   const action = body.action;
 
   if (action === 'clear_tips') {
-    const [store] = await db
-      .select({ tips: s.agents.tipsBalance })
-      .from(s.agents)
-      .where(eq(s.agents.id, agent.storeId));
-    const tips = Number(store?.tips ?? 0);
-    if (tips > 0) {
-      await db.transaction(async (tx) => {
-        await tx
-          .update(s.agents)
-          .set({
-            onlineBalance: sql`${s.agents.onlineBalance} + ${tips}`,
-            tipsBalance: '0',
-          })
-          .where(eq(s.agents.id, agent.storeId));
-        await tx.insert(s.agentTransactions).values({
-          agentId: agent.storeId,
-          type: 'transfer',
-          amount: String(tips),
-          remark: 'Tips cleared to online balance',
-          status: 'completed',
-        });
+    // Lock the row for the life of the transaction so a concurrent clear_tips
+    // (double-click, two tabs) can't both read the same pre-clear tips value.
+    const cleared = await db.transaction(async (tx) => {
+      const [store] = await tx
+        .select({ tips: s.agents.tipsBalance })
+        .from(s.agents)
+        .where(eq(s.agents.id, agent.storeId))
+        .for('update');
+      const tips = Number(store?.tips ?? 0);
+      if (tips <= 0) return 0;
+      await tx
+        .update(s.agents)
+        .set({
+          onlineBalance: sql`${s.agents.onlineBalance} + ${tips}`,
+          tipsBalance: '0',
+        })
+        .where(eq(s.agents.id, agent.storeId));
+      await tx.insert(s.agentTransactions).values({
+        agentId: agent.storeId,
+        type: 'transfer',
+        amount: String(tips),
+        remark: 'Tips cleared to online balance',
+        status: 'completed',
       });
-    }
-    return NextResponse.json({ ok: true, cleared: tips });
+      return tips;
+    });
+    return NextResponse.json({ ok: true, cleared });
   }
 
   if (action === 'cancel') {
@@ -202,12 +206,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
   }
 
-  const [store] = await db
-    .select({ balance: s.agents.onlineBalance })
-    .from(s.agents)
-    .where(eq(s.agents.id, agent.storeId));
-  const balance = Number(store.balance);
-
   if (action === 'deposit') {
     if (amount < 50) {
       return NextResponse.json({ error: 'Minimum deposit is 50 USD' }, { status: 400 });
@@ -216,12 +214,16 @@ export async function POST(req: Request) {
       ? (body.method as (typeof DEPOSIT_METHODS)[number])
       : null;
     if (!method) return NextResponse.json({ error: 'Select a payment method' }, { status: 400 });
+    const [store] = await db
+      .select({ balance: s.agents.onlineBalance })
+      .from(s.agents)
+      .where(eq(s.agents.id, agent.storeId));
     await db.insert(s.agentTransactions).values({
       agentId: agent.storeId,
       type: 'deposit',
       method,
       amount: String(amount),
-      balanceBefore: String(balance),
+      balanceBefore: String(store.balance),
       status: 'pending',
     });
     return NextResponse.json({ ok: true });
@@ -231,28 +233,41 @@ export async function POST(req: Request) {
     const method = WITHDRAW_METHODS.includes(body.method as (typeof WITHDRAW_METHODS)[number])
       ? (body.method as (typeof WITHDRAW_METHODS)[number])
       : null;
-    if (balance < amount) {
-      return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
-    }
     // Flat fee up to $2 on PYUSD/USDC rails (mirrors production fee badges).
     const fee = method === 'paypal_pyusd' || method === 'cashapp_usdc' ? Math.min(2, amount) : 0;
-    await db.transaction(async (tx) => {
-      await tx.insert(s.agentTransactions).values({
-        agentId: agent.storeId,
-        type: 'withdraw',
-        method,
-        amount: String(amount),
-        fee: String(fee),
-        address: typeof body.address === 'string' ? body.address : null,
-        balanceBefore: String(balance),
-        balanceAfter: String(balance - amount),
-        status: 'pending',
+    try {
+      await db.transaction(async (tx) => {
+        // Lock the balance row for the life of the transaction so a concurrent
+        // withdraw/transfer can't pass the same stale balance check twice.
+        const [row] = await tx
+          .select({ balance: s.agents.onlineBalance })
+          .from(s.agents)
+          .where(eq(s.agents.id, agent.storeId))
+          .for('update');
+        const balance = Number(row.balance);
+        if (balance < amount) throw new InsufficientBalanceError();
+        await tx.insert(s.agentTransactions).values({
+          agentId: agent.storeId,
+          type: 'withdraw',
+          method,
+          amount: String(amount),
+          fee: String(fee),
+          address: typeof body.address === 'string' ? body.address : null,
+          balanceBefore: String(balance),
+          balanceAfter: String(balance - amount),
+          status: 'pending',
+        });
+        await tx
+          .update(s.agents)
+          .set({ onlineBalance: sql`${s.agents.onlineBalance} - ${amount}` })
+          .where(eq(s.agents.id, agent.storeId));
       });
-      await tx
-        .update(s.agents)
-        .set({ onlineBalance: sql`${s.agents.onlineBalance} - ${amount}` })
-        .where(eq(s.agents.id, agent.storeId));
-    });
+    } catch (err) {
+      if (err instanceof InsufficientBalanceError) {
+        return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
+      }
+      throw err;
+    }
     return NextResponse.json({ ok: true });
   }
 
@@ -268,28 +283,41 @@ export async function POST(req: Request) {
   if (!target || target.id === agent.storeId) {
     return NextResponse.json({ error: 'Recipient agent not found in your store' }, { status: 404 });
   }
-  if (balance < amount) {
-    return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
-  }
-  await db.transaction(async (tx) => {
-    await tx.insert(s.agentTransactions).values({
-      agentId: agent.storeId,
-      type: 'transfer',
-      amount: String(amount),
-      counterpartyAgentId: target.id,
-      remark: typeof body.remark === 'string' ? body.remark.slice(0, 100) : null,
-      balanceBefore: String(balance),
-      balanceAfter: String(balance - amount),
-      status: 'completed',
+  try {
+    await db.transaction(async (tx) => {
+      // Lock the sender's balance row so a concurrent withdraw/transfer can't
+      // pass the same stale balance check twice.
+      const [row] = await tx
+        .select({ balance: s.agents.onlineBalance })
+        .from(s.agents)
+        .where(eq(s.agents.id, agent.storeId))
+        .for('update');
+      const balance = Number(row.balance);
+      if (balance < amount) throw new InsufficientBalanceError();
+      await tx.insert(s.agentTransactions).values({
+        agentId: agent.storeId,
+        type: 'transfer',
+        amount: String(amount),
+        counterpartyAgentId: target.id,
+        remark: typeof body.remark === 'string' ? body.remark.slice(0, 100) : null,
+        balanceBefore: String(balance),
+        balanceAfter: String(balance - amount),
+        status: 'completed',
+      });
+      await tx
+        .update(s.agents)
+        .set({ onlineBalance: sql`${s.agents.onlineBalance} - ${amount}` })
+        .where(eq(s.agents.id, agent.storeId));
+      await tx
+        .update(s.agents)
+        .set({ onlineBalance: sql`${s.agents.onlineBalance} + ${amount}` })
+        .where(eq(s.agents.id, target.id));
     });
-    await tx
-      .update(s.agents)
-      .set({ onlineBalance: sql`${s.agents.onlineBalance} - ${amount}` })
-      .where(eq(s.agents.id, agent.storeId));
-    await tx
-      .update(s.agents)
-      .set({ onlineBalance: sql`${s.agents.onlineBalance} + ${amount}` })
-      .where(eq(s.agents.id, target.id));
-  });
+  } catch (err) {
+    if (err instanceof InsufficientBalanceError) {
+      return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
+    }
+    throw err;
+  }
   return NextResponse.json({ ok: true });
 }

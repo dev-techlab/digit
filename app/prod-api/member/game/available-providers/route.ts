@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import * as s from '@/lib/db/schema';
 
@@ -20,10 +20,12 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   const providerType = new URL(req.url).searchParams.get('providerType');
 
-  const where =
+  const where = and(
+    eq(s.gameProviders.status, 1),
     providerType === 'SC' || providerType === 'GC'
       ? eq(s.gameProviders.providerType, providerType)
-      : undefined;
+      : undefined
+  );
 
   const providers = await db
     .select()

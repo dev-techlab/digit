@@ -1,8 +1,15 @@
 import type { Job } from 'pg-boss';
+import { and, eq, isNotNull, lte } from 'drizzle-orm';
 import { getBoss } from './boss';
 import { deliver } from '@/lib/mail/deliver';
 import type { MailPayload } from '@/lib/mail/types';
 import { syncGamePlatforms } from '@/lib/provider-api';
+import { db } from '@/lib/db';
+import * as s from '@/lib/db/schema';
+
+// Referral commissions mature this long after signup before they're settled
+// (pending -> claimed) — gives a window to reverse fraudulent signups.
+const REFERRAL_SETTLE_DELAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Job registry. Cron-scheduled jobs from DB_DIAGRAM §9 plus on-demand queues.
@@ -30,7 +37,16 @@ export const JOBS: JobDef[] = [
     name: 'bonus.daily-reset',
     cron: '0 0 * * *',
     handler: async () => {
-      // TODO: reset daily user_bonus_claims + set next_available_at
+      await db
+        .update(s.userBonusClaims)
+        .set({ status: 'claimable', nextAvailableAt: null })
+        .where(
+          and(
+            eq(s.userBonusClaims.status, 'claimed'),
+            isNotNull(s.userBonusClaims.nextAvailableAt),
+            lte(s.userBonusClaims.nextAvailableAt, new Date())
+          )
+        );
     },
   },
   {
@@ -51,7 +67,11 @@ export const JOBS: JobDef[] = [
     name: 'referral.settle',
     cron: '0 1 * * *',
     handler: async () => {
-      // TODO: move eligible referral_commissions pending → claimable
+      const cutoff = new Date(Date.now() - REFERRAL_SETTLE_DELAY_MS);
+      await db
+        .update(s.referralCommissions)
+        .set({ status: 'claimed' })
+        .where(and(eq(s.referralCommissions.status, 'pending'), lte(s.referralCommissions.joinedAt, cutoff)));
     },
   },
   {

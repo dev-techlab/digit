@@ -1,6 +1,6 @@
 import 'server-only';
 import { cookies } from 'next/headers';
-import { eq, asc, desc } from 'drizzle-orm';
+import { and, eq, asc, desc } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import * as s from '@/lib/db/schema';
 import { userIdForToken } from '@/lib/user-service';
@@ -45,7 +45,7 @@ export async function getProviders(providerType: 'SC' | 'GC'): Promise<GameProvi
   const rows = await db
     .select()
     .from(s.gameProviders)
-    .where(eq(s.gameProviders.providerType, providerType))
+    .where(and(eq(s.gameProviders.providerType, providerType), eq(s.gameProviders.status, 1)))
     .orderBy(asc(s.gameProviders.sort));
 
   const tiers = await db

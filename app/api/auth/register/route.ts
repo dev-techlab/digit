@@ -18,12 +18,13 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);
   const username = typeof body.username === 'string' ? body.username : undefined;
   const password = typeof body.password === 'string' ? body.password : undefined;
+  const inviteCode = typeof body.inviteCode === 'string' ? body.inviteCode : undefined;
   if (password != null && password.length < 6) {
     return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
   }
 
   try {
-    const created = await registerUser({ username, password });
+    const created = await registerUser({ username, password, inviteCode });
     const { token } = await createUserSession(created.id, {
       userAgent: req.headers.get('user-agent') ?? undefined,
     });

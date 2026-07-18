@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { User, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { User, Lock, Phone, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { AuthModalFrame } from './AuthModalFrame';
 import { Button } from '@/components/ui/Button';
 import { IconInput } from '@/components/ui/IconInput';
@@ -10,16 +10,117 @@ import { Tabs } from '@/components/ui/Tabs';
 import { useAuth } from '@/lib/auth-context';
 import { useAuthModal } from '@/lib/auth-modal-context';
 
+const RESEND_COOLDOWN_S = 60;
+
 export function LoginModal() {
   const { mode, close, open } = useAuthModal();
-  const { login } = useAuth();
+  const { setUser } = useAuth();
   const [method, setMethod] = useState('account');
   const [showPassword, setShowPassword] = useState(false);
 
-  const submit = () => {
-    login();
-    close();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
+  const [code, setCode] = useState('');
+  const [cooldown, setCooldown] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const reset = () => {
+    setUsername('');
+    setPassword('');
+    setPhone('');
+    setCode('');
+    setError(null);
   };
+
+  const submitAccount = async () => {
+    if (!username.trim() || !password) {
+      setError('Enter your username and password.');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim(), password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? 'Login failed');
+      setUser(data.user);
+      reset();
+      close();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendCode = async () => {
+    if (!phone.trim()) {
+      setError('Enter your phone number.');
+      return;
+    }
+    setSendingCode(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/auth/otp/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ destination: phone.trim(), purpose: 'login' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? 'Failed to send code');
+      setCooldown(RESEND_COOLDOWN_S);
+      const timer = setInterval(() => {
+        setCooldown((c) => {
+          if (c <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return c - 1;
+        });
+      }, 1000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to send code');
+    } finally {
+      setSendingCode(false);
+    }
+  };
+
+  const submitPhone = async () => {
+    if (!phone.trim() || !code.trim()) {
+      setError('Enter your phone number and verification code.');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/auth/otp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ destination: phone.trim(), purpose: 'login', code: code.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? 'Verification failed');
+      if (!data.user) {
+        throw new Error('No account found for this phone number. Try registering instead.');
+      }
+      setUser(data.user);
+      reset();
+      close();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Verification failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submit = () => (method === 'account' ? submitAccount() : submitPhone());
 
   return (
     <AuthModalFrame open={mode === 'login'} onClose={close} tagline="Welcome back! Ready to play?">
@@ -33,16 +134,24 @@ export function LoginModal() {
           { value: 'phone', label: 'Phone' },
         ]}
         value={method}
-        onChange={setMethod}
+        onChange={(v) => {
+          setMethod(v);
+          setError(null);
+        }}
       />
 
       <div className="mt-5 space-y-4">
+        {error && <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
+
         {method === 'account' ? (
           <>
             <IconInput
               icon={<User size={16} />}
               label="Username"
               placeholder="Please enter username"
+              autoComplete="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
             />
             <IconInput
               icon={<Lock size={16} />}
@@ -57,6 +166,9 @@ export function LoginModal() {
               }
               type={showPassword ? 'text' : 'password'}
               placeholder="Please enter password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               trailing={
                 <button
                   onClick={() => setShowPassword((v) => !v)}
@@ -70,10 +182,14 @@ export function LoginModal() {
         ) : (
           <>
             <IconInput
-              icon={<User size={16} />}
+              icon={<Phone size={16} />}
               label="Phone Number"
               placeholder="Phone Number"
+              type="tel"
               inputMode="tel"
+              autoComplete="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
             />
             <div>
               <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--text-secondary)]">
@@ -84,18 +200,26 @@ export function LoginModal() {
                   icon={<Lock size={16} />}
                   placeholder="Verification code"
                   className="flex-1"
+                  autoComplete="one-time-code"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
                 />
-                <Button variant="secondary" className="whitespace-nowrap px-4">
-                  Send code
+                <Button
+                  variant="secondary"
+                  className="whitespace-nowrap px-4"
+                  disabled={sendingCode || cooldown > 0}
+                  onClick={sendCode}
+                >
+                  {cooldown > 0 ? `Resend (${cooldown}s)` : sendingCode ? 'Sending…' : 'Send code'}
                 </Button>
               </div>
             </div>
           </>
         )}
 
-        <Button fullWidth onClick={submit} className="mt-2">
-          Login
-          <ArrowRight size={16} />
+        <Button fullWidth onClick={submit} disabled={loading} className="mt-2">
+          {loading ? 'Logging in…' : 'Login'}
+          {!loading && <ArrowRight size={16} />}
         </Button>
 
         <div className="h-px bg-[var(--divider-color)]" />
@@ -113,7 +237,13 @@ export function LoginModal() {
 
         <p className="text-center text-sm text-[var(--text-secondary)]">
           Don&apos;t have an account?{' '}
-          <button onClick={() => open('register')} className="font-semibold text-brand">
+          <button
+            onClick={() => {
+              reset();
+              open('register');
+            }}
+            className="font-semibold text-brand"
+          >
             Register
           </button>
         </p>

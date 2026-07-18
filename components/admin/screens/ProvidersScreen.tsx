@@ -202,14 +202,21 @@ export function ProvidersScreen() {
   };
 
   const remove = async (p: Provider) => {
-    if (
-      !window.confirm(
-        `Permanently delete "${p.name}"? This also removes its deposit tiers and any linked member accounts.`
-      )
-    )
-      return;
-    await api(`/api/admin/providers?id=${p.id}`, { method: 'DELETE' });
-    void load();
+    try {
+      const preview = await api<{ requiresConfirmation: true; linkedAccounts: number }>(
+        `/api/admin/providers?id=${p.id}`,
+        { method: 'DELETE' }
+      );
+      const blastRadius =
+        preview.linkedAccounts > 0
+          ? `This will permanently delete ${preview.linkedAccounts} player account${preview.linkedAccounts === 1 ? '' : 's'} (their game credentials and balance for this provider), plus its deposit tiers. This cannot be undone.`
+          : 'This also removes its deposit tiers. No player accounts are currently linked to it. This cannot be undone.';
+      if (!window.confirm(`Permanently delete "${p.name}"?\n\n${blastRadius}`)) return;
+      await api(`/api/admin/providers?id=${p.id}&confirm=true`, { method: 'DELETE' });
+      void load();
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'Failed to delete provider.');
+    }
   };
 
   return (
@@ -285,10 +292,18 @@ export function ProvidersScreen() {
       >
         {draft && (
           <div className="space-y-5">
-            {error && <p className="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">{error}</p>}
+            {error && (
+              <p className="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">{error}</p>
+            )}
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Field label="Provider ID" required hint={draft.isNew ? 'Numeric, must match upstream id if syncing later.' : 'Immutable.'}>
+              <Field
+                label="Provider ID"
+                required
+                hint={
+                  draft.isNew ? 'Numeric, must match upstream id if syncing later.' : 'Immutable.'
+                }
+              >
                 <TextInput
                   type="number"
                   value={draft.id}
@@ -314,7 +329,9 @@ export function ProvidersScreen() {
               <Field label="Provider Type" required>
                 <Select
                   value={draft.providerType}
-                  onChange={(e) => setDraft({ ...draft, providerType: e.target.value as 'SC' | 'GC' })}
+                  onChange={(e) =>
+                    setDraft({ ...draft, providerType: e.target.value as 'SC' | 'GC' })
+                  }
                 >
                   <option value="SC">SC — Sweepstakes</option>
                   <option value="GC">GC — Gold Coins</option>
@@ -343,7 +360,10 @@ export function ProvidersScreen() {
               </Field>
               <Field label="Active">
                 <div className="pt-1.5">
-                  <Toggle checked={draft.status} onChange={(v) => setDraft({ ...draft, status: v })} />
+                  <Toggle
+                    checked={draft.status}
+                    onChange={(v) => setDraft({ ...draft, status: v })}
+                  />
                 </div>
               </Field>
             </div>

@@ -1,13 +1,29 @@
 import Link from 'next/link';
-import { CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, HelpCircle } from 'lucide-react';
 import { APP_NAME } from '@/lib/constants';
+import { db } from '@/lib/db';
 
 export const metadata = { title: `Payment Result · ${APP_NAME}` };
 
-function resolveStatus(code: string): 'success' | 'failed' | 'pending' {
-  if (code.toLowerCase().includes('fail')) return 'failed';
-  if (code.toLowerCase().includes('pending')) return 'pending';
-  return 'success';
+type Status = 'success' | 'failed' | 'pending' | 'unknown';
+
+/** Resolve the real order/transaction behind this reference — never guess from the URL text. */
+async function resolveStatus(code: string): Promise<Status> {
+  const order = await db.query.orders.findFirst({ where: (t, { eq }) => eq(t.orderNo, code) });
+  if (order) {
+    if (order.status === 'completed') return 'success';
+    if (order.status === 'pending') return 'pending';
+    return 'failed'; // failed | cancelled
+  }
+
+  const tx = await db.query.transactions.findFirst({ where: (t, { eq }) => eq(t.id, code) });
+  if (tx) {
+    if (tx.status === 'completed') return 'success';
+    if (tx.status === 'pending') return 'pending';
+    return 'failed'; // failed | cancelled
+  }
+
+  return 'unknown';
 }
 
 const CONTENT = {
@@ -32,10 +48,17 @@ const CONTENT = {
     title: 'Payment Failed',
     body: 'Something went wrong processing your payment. No funds were deducted.',
   },
+  unknown: {
+    icon: HelpCircle,
+    color: 'text-[var(--text-secondary)]',
+    bg: 'bg-[var(--divider-color)]',
+    title: 'Payment Not Found',
+    body: "We couldn't find a payment matching this reference. If funds left your account, please contact support.",
+  },
 } as const;
 
-export default function PaymentResultPage({ params }: { params: { code: string } }) {
-  const status = resolveStatus(params.code);
+export default async function PaymentResultPage({ params }: { params: { code: string } }) {
+  const status = await resolveStatus(params.code);
   const { icon: Icon, color, bg, title, body } = CONTENT[status];
 
   return (

@@ -1,7 +1,17 @@
 'use client';
 
-import { createContext, useContext, useMemo, useState, ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  ReactNode,
+} from 'react';
+import { useRouter } from 'next/navigation';
 
+/** Player profile as returned by /api/auth/{me,login,register,otp/verify} (lib/user-service.ts#getUserProfile). */
 export interface MockUser {
   username: string;
   nickname: string;
@@ -14,37 +24,78 @@ export interface MockUser {
 
 interface AuthContextValue {
   isAuthenticated: boolean;
+  /** True until the initial /api/auth/me check resolves. */
+  isLoading: boolean;
   user: MockUser | null;
-  login: () => void;
-  logout: () => void;
+  /** Called by Login/Register/OTP-verify modals with the profile the API just returned. */
+  setUser: (user: MockUser) => void;
+  logout: () => Promise<void>;
+  /**
+   * Local-only optimistic patch (avatar edit, bind-phone, KYC/PWA completion
+   * flows aren't wired to a persistence endpoint yet — this matches their
+   * prior mock behavior). A page refresh reflects real DB state, not this.
+   */
   updateProfile: (patch: Partial<MockUser>) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const DEMO_USER: MockUser = {
-  username: 'player_2481',
-  nickname: 'Lucky Player',
-  avatarUrl: null,
-  avatarEmoji: '🎰',
-  phoneBound: false,
-  kycStatus: 'unverified',
-  pwaInstalled: false,
-};
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<MockUser>(DEMO_USER);
+  const router = useRouter();
+  const [user, setUserState] = useState<MockUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/auth/me')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled) setUserState(data?.user ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setUserState(null);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Login/register/OTP-verify hand us the freshly-authenticated profile, but
+  // wallet/orders/bonus/etc. are Server-Component data keyed off the session
+  // cookie — refresh() re-renders them now that the cookie is actually set,
+  // instead of leaving them showing whatever an anonymous visitor sees until
+  // the next full navigation.
+  const setUser = useCallback(
+    (u: MockUser) => {
+      setUserState(u);
+      router.refresh();
+    },
+    [router]
+  );
+
+  const logout = useCallback(async () => {
+    setUserState(null);
+    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    router.refresh();
+  }, [router]);
+
+  const updateProfile = useCallback((patch: Partial<MockUser>) => {
+    setUserState((prev) => (prev ? { ...prev, ...patch } : prev));
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      isAuthenticated,
-      user: isAuthenticated ? user : null,
-      login: () => setIsAuthenticated(true),
-      logout: () => setIsAuthenticated(false),
-      updateProfile: (patch) => setUser((prev) => ({ ...prev, ...patch })),
+      isAuthenticated: !!user,
+      isLoading,
+      user,
+      setUser,
+      logout,
+      updateProfile,
     }),
-    [isAuthenticated, user]
+    [user, isLoading, setUser, logout, updateProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

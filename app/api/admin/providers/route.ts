@@ -1,30 +1,36 @@
 import { NextResponse } from 'next/server';
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import * as s from '@/lib/db/schema';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission, PermissionError } from '@/lib/rbac-core';
+import { clientIp, logAdminAction } from '@/lib/audit-log';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
-const int = (v: unknown, fallback = 0) => (Number.isFinite(Number(v)) ? Math.trunc(Number(v)) : fallback);
+const int = (v: unknown, fallback = 0) =>
+  Number.isFinite(Number(v)) ? Math.trunc(Number(v)) : fallback;
 const bool = (v: unknown, fallback = false) => (typeof v === 'boolean' ? v : fallback);
 
 /** Resolve + permission-check the caller; returns the adminId or a ready-to-return error response. */
-async function authorize(req: Request, permKey: string) {
+async function authorize(
+  req: Request,
+  permKey: string
+): Promise<{ adminId: string; error: undefined } | { adminId: undefined; error: NextResponse }> {
   const adminId = await getAdminIdFromRequest(req);
-  if (!adminId) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+  if (!adminId)
+    return { adminId: undefined, error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
   try {
     await requirePermission(adminId, permKey);
   } catch (e) {
     if (e instanceof PermissionError) {
-      return { error: NextResponse.json({ error: e.message }, { status: e.status }) };
+      return { adminId: undefined, error: NextResponse.json({ error: e.message }, { status: e.status }) };
     }
     throw e;
   }
-  return { adminId };
+  return { adminId, error: undefined };
 }
 
 /** GET /api/admin/providers — full provider catalog for management. */
@@ -41,7 +47,7 @@ export async function GET(req: Request) {
 
 /** POST /api/admin/providers — create a new provider row. */
 export async function POST(req: Request) {
-  const { error } = await authorize(req, 'providers.write');
+  const { error, adminId } = await authorize(req, 'providers.write');
   if (error) return error;
 
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);
@@ -52,12 +58,15 @@ export async function POST(req: Request) {
   const iconUrl = str(body.iconUrl);
   const providerType = body.providerType === 'GC' ? 'GC' : body.providerType === 'SC' ? 'SC' : '';
 
-  if (!Number.isFinite(id)) return NextResponse.json({ error: 'A numeric id is required' }, { status: 400 });
+  if (!Number.isFinite(id))
+    return NextResponse.json({ error: 'A numeric id is required' }, { status: 400 });
   if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 });
   if (!providerCode) return NextResponse.json({ error: 'providerCode required' }, { status: 400 });
-  if (!launchUrlTemplate) return NextResponse.json({ error: 'launchUrlTemplate required' }, { status: 400 });
+  if (!launchUrlTemplate)
+    return NextResponse.json({ error: 'launchUrlTemplate required' }, { status: 400 });
   if (!iconUrl) return NextResponse.json({ error: 'iconUrl required' }, { status: 400 });
-  if (!providerType) return NextResponse.json({ error: 'providerType must be SC or GC' }, { status: 400 });
+  if (!providerType)
+    return NextResponse.json({ error: 'providerType must be SC or GC' }, { status: 400 });
 
   try {
     const [row] = await db
@@ -82,6 +91,14 @@ export async function POST(req: Request) {
         canChangePassword: int(body.canChangePassword, 1),
       })
       .returning();
+    await logAdminAction({
+      adminId,
+      action: 'provider.create',
+      entityType: 'game_provider',
+      entityId: String(row.id),
+      changes: row,
+      ipAddress: clientIp(req),
+    });
     return NextResponse.json({ provider: row }, { status: 201 });
   } catch {
     return NextResponse.json({ error: 'A provider with that id already exists' }, { status: 409 });
@@ -90,7 +107,7 @@ export async function POST(req: Request) {
 
 /** PUT /api/admin/providers — update an existing provider ({ id, ...fields }). */
 export async function PUT(req: Request) {
-  const { error } = await authorize(req, 'providers.write');
+  const { error, adminId } = await authorize(req, 'providers.write');
   if (error) return error;
 
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);
@@ -102,7 +119,8 @@ export async function PUT(req: Request) {
   if (str(body.providerCode)) set.providerCode = str(body.providerCode);
   if (str(body.launchUrlTemplate)) set.launchUrlTemplate = str(body.launchUrlTemplate);
   if (str(body.iconUrl)) set.iconUrl = str(body.iconUrl);
-  if (body.providerType === 'SC' || body.providerType === 'GC') set.providerType = body.providerType;
+  if (body.providerType === 'SC' || body.providerType === 'GC')
+    set.providerType = body.providerType;
   if (body.status != null) set.status = int(body.status);
   if (body.sort != null) set.sort = int(body.sort);
   if (body.createType != null) set.createType = int(body.createType);
@@ -116,23 +134,69 @@ export async function PUT(req: Request) {
   if (body.canChangePassword != null) set.canChangePassword = int(body.canChangePassword);
 
   try {
-    const [row] = await db.update(s.gameProviders).set(set).where(eq(s.gameProviders.id, id)).returning();
+    const [row] = await db
+      .update(s.gameProviders)
+      .set(set)
+      .where(eq(s.gameProviders.id, id))
+      .returning();
     if (!row) return NextResponse.json({ error: 'not found' }, { status: 404 });
+    await logAdminAction({
+      adminId,
+      action: 'provider.update',
+      entityType: 'game_provider',
+      entityId: String(id),
+      changes: set,
+      ipAddress: clientIp(req),
+    });
     return NextResponse.json({ provider: row });
   } catch {
     return NextResponse.json({ error: 'Update failed' }, { status: 409 });
   }
 }
 
-/** DELETE /api/admin/providers?id=... — permanently remove a provider (and its deposit tiers/accounts, cascade). */
+/**
+ * DELETE /api/admin/providers?id=... — permanently remove a provider (and its
+ * deposit tiers/accounts, cascade).
+ *
+ * Two-phase: without `&confirm=true` this only reports how many player
+ * accounts (`user_provider_accounts` — real player game credentials/balance
+ * for this provider) would be destroyed, and deletes nothing. The caller
+ * must re-request with `confirm=true` to actually perform the (irreversible)
+ * delete — this lets the UI show the real blast radius before committing,
+ * instead of a generic "are you sure?" with no idea what it destroys.
+ */
 export async function DELETE(req: Request) {
-  const { error } = await authorize(req, 'providers.write');
+  const { error, adminId } = await authorize(req, 'providers.write');
   if (error) return error;
 
-  const id = int(new URL(req.url).searchParams.get('id'), NaN);
+  const url = new URL(req.url);
+  const id = int(url.searchParams.get('id'), NaN);
   if (!Number.isFinite(id)) return NextResponse.json({ error: 'id required' }, { status: 400 });
+
+  const [existing] = await db
+    .select({ id: s.gameProviders.id })
+    .from(s.gameProviders)
+    .where(eq(s.gameProviders.id, id));
+  if (!existing) return NextResponse.json({ error: 'not found' }, { status: 404 });
+
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(s.userProviderAccounts)
+    .where(eq(s.userProviderAccounts.providerId, id));
+
+  if (url.searchParams.get('confirm') !== 'true') {
+    return NextResponse.json({ requiresConfirmation: true, linkedAccounts: count });
+  }
 
   const [row] = await db.delete(s.gameProviders).where(eq(s.gameProviders.id, id)).returning();
   if (!row) return NextResponse.json({ error: 'not found' }, { status: 404 });
-  return NextResponse.json({ ok: true });
+  await logAdminAction({
+    adminId,
+    action: 'provider.delete',
+    entityType: 'game_provider',
+    entityId: String(id),
+    changes: { provider: row, linkedAccountsRemoved: count },
+    ipAddress: clientIp(req),
+  });
+  return NextResponse.json({ ok: true, linkedAccountsRemoved: count });
 }

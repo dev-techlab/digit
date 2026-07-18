@@ -27,6 +27,27 @@ const FAQS = [
 export function HelpCenterForm() {
   const [submitted, setSubmitted] = useState(false);
   const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/support-tickets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? 'Failed to submit ticket');
+      setSubmitted(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to submit ticket');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -58,8 +79,9 @@ export function HelpCenterForm() {
               rows={3}
               className="w-full rounded-md border border-[var(--input-border)] bg-[var(--input-bg)] px-4 py-3 text-sm outline-none focus:border-brand"
             />
-            <Button className="mt-3" disabled={!message} onClick={() => setSubmitted(true)}>
-              Submit Ticket
+            {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+            <Button className="mt-3" disabled={!message || submitting} onClick={submit}>
+              {submitting ? 'Submitting…' : 'Submit Ticket'}
             </Button>
           </>
         )}

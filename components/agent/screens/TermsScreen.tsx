@@ -5,6 +5,7 @@ import { Info } from 'lucide-react';
 import { api, Btn, Card } from '../ui';
 import { RichTextEditor } from '../RichTextEditor';
 import { cn } from '@/lib/cn';
+import { sanitizeHtml } from '@/lib/sanitize-html';
 
 export function TermsScreen() {
   const [terms, setTerms] = useState<{ en: string | null; es: string | null } | null>(null);
@@ -98,7 +99,9 @@ export function TermsScreen() {
           {content ? (
             <div
               className="[&_a]:text-blue-500 [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-slate-200 [&_blockquote]:pl-3 [&_blockquote]:text-slate-500 [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:mt-3 [&_h3]:text-base [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6"
-              dangerouslySetInnerHTML={{ __html: content }}
+              // Sanitized again here (not just on save) so content stored before
+              // this fix, or written directly to the DB, can't execute either.
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
             />
           ) : (
             <p className="text-slate-300">Nothing to preview yet.</p>

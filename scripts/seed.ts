@@ -34,6 +34,9 @@ function seedAdminPassword(): { password: string; rotate: boolean } {
     console.warn(`  ⚠ SEED_ADMIN_PASSWORD unset — generated admin password: ${generated}`);
     return { password: generated, rotate: true };
   }
+  console.warn(
+    `  ⚠ SEED_ADMIN_PASSWORD unset and NODE_ENV=${JSON.stringify(process.env.NODE_ENV ?? undefined)} (not "production") — seeding the well-known dev password admin1234. Set SEED_ADMIN_PASSWORD before seeding any shared/staging environment.`
+  );
   return { password: 'admin1234', rotate: false }; // dev only
 }
 

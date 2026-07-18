@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {
   Home,
   Gamepad2,
+  Layers,
   Lock,
   Power,
   X,
@@ -27,6 +28,7 @@ export interface AdminMe {
 const TITLES: Record<string, string> = {
   dashboard: 'Dashboard',
   providers: 'Providers',
+  platforms: 'Platforms',
 };
 
 const AdminCtx = createContext<{ me: AdminMe } | null>(null);
@@ -124,6 +126,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     <nav className="flex-1 space-y-0.5 overflow-y-auto px-2.5 pb-4">
       <NavItem icon={Home} label="Dashboard" href="/admin/dashboard" />
       <NavItem icon={Gamepad2} label="Providers" href="/admin/providers" />
+      <NavItem icon={Layers} label="Platforms" href="/admin/platforms" />
       <div className="my-3 border-t border-slate-100" />
       <NavItem icon={Lock} label="Change Password" href="/admin/forgot-password" />
       <NavItem icon={Power} label="Logout" onClick={logout} />
@@ -197,7 +200,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          <div className="flex items-center gap-2 overflow-x-auto px-4 pt-3 sm:px-5 [scrollbar-width:none]">
+          <div className="flex items-center gap-2 overflow-x-auto px-4 pt-3 [scrollbar-width:none] sm:px-5">
             <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-blue-500 px-3 py-1.5 text-sm font-medium text-white">
               {title}
             </span>
