@@ -2,24 +2,24 @@
 
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { Mail, CheckCircle2 } from 'lucide-react';
+import { UserRound, CheckCircle2 } from 'lucide-react';
 import { APP_NAME } from '@/lib/constants';
 import { BrandLoader } from '@/components/shell/BrandLoader';
 
-export function AdminForgotPasswordView() {
-  const [email, setEmail] = useState('');
-  const [emailError, setEmailError] = useState(false);
+export function AgentForgotPasswordView() {
+  const [username, setUsername] = useState('');
+  const [usernameError, setUsernameError] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const isEmailValid = email.trim().length > 0;
-    setEmailError(!isEmailValid);
-    if (!isEmailValid) return;
+    const isUsernameValid = username.trim().length > 0;
+    setUsernameError(!isUsernameValid);
+    if (!isUsernameValid) return;
     // No password-reset backend exists yet — show a generic confirmation
-    // regardless of whether the email matches an admin, to avoid leaking
-    // which addresses have accounts.
+    // regardless of whether the username matches an agent, to avoid leaking
+    // which accounts exist.
     setBusy(true);
     setTimeout(() => {
       setBusy(false);
@@ -41,7 +41,7 @@ export function AdminForgotPasswordView() {
 
       <div className="relative z-10 my-6 w-full max-w-[440px] rounded-[24px] bg-white/95 p-6 shadow-[0_25px_70px_rgba(60,30,120,0.28)] sm:rounded-[28px] sm:p-8">
         <div className="flex justify-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 shadow-lg">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-green-400 to-green-600 shadow-lg">
             <span className="text-3xl font-semibold text-white">{APP_NAME[0]}</span>
           </div>
         </div>
@@ -49,7 +49,7 @@ export function AdminForgotPasswordView() {
         <div className="mt-4 text-center">
           <h1 className="text-2xl font-extrabold text-slate-700 sm:text-3xl">{APP_NAME}</h1>
           <p className="mt-1 text-sm text-slate-500 sm:text-base">
-            {submitted ? 'Check your email' : 'Reset your password'}
+            {submitted ? 'Check with your agent' : 'Reset your password'}
           </p>
         </div>
 
@@ -57,30 +57,32 @@ export function AdminForgotPasswordView() {
           <div className="mt-6 flex flex-col items-center gap-3 text-center sm:mt-8">
             <CheckCircle2 className="h-10 w-10 text-blue-500" strokeWidth={1.8} />
             <p className="text-sm text-slate-500 sm:text-base">
-              If an account exists for <span className="font-semibold text-slate-700">{email}</span>,
-              we&apos;ve sent instructions to reset the password.
+              If an account exists for{' '}
+              <span className="font-semibold text-slate-700">{username}</span>, your store admin
+              has been notified to reset the password.
             </p>
           </div>
         ) : (
           <form className="mt-6 sm:mt-8" onSubmit={handleSubmit} noValidate>
             <div
               className={`flex items-center gap-3 rounded-2xl border-2 bg-white p-2 shadow-sm transition focus-within:border-blue-400 sm:py-3 ${
-                emailError ? 'border-red-300' : 'border-slate-200'
+                usernameError ? 'border-red-300' : 'border-slate-200'
               }`}
             >
-              <Mail className="h-5 w-5 flex-shrink-0 text-slate-400" strokeWidth={1.8} />
+              <UserRound className="h-5 w-5 flex-shrink-0 text-slate-400" strokeWidth={1.8} />
               <input
-                type="email"
-                value={email}
+                type="text"
+                value={username}
                 onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (emailError) setEmailError(false);
+                  setUsername(e.target.value);
+                  if (usernameError) setUsernameError(false);
                 }}
-                placeholder="Email"
+                placeholder="Username"
+                autoComplete="username"
                 className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 sm:text-base"
               />
             </div>
-            {emailError && <p className="mt-1 text-xs text-red-400">Please enter your email</p>}
+            {usernameError && <p className="mt-1 text-xs text-red-400">Please enter Username</p>}
 
             <button
               type="submit"
@@ -93,7 +95,7 @@ export function AdminForgotPasswordView() {
 
         <p className="mt-6 text-center text-sm text-slate-500 sm:text-base">
           Remember your password?{' '}
-          <Link href="/admin/login" className="font-semibold text-blue-500 hover:underline">
+          <Link href="/agent/login" className="font-semibold text-blue-500 hover:underline">
             Login
           </Link>
         </p>

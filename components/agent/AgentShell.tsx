@@ -1,7 +1,8 @@
 'use client';
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   Home,
   Wallet,
@@ -34,25 +35,9 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { APP_NAME } from '@/lib/constants';
+import { BrandLoader } from '@/components/shell/BrandLoader';
 import { api } from './ui';
-import { DashboardScreen } from './screens/DashboardScreen';
-import { WalletScreen } from './screens/WalletScreen';
-import { GameSettingScreen } from './screens/GameSettingScreen';
-import { PlatformCatalogScreen } from './screens/PlatformCatalogScreen';
-import { AgentListScreen } from './screens/AgentListScreen';
-import { MemberScreen } from './screens/MemberScreen';
-import { KioskScreen } from './screens/KioskScreen';
-import { PromotionScreen } from './screens/PromotionScreen';
-import { StoreAdminScreen } from './screens/StoreAdminScreen';
-import { TransactionScreen } from './screens/TransactionScreen';
-import { CsConfigScreen } from './screens/CsConfigScreen';
-import { TermsScreen } from './screens/TermsScreen';
-import { PostersScreen } from './screens/PostersScreen';
-import { ChangePasswordScreen } from './screens/ChangePasswordScreen';
-import { MemberRewardsScreen } from './screens/MemberRewardsScreen';
-import { TutorialScreen } from './screens/TutorialScreen';
-import { DocPreviewScreen } from './screens/DocPreviewScreen';
-import { NoticesScreen } from './screens/NoticesScreen';
 
 export interface AgentMe {
   id: string;
@@ -63,62 +48,40 @@ export interface AgentMe {
   store?: { username: string; inviteCode: string; email: string | null };
 }
 
-type ScreenKey =
-  | 'dashboard'
-  | 'wallet'
-  | 'game-setting'
-  | 'game-platforms'
-  | 'sale-agents'
-  | 'members'
-  | 'sub-agents'
-  | 'kiosks'
-  | 'member-rewards'
-  | 'promotions'
-  | 'store-admins'
-  | 'transactions'
-  | 'cs-config'
-  | 'terms'
-  | 'posters'
-  | 'tutorial'
-  | 'doc-preview'
-  | 'notices'
-  | 'change-password';
-
-const SCREENS: Record<ScreenKey, { title: string; render: () => JSX.Element }> = {
-  dashboard: { title: 'Dashboard', render: () => <DashboardScreen /> },
-  wallet: { title: 'My Wallet', render: () => <WalletScreen /> },
-  'game-setting': { title: 'Game Setting', render: () => <GameSettingScreen /> },
-  'game-platforms': { title: 'Game Platforms', render: () => <PlatformCatalogScreen /> },
-  'sale-agents': { title: 'Sale Agent List', render: () => <AgentListScreen type="sale" /> },
-  members: { title: 'Member List', render: () => <MemberScreen /> },
-  'sub-agents': { title: 'Sub Agent List', render: () => <AgentListScreen type="sub" /> },
-  kiosks: { title: 'Kiosk List', render: () => <KioskScreen /> },
-  'member-rewards': { title: 'Member Rewards', render: () => <MemberRewardsScreen /> },
-  promotions: { title: 'Promotion Config', render: () => <PromotionScreen /> },
-  'store-admins': { title: 'Store Administrator', render: () => <StoreAdminScreen /> },
-  transactions: { title: 'Transaction List', render: () => <TransactionScreen /> },
-  'cs-config': { title: 'CS Config', render: () => <CsConfigScreen /> },
-  terms: { title: 'Terms', render: () => <TermsScreen /> },
-  posters: { title: 'Download posters', render: () => <PostersScreen /> },
-  tutorial: { title: 'Tutorial', render: () => <TutorialScreen /> },
-  'doc-preview': { title: 'Doc Preview', render: () => <DocPreviewScreen /> },
-  notices: { title: 'My Notices', render: () => <NoticesScreen /> },
-  'change-password': { title: 'Change Password', render: () => <ChangePasswordScreen /> },
+const TITLES: Record<string, string> = {
+  dashboard: 'Dashboard',
+  'my-wallet': 'My Wallet',
+  'game-setting': 'Game Setting',
+  'game-platforms': 'Game Platforms',
+  'sale-agents': 'Sale Agent List',
+  members: 'Member List',
+  'sub-agents': 'Sub Agent List',
+  kiosks: 'Kiosk List',
+  'member-rewards': 'Member Rewards',
+  promotions: 'Promotion Config',
+  'store-admins': 'Store Administrator',
+  transactions: 'Transaction List',
+  'cs-config': 'CS Config',
+  terms: 'Terms',
+  posters: 'Download posters',
+  tutorial: 'Tutorial',
+  'doc-preview': 'Doc Preview',
+  notices: 'My Notices',
+  'change-password': 'Change Password',
 };
 
-const PanelCtx = createContext<{ me: AgentMe; open: (k: ScreenKey) => void } | null>(null);
+const PanelCtx = createContext<{ me: AgentMe } | null>(null);
 export const usePanel = () => {
   const ctx = useContext(PanelCtx);
   if (!ctx) throw new Error('usePanel outside provider');
   return ctx;
 };
 
-export function AgentPanel() {
+export function AgentShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [me, setMe] = useState<AgentMe | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tabs, setTabs] = useState<ScreenKey[]>(['dashboard']);
-  const [active, setActive] = useState<ScreenKey>('dashboard');
   const [accountOpen, setAccountOpen] = useState(true);
   const [collapsed, setCollapsed] = useState(false); // desktop mini-sidebar
   const [mobileNav, setMobileNav] = useState(false); // <lg overlay drawer
@@ -128,7 +91,7 @@ export function AgentPanel() {
   useEffect(() => {
     api<AgentMe>('/api/agent/me')
       .then(setMe)
-      .catch(() => router.replace('/admin/login'))
+      .catch(() => router.replace('/agent/login'))
       .finally(() => setLoading(false));
   }, [router]);
 
@@ -154,71 +117,64 @@ export function AgentPanel() {
     };
   }, []);
 
-  const open = (key: ScreenKey) => {
-    setTabs((t) => (t.includes(key) ? t : [...t, key]));
-    setActive(key);
-    setMobileNav(false);
-  };
-  const close = (key: ScreenKey) => {
-    if (key === 'dashboard') return;
-    setTabs((t) => {
-      const next = t.filter((k) => k !== key);
-      if (active === key) setActive(next[next.length - 1] ?? 'dashboard');
-      return next;
-    });
-  };
-
   const logout = async () => {
     await fetch('/api/agent/logout', { method: 'POST' });
-    router.replace('/admin/login');
+    router.replace('/agent/login');
   };
 
-  const ctx = useMemo(() => (me ? { me, open } : null), [me]);
+  const ctx = useMemo(() => (me ? { me } : null), [me]);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-slate-50 text-sm text-slate-400">
-        Loading…
-      </div>
-    );
-  }
+  if (loading) return <BrandLoader />;
   if (!me || !ctx) return null;
+
+  const segment = pathname.split('/').filter(Boolean).pop() ?? 'dashboard';
+  const title = TITLES[segment] ?? 'Dashboard';
 
   const NavItem = ({
     icon: Icon,
     label,
-    screen,
+    href,
     onClick,
     activeMatch,
     indent,
   }: {
     icon: LucideIcon;
     label: string;
-    screen?: ScreenKey;
+    href?: string;
     onClick?: () => void;
     activeMatch?: boolean;
     indent?: boolean;
-  }) => (
-    <button
-      onClick={onClick ?? (screen ? () => open(screen) : undefined)}
-      className={cn(
-        'flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition',
-        indent && !collapsed && 'pl-11',
-        (activeMatch ?? (screen && active === screen))
-          ? 'bg-blue-50 font-medium text-blue-500'
-          : 'text-slate-600 hover:bg-slate-50'
-      )}
-      title={label}
-    >
-      <Icon size={18} />
-      {!collapsed && <span className="truncate">{label}</span>}
-    </button>
-  );
+  }) => {
+    const active = activeMatch ?? (href ? pathname === href : false);
+    const className = cn(
+      'flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] transition',
+      indent && !collapsed && 'pl-11',
+      active ? 'bg-blue-50 font-medium text-blue-500' : 'text-slate-600 hover:bg-slate-50'
+    );
+    const content = (
+      <>
+        <Icon size={18} />
+        {!collapsed && <span className="truncate">{label}</span>}
+      </>
+    );
+    if (href) {
+      return (
+        <Link href={href} className={className} title={label} onClick={() => setMobileNav(false)}>
+          {content}
+        </Link>
+      );
+    }
+    return (
+      <button onClick={onClick} className={className} title={label}>
+        {content}
+      </button>
+    );
+  };
 
   const sidebarNav = (
     <nav className="flex-1 space-y-0.5 overflow-y-auto px-2.5 pb-4">
-      <NavItem icon={Home} label="Dashboard" screen="dashboard" />
-      <NavItem icon={Wallet} label="My Wallet" screen="wallet" />
+      <NavItem icon={Home} label="Dashboard" href="/agent/dashboard" />
+      <NavItem icon={Wallet} label="My Wallet" href="/agent/my-wallet" />
       <button
         onClick={() => setAccountOpen((v) => !v)}
         className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-[15px] text-slate-600 hover:bg-slate-50"
@@ -237,24 +193,24 @@ export function AgentPanel() {
       </button>
       {accountOpen && (
         <div className="space-y-0.5">
-          <NavItem indent icon={Gamepad2} label="Game Setting" screen="game-setting" />
-          <NavItem indent icon={LayoutGrid} label="Game Platforms" screen="game-platforms" />
-          <NavItem indent icon={UserRound} label="Sale Agent List" screen="sale-agents" />
-          <NavItem indent icon={Wine} label="Member List" screen="members" />
-          <NavItem indent icon={UserRound} label="Sub Agent List" screen="sub-agents" />
-          <NavItem indent icon={Monitor} label="Kiosk List" screen="kiosks" />
-          <NavItem indent icon={Trophy} label="Member Rewards" screen="member-rewards" />
+          <NavItem indent icon={Gamepad2} label="Game Setting" href="/agent/game-setting" />
+          <NavItem indent icon={LayoutGrid} label="Game Platforms" href="/agent/game-platforms" />
+          <NavItem indent icon={UserRound} label="Sale Agent List" href="/agent/sale-agents" />
+          <NavItem indent icon={Wine} label="Member List" href="/agent/members" />
+          <NavItem indent icon={UserRound} label="Sub Agent List" href="/agent/sub-agents" />
+          <NavItem indent icon={Monitor} label="Kiosk List" href="/agent/kiosks" />
+          <NavItem indent icon={Trophy} label="Member Rewards" href="/agent/member-rewards" />
         </div>
       )}
-      <NavItem icon={Gift} label="Promotion Config" screen="promotions" />
-      <NavItem icon={UserCircle} label="Store Administrator" screen="store-admins" />
-      <NavItem icon={FolderClosed} label="Transaction List" screen="transactions" />
-      <NavItem icon={Settings} label="CS Config" screen="cs-config" />
-      <NavItem icon={FileText} label="Terms" screen="terms" />
-      <NavItem icon={Camera} label="Download posters" screen="posters" />
-      <NavItem icon={PlayCircle} label="Tutorial" screen="tutorial" />
-      <NavItem icon={BookOpen} label="Doc Preview" screen="doc-preview" />
-      <NavItem icon={Lock} label="Change Password" screen="change-password" />
+      <NavItem icon={Gift} label="Promotion Config" href="/agent/promotions" />
+      <NavItem icon={UserCircle} label="Store Administrator" href="/agent/store-admins" />
+      <NavItem icon={FolderClosed} label="Transaction List" href="/agent/transactions" />
+      <NavItem icon={Settings} label="CS Config" href="/agent/cs-config" />
+      <NavItem icon={FileText} label="Terms" href="/agent/terms" />
+      <NavItem icon={Camera} label="Download posters" href="/agent/posters" />
+      <NavItem icon={PlayCircle} label="Tutorial" href="/agent/tutorial" />
+      <NavItem icon={BookOpen} label="Doc Preview" href="/agent/doc-preview" />
+      <NavItem icon={Lock} label="Change Password" href="/agent/change-password" />
       <NavItem icon={Power} label="Logout" onClick={logout} />
       <div className="my-3 border-t border-slate-100" />
       <NavItem
@@ -269,9 +225,9 @@ export function AgentPanel() {
   const brand = (
     <div className="flex items-center gap-2.5 px-5 py-4">
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-green-400 to-green-600 text-base font-bold text-white">
-        D
+        {APP_NAME[0]}
       </span>
-      {!collapsed && <span className="text-lg font-bold text-slate-800">Digit Link</span>}
+      {!collapsed && <span className="text-lg font-bold text-slate-800">{APP_NAME}</span>}
     </div>
   );
 
@@ -343,15 +299,13 @@ export function AgentPanel() {
                     <Bell size={32} strokeWidth={1.2} />
                     <p className="text-sm text-slate-400">No messages</p>
                   </div>
-                  <button
-                    onClick={() => {
-                      setBellOpen(false);
-                      open('notices');
-                    }}
+                  <Link
+                    href="/agent/notices"
+                    onClick={() => setBellOpen(false)}
                     className="block w-full border-t border-slate-100 px-4 py-3 text-left text-sm font-medium text-blue-500 hover:bg-slate-50"
                   >
                     View More ›
-                  </button>
+                  </Link>
                 </div>
               )}
               <span className="max-w-32 truncate text-base font-bold text-slate-800 sm:max-w-none">
@@ -360,34 +314,14 @@ export function AgentPanel() {
             </div>
           </header>
 
-          {/* Chip tab bar — scrolls horizontally when it overflows */}
+          {/* Current page pill */}
           <div className="flex items-center gap-2 overflow-x-auto px-4 pt-3 sm:px-5 [scrollbar-width:none]">
-            {tabs.map((key) => (
-              <span
-                key={key}
-                className={cn(
-                  'inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition',
-                  active === key
-                    ? 'bg-blue-500 font-medium text-white'
-                    : 'border border-slate-200 bg-white text-slate-500 hover:text-slate-700'
-                )}
-                onClick={() => setActive(key)}
-              >
-                {SCREENS[key].title}
-                {key !== 'dashboard' && (
-                  <X
-                    size={13}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      close(key);
-                    }}
-                  />
-                )}
-              </span>
-            ))}
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-blue-500 px-3 py-1.5 text-sm font-medium text-white">
+              {title}
+            </span>
           </div>
 
-          <main className="min-w-0 flex-1 p-3 sm:p-5">{SCREENS[active].render()}</main>
+          <main className="min-w-0 flex-1 p-3 sm:p-5">{children}</main>
 
           {/* Customer service chat (placeholder widget, like production SaleSmartly) */}
           {chatOpen && (

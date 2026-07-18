@@ -6,9 +6,9 @@
 > (visual-only, third-party integration out of scope). File references point at the component
 > that renders the control.
 >
-> Login: `Deluxe001 / deluxe123` at `/admin/login`. Panel: `/admin`.
+> Login: `Deluxe001 / deluxe123` at `/agent/login`. Panel: `/agent`.
 
-## Global shell — `components/agent/AgentPanel.tsx`
+## Global shell — `components/agent/AgentShell.tsx`
 
 | Button / control | Action | API path | Status |
 |---|---|---|---|
@@ -34,7 +34,7 @@
 | Sidebar → Tutorial | Opens Tutorial tab (video guide grid) | — | ✅ |
 | Sidebar → Doc Preview | Opens Doc Preview tab (manual viewer) | — | ✅ |
 | Sidebar → Change Password | Opens Change Password tab | `POST /api/agent/change-password` | ✅ |
-| Sidebar → Logout | Ends session, redirects to `/admin/login` | `POST /api/agent/logout` | ✅ |
+| Sidebar → Logout | Ends session, redirects to `/agent/login` | `POST /api/agent/logout` | ✅ |
 | Sidebar → Customer Service | Opens chat widget panel | — | ✅ (placeholder chat) |
 | Tab chip (click) | Switches to that open tab | — | ✅ |
 | Tab chip ✕ | Closes tab (Dashboard pinned) | — | ✅ |
@@ -42,11 +42,11 @@
 | Chat: ‹ back / ✕ | Closes chat | — | ✅ |
 | Chat: + / 😊 / Send | Visual only (no live chat backend) | — | 🔶 |
 
-## Login — `components/agent/AgentLoginView.tsx` (`/admin/login`)
+## Login — `components/agent/AgentLoginView.tsx` (`/agent/login`)
 
 | Button | Action | API path | Status |
 |---|---|---|---|
-| Sign In | Authenticates, sets `agent_session` cookie, → `/admin` | `POST /api/agent/login` | ✅ |
+| Sign In | Authenticates, sets `agent_session` cookie, → `/agent` | `POST /api/agent/login` | ✅ |
 
 ## Dashboard — `screens/DashboardScreen.tsx`
 

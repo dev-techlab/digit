@@ -120,3 +120,15 @@ html[data-theme='light'] .app-starfield {
 .scrollbar-thin::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* Neutralize Chrome's default autofill background (gray/yellow) on white
+   inputs — e.g. the agent/admin login forms — so saved credentials don't
+   clash with the field's own background color. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #334155;
+  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset;
+  box-shadow: 0 0 0px 1000px #ffffff inset;
+  transition: background-color 9999s ease-in-out 0s;
+}

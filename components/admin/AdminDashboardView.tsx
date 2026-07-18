@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LogOut, ShieldCheck } from 'lucide-react';
 import { APP_NAME } from '@/lib/constants';
+import { BrandLoader } from '@/components/shell/BrandLoader';
 
 interface AdminMe {
   adminId: string;
@@ -39,23 +40,22 @@ export function AdminDashboardView() {
     router.replace('/admin/login');
   };
 
-  if (loading) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-slate-50">
-        <p className="text-sm text-slate-400">Loading…</p>
-      </div>
-    );
-  }
+  if (loading) return <BrandLoader />;
 
   if (!me) return null;
 
   return (
     <div className="min-h-dvh bg-slate-50">
       <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
-        <h1 className="text-lg font-bold text-slate-700">{APP_NAME} Admin</h1>
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white">
+            {APP_NAME[0]}
+          </span>
+          <h1 className="text-lg font-bold text-slate-700">{APP_NAME} Admin</h1>
+        </div>
         <button
           onClick={logout}
-          className="flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold text-slate-500 hover:bg-slate-100"
+          className="flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold text-slate-500 transition hover:bg-indigo-50 hover:text-indigo-600"
         >
           <LogOut size={16} />
           Logout
@@ -65,7 +65,7 @@ export function AdminDashboardView() {
       <main className="mx-auto max-w-2xl px-6 py-10">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600">
               <ShieldCheck size={20} />
             </span>
             <div>
@@ -76,7 +76,14 @@ export function AdminDashboardView() {
 
           <div className="mt-5 border-t border-slate-100 pt-5">
             <p className="text-sm font-semibold text-slate-600">
-              Role: {me.isSuperAdmin ? 'Super Admin (full access)' : 'Standard Admin'}
+              Role:{' '}
+              {me.isSuperAdmin ? (
+                <span className="bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text font-bold text-transparent">
+                  Super Admin (full access)
+                </span>
+              ) : (
+                'Standard Admin'
+              )}
             </p>
             {!me.isSuperAdmin && (
               <div className="mt-3">
@@ -88,7 +95,7 @@ export function AdminDashboardView() {
                     {me.permissions.map((p) => (
                       <li
                         key={p}
-                        className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600"
+                        className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-600"
                       >
                         {p}
                       </li>

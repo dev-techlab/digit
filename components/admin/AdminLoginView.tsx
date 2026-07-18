@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Mail, Lock } from 'lucide-react';
 import { APP_NAME } from '@/lib/constants';
+import { BrandLoader } from '@/components/shell/BrandLoader';
 
 export function AdminLoginView() {
   const router = useRouter();
@@ -44,6 +45,8 @@ export function AdminLoginView() {
       setLoading(false);
     }
   };
+
+  if (loading) return <BrandLoader />;
 
   return (
     <div

@@ -300,7 +300,7 @@ async function main() {
   }
 
   console.log('✓ promotion, CS config, terms, posters');
-  console.log('\nDone. Login: Deluxe001 / deluxe123 at /admin/login (agent panel).');
+  console.log('\nDone. Login: Deluxe001 / deluxe123 at /agent/login (agent panel).');
   process.exit(0);
 }
 

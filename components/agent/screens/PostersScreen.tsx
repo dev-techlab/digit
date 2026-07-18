@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Download, ImageIcon } from 'lucide-react';
-import { usePanel } from '../AgentPanel';
+import { APP_NAME } from '@/lib/constants';
+import { usePanel } from '../AgentShell';
 import { api, Btn, Card } from '../ui';
 
 interface Poster {
@@ -32,7 +33,7 @@ function downloadPoster(p: Poster, inviteLink: string) {
   ctx.fillStyle = '#4ade80';
   ctx.font = `bold ${portrait ? 96 : 84}px sans-serif`;
   ctx.textAlign = 'center';
-  ctx.fillText('DigitLink', w / 2, portrait ? 220 : 160);
+  ctx.fillText(APP_NAME, w / 2, portrait ? 220 : 160);
   ctx.fillStyle = '#ffffff';
   ctx.font = `${portrait ? 52 : 46}px sans-serif`;
   ctx.fillText(p.title ?? 'Your Ultimate Gaming Solution', w / 2, portrait ? 320 : 250);
