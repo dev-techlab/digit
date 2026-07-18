@@ -12,6 +12,7 @@ export function TermsScreen() {
   const [locale, setLocale] = useState<'en' | 'es'>('en');
   const [content, setContent] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
   const [view, setView] = useState<'edit' | 'preview'>('edit');
 
   useEffect(() => {
@@ -30,20 +31,30 @@ export function TermsScreen() {
   };
 
   const save = async () => {
-    await api('/api/agent/terms', {
-      method: 'PUT',
-      body: JSON.stringify({ locale, content: content || null }),
-    });
-    setTerms({ ...terms, [locale]: content });
-    setMsg('Terms saved');
-    setTimeout(() => setMsg(null), 2500);
+    setErr(null);
+    try {
+      await api('/api/agent/terms', {
+        method: 'PUT',
+        body: JSON.stringify({ locale, content: content || null }),
+      });
+      setTerms({ ...terms, [locale]: content });
+      setMsg('Terms saved');
+      setTimeout(() => setMsg(null), 2500);
+    } catch (e) {
+      setErr((e as Error).message);
+    }
   };
 
   const inherit = async () => {
-    setContent('');
-    await api('/api/agent/terms', { method: 'PUT', body: JSON.stringify({ locale, content: null }) });
-    setMsg('Using inherited version');
-    setTimeout(() => setMsg(null), 2500);
+    setErr(null);
+    try {
+      await api('/api/agent/terms', { method: 'PUT', body: JSON.stringify({ locale, content: null }) });
+      setContent('');
+      setMsg('Using inherited version');
+      setTimeout(() => setMsg(null), 2500);
+    } catch (e) {
+      setErr((e as Error).message);
+    }
   };
 
   return (
@@ -52,6 +63,11 @@ export function TermsScreen() {
       {msg && (
         <p className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-600">
           {msg}
+        </p>
+      )}
+      {err && (
+        <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
+          {err}
         </p>
       )}
       <p className="mt-4 flex items-start gap-2 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-500">

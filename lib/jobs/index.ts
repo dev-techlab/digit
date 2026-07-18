@@ -1,5 +1,5 @@
 import type { Job } from 'pg-boss';
-import { and, eq, isNotNull, lte } from 'drizzle-orm';
+import { and, eq, isNotNull, lt, lte, or } from 'drizzle-orm';
 import { getBoss } from './boss';
 import { deliver } from '@/lib/mail/deliver';
 import type { MailPayload } from '@/lib/mail/types';
@@ -53,14 +53,22 @@ export const JOBS: JobDef[] = [
     name: 'otp.purge',
     cron: '*/15 * * * *',
     handler: async () => {
-      // TODO: delete expired/consumed otp_codes
+      await db
+        .delete(s.otpCodes)
+        .where(or(lt(s.otpCodes.expiresAt, new Date()), eq(s.otpCodes.consumed, true)));
     },
   },
   {
     name: 'sessions.purge',
     cron: '0 * * * *',
     handler: async () => {
-      // TODO: delete expired sessions + admin_sessions
+      const now = new Date();
+      await db
+        .delete(s.sessions)
+        .where(or(lt(s.sessions.expiresAt, now), isNotNull(s.sessions.revokedAt)));
+      await db
+        .delete(s.adminSessions)
+        .where(or(lt(s.adminSessions.expiresAt, now), isNotNull(s.adminSessions.revokedAt)));
     },
   },
   {
@@ -117,7 +125,14 @@ export async function startWorker() {
     await boss.createQueue(job.name);
     if (job.cron) await boss.schedule(job.name, job.cron);
     await boss.work(job.name, async (jobs: Job[]) => {
-      for (const j of jobs) await job.handler(j);
+      for (const j of jobs) {
+        try {
+          await job.handler(j);
+        } catch (err) {
+          console.error(`[pg-boss] job "${job.name}" failed`, err);
+          throw err; // rethrow so pg-boss still applies its own retry/failure tracking
+        }
+      }
     });
     console.log(`[pg-boss] registered ${job.name}${job.cron ? ` (${job.cron})` : ''}`);
   }

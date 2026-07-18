@@ -65,6 +65,10 @@ export interface SyncGamePlatformsResult {
   total: number;
   unmatchedExisting: number;
   sources: { sc: string; gc: string };
+  /** Platform names present in both the SC and GC catalogs — only one mapping can be
+   * stored per row (`game_platforms.name` is unique), so these are reported instead
+   * of being silently dropped. */
+  crossTypeConflicts: string[];
 }
 
 /**
@@ -83,42 +87,72 @@ export interface SyncGamePlatformsResult {
 export async function syncGamePlatforms(): Promise<SyncGamePlatformsResult> {
   const [sc, gc] = await Promise.all([fetchProviders('SC'), fetchProviders('GC')]);
 
-  // SC entries win on duplicate providerCode (agent panel deals in SC platforms).
-  const byCode = new Map<string, ApiProvider>();
-  for (const p of [...gc.list, ...sc.list]) byCode.set(p.providerCode, p);
-  const providers = [...byCode.values()];
-
   const existing = await db.select().from(s.gamePlatforms);
   const byName = new Map(existing.map((row) => [normalize(row.name), row]));
   const now = new Date();
 
+  // De-dupe within each type by providerCode first (defensive against a
+  // single feed repeating a code), then group by normalized name so a name
+  // present in BOTH catalogs is detected instead of one entry silently
+  // overwriting the other (`game_platforms` can only hold one mapping per
+  // row — name is DB-unique).
+  const dedupeByCode = (list: ApiProvider[]) => {
+    const byCode = new Map<string, ApiProvider>();
+    for (const p of list) byCode.set(p.providerCode, p);
+    return [...byCode.values()];
+  };
+  const byNormalizedName = new Map<string, ApiProvider[]>();
+  for (const p of [...dedupeByCode(gc.list), ...dedupeByCode(sc.list)]) {
+    const key = normalize(p.name);
+    const candidates = byNormalizedName.get(key) ?? [];
+    candidates.push(p);
+    byNormalizedName.set(key, candidates);
+  }
+
   let updated = 0;
   let inserted = 0;
-  for (const p of providers) {
+  const crossTypeConflicts: string[] = [];
+
+  for (const candidates of byNormalizedName.values()) {
+    const match = byName.get(normalize(candidates[0].name));
+    // Sticky: prefer whichever candidate matches the row's current mapping
+    // type, so a name in both catalogs doesn't flip type on every sync.
+    // New rows default to the first (GC) candidate.
+    let chosen = candidates[0];
+    if (candidates.length > 1) {
+      crossTypeConflicts.push(`${chosen.name} (${candidates.map((c) => c.providerType).join('/')})`);
+      if (match?.providerType) {
+        chosen = candidates.find((c) => c.providerType === match.providerType) ?? chosen;
+      }
+    }
+
     const values = {
-      iconUrl: p.iconUrl,
-      externalId: p.id,
-      providerCode: p.providerCode,
-      providerType: p.providerType,
-      launchUrl: p.launchUrlTemplate,
-      sort: p.sort,
-      isActive: p.status === 1,
+      iconUrl: chosen.iconUrl,
+      externalId: chosen.id,
+      providerCode: chosen.providerCode,
+      providerType: chosen.providerType,
+      launchUrl: chosen.launchUrlTemplate,
+      sort: chosen.sort,
+      isActive: chosen.status === 1,
       syncedAt: now,
     };
-    const match = byName.get(normalize(p.name));
     if (match) {
       await db
         .update(s.gamePlatforms)
-        .set({ ...values, name: p.name }) // adopt the API's canonical name
+        .set({ ...values, name: chosen.name }) // adopt the API's canonical name
         .where(eq(s.gamePlatforms.id, match.id));
       updated++;
     } else {
       await db
         .insert(s.gamePlatforms)
-        .values({ name: p.name, slug: slugify(p.name), ...values })
+        .values({ name: chosen.name, slug: slugify(chosen.name), ...values })
         .onConflictDoNothing();
       inserted++;
     }
+  }
+
+  if (crossTypeConflicts.length) {
+    console.warn(`[providers.sync] name collision across SC/GC catalogs (one mapping kept per row): ${crossTypeConflicts.join(', ')}`);
   }
 
   const total = await db.select({ n: s.gamePlatforms.id }).from(s.gamePlatforms);
@@ -128,5 +162,6 @@ export async function syncGamePlatforms(): Promise<SyncGamePlatformsResult> {
     total: total.length,
     unmatchedExisting: existing.length - updated,
     sources: { sc: sc.source, gc: gc.source },
+    crossTypeConflicts,
   };
 }

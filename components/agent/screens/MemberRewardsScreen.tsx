@@ -11,6 +11,7 @@ interface WalletData {
 export function MemberRewardsScreen() {
   const [reward, setReward] = useState('3');
   const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     api<WalletData>('/api/agent/wallet').then((d) => {
@@ -19,12 +20,17 @@ export function MemberRewardsScreen() {
   }, []);
 
   const save = async () => {
-    await api('/api/agent/wallet', {
-      method: 'PUT',
-      body: JSON.stringify({ phoneBindRewardSc: Number(reward) }),
-    });
-    setMsg('Reward settings saved');
-    setTimeout(() => setMsg(null), 2500);
+    setErr(null);
+    try {
+      await api('/api/agent/wallet', {
+        method: 'PUT',
+        body: JSON.stringify({ phoneBindRewardSc: Number(reward) }),
+      });
+      setMsg('Reward settings saved');
+      setTimeout(() => setMsg(null), 2500);
+    } catch (e) {
+      setErr((e as Error).message);
+    }
   };
 
   return (
@@ -33,6 +39,11 @@ export function MemberRewardsScreen() {
       {msg && (
         <p className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-600">
           {msg}
+        </p>
+      )}
+      {err && (
+        <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
+          {err}
         </p>
       )}
       <p className="mt-4 flex items-start gap-2 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-500">

@@ -115,6 +115,10 @@ export async function getWallet(): Promise<WalletBalance> {
 export async function getOrders(): Promise<OrderRecord[]> {
   const userId = await currentUserId();
   if (!userId) return [];
+  const user = await db.query.users.findFirst({
+    where: (t, { eq }) => eq(t.id, userId),
+    columns: { username: true },
+  });
   const rows = await db
     .select()
     .from(s.orders)
@@ -122,7 +126,7 @@ export async function getOrders(): Promise<OrderRecord[]> {
     .orderBy(desc(s.orders.createdAt));
   return rows.map((o) => ({
     orderNo: o.orderNo,
-    username: 'player_2481',
+    username: user?.username ?? '',
     amount: o.amount,
     payAmount: o.payAmount,
     actualDepositAmount: o.actualDepositAmount,

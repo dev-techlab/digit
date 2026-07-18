@@ -56,12 +56,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Max Bonus Amount is required' }, { status: 400 });
   }
 
+  let assignAgentId: string | null = null;
+  if (typeof body.assignAgentId === 'string' && body.assignAgentId) {
+    const [assignee] = await db
+      .select({ id: s.agents.id })
+      .from(s.agents)
+      .where(and(eq(s.agents.id, body.assignAgentId), eq(s.agents.storeId, agent.storeId)));
+    if (!assignee) {
+      return NextResponse.json({ error: 'assignAgentId must belong to this store' }, { status: 400 });
+    }
+    assignAgentId = assignee.id;
+  }
+
   const bonusPercent = Math.min(200, Math.max(1, Number(body.bonusPercent) || 100));
   const [created] = await db
     .insert(s.promotions)
     .values({
       storeId: agent.storeId,
-      assignAgentId: typeof body.assignAgentId === 'string' ? body.assignAgentId : null,
+      assignAgentId,
       type,
       hiddenFromAgentIds: Array.isArray(body.hiddenFromAgentIds)
         ? (body.hiddenFromAgentIds as string[])

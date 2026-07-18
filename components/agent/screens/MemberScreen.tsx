@@ -83,12 +83,17 @@ export function MemberScreen() {
 
   const saveEdit = async () => {
     if (!editRow) return;
-    await api('/api/agent/members', {
-      method: 'PUT',
-      body: JSON.stringify({ id: editRow.id, remark }),
-    });
-    setEditRow(null);
-    void load();
+    setErr(null);
+    try {
+      await api('/api/agent/members', {
+        method: 'PUT',
+        body: JSON.stringify({ id: editRow.id, remark }),
+      });
+      setEditRow(null);
+      void load();
+    } catch (e) {
+      setErr((e as Error).message);
+    }
   };
 
   const openDetail = async (row: MemberRow) => {
@@ -178,6 +183,7 @@ export function MemberScreen() {
                     onClick={() => {
                       setEditRow(r);
                       setRemark(r.remark ?? '');
+                      setErr(null);
                     }}
                   >
                     More ▾
@@ -242,13 +248,16 @@ export function MemberScreen() {
           </>
         }
       >
-        <Field label="Remark">
-          <TextInput
-            placeholder="Enter remark..."
-            value={remark}
-            onChange={(e) => setRemark(e.target.value)}
-          />
-        </Field>
+        <div className="space-y-4">
+          {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{err}</p>}
+          <Field label="Remark">
+            <TextInput
+              placeholder="Enter remark..."
+              value={remark}
+              onChange={(e) => setRemark(e.target.value)}
+            />
+          </Field>
+        </div>
       </Modal>
 
       <Modal

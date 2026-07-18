@@ -23,6 +23,10 @@ async function main() {
   console.log(`✓ GC: ${result.sources.gc}`);
   console.log(`✓ synced: ${result.updated} updated, ${result.inserted} inserted, ${result.total} total`);
   console.log(`  (${result.unmatchedExisting} pre-seeded rows had no API match and were left untouched)`);
+  // if (result.crossTypeConflicts.length) {
+  //   console.log(`  ⚠ ${result.crossTypeConflicts.length} name(s) present in both SC and GC catalogs (one mapping kept per row):`);
+  //   for (const name of result.crossTypeConflicts) console.log(`    - ${name}`);
+  // }
   process.exit(0);
 }
 

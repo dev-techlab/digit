@@ -99,10 +99,9 @@ export async function PUT(req: Request) {
 
   const patch: Partial<typeof s.storeSettings.$inferInsert> = { updatedAt: new Date() };
   if (typeof body.storeName === 'string') patch.storeName = body.storeName.slice(0, 20);
-  if (body.dailyMaxRedeem != null) patch.dailyMaxRedeem = String(Number(body.dailyMaxRedeem));
-  if (body.dailyMaxWithdraw != null) patch.dailyMaxWithdraw = String(Number(body.dailyMaxWithdraw));
-  if (body.phoneBindRewardSc != null)
-    patch.phoneBindRewardSc = String(Number(body.phoneBindRewardSc));
+  for (const key of ['dailyMaxRedeem', 'dailyMaxWithdraw', 'phoneBindRewardSc'] as const) {
+    if (body[key] != null && Number.isFinite(Number(body[key]))) patch[key] = String(body[key]);
+  }
   if (typeof body.logoUrl === 'string') {
     if (body.logoUrl.length > 2.8 * 1024 * 1024) {
       return NextResponse.json({ error: 'Logo must be at most 2MB' }, { status: 400 });
@@ -233,6 +232,7 @@ export async function POST(req: Request) {
     const method = WITHDRAW_METHODS.includes(body.method as (typeof WITHDRAW_METHODS)[number])
       ? (body.method as (typeof WITHDRAW_METHODS)[number])
       : null;
+    if (!method) return NextResponse.json({ error: 'Select a withdrawal method' }, { status: 400 });
     // Flat fee up to $2 on PYUSD/USDC rails (mirrors production fee badges).
     const fee = method === 'paypal_pyusd' || method === 'cashapp_usdc' ? Math.min(2, amount) : 0;
     try {

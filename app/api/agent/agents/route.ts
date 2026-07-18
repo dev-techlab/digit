@@ -131,6 +131,9 @@ export async function PUT(req: Request) {
   if (body.status === 'active' || body.status === 'disabled') set.status = body.status;
   if (typeof body.remark === 'string') set.remark = body.remark.slice(0, 300);
   if (typeof body.nickname === 'string') set.nickname = body.nickname;
+  if (typeof body.password === 'string' && body.password.length >= 6) {
+    set.passwordHash = await bcrypt.hash(body.password, 10);
+  }
 
   await db
     .update(s.agents)

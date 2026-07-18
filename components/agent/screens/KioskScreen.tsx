@@ -16,6 +16,7 @@ export function KioskScreen() {
   const [rows, setRows] = useState<KioskRow[]>([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: '', code: '' });
+  const [err, setErr] = useState<string | null>(null);
 
   const load = () => api<{ kiosks: KioskRow[] }>('/api/agent/kiosks').then((d) => setRows(d.kiosks));
   useEffect(() => {
@@ -23,16 +24,28 @@ export function KioskScreen() {
   }, []);
 
   const create = async () => {
-    await api('/api/agent/kiosks', { method: 'POST', body: JSON.stringify(form) });
-    setOpen(false);
-    setForm({ name: '', code: '' });
-    void load();
+    setErr(null);
+    try {
+      await api('/api/agent/kiosks', { method: 'POST', body: JSON.stringify(form) });
+      setOpen(false);
+      setForm({ name: '', code: '' });
+      void load();
+    } catch (e) {
+      setErr((e as Error).message);
+    }
   };
 
   return (
     <div className="space-y-4">
       <Card>
-        <Btn variant="success" className="mb-4" onClick={() => setOpen(true)}>
+        <Btn
+          variant="success"
+          className="mb-4"
+          onClick={() => {
+            setErr(null);
+            setOpen(true);
+          }}
+        >
           <Plus size={16} /> Add Kiosk
         </Btn>
         <Table headers={['Name', 'Code', 'Status', 'Created']} empty={rows.length === 0}>
@@ -63,6 +76,7 @@ export function KioskScreen() {
         }
       >
         <div className="space-y-4">
+          {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{err}</p>}
           <Field label="Name" required>
             <TextInput value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </Field>

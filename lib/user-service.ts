@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
 import * as s from '@/lib/db/schema';
 import { newSessionToken, USER_SESSION_TTL_S } from '@/lib/auth-tokens';
+import { isUniqueViolation } from '@/lib/db-errors';
 
 /** 409-style error for duplicate username/registration conflicts. */
 export class UserConflictError extends Error {
@@ -53,18 +54,27 @@ export async function registerUser(
     : null;
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const [user] = await db
-    .insert(s.users)
-    .values({
-      username,
-      nickname: username,
-      passwordHash,
-      phone: input.phone ?? null,
-      phoneBound: !!input.phone,
-      inviteCode: `DL${randomBytes(4).toString('hex').toUpperCase()}`,
-      referredByUserId: referrer?.id ?? null,
-    })
-    .returning();
+  let user: typeof s.users.$inferSelect;
+  try {
+    [user] = await db
+      .insert(s.users)
+      .values({
+        username,
+        nickname: username,
+        passwordHash,
+        phone: input.phone ?? null,
+        phoneBound: !!input.phone,
+        inviteCode: `DL${randomBytes(4).toString('hex').toUpperCase()}`,
+        referredByUserId: referrer?.id ?? null,
+      })
+      .returning();
+  } catch (err) {
+    // A concurrent double-submit can both pass the findFirst check above and
+    // then race the unique constraint — surface it as the intended 409, not
+    // a raw 500.
+    if (isUniqueViolation(err)) throw new UserConflictError('Username already taken');
+    throw err;
+  }
   await db.insert(s.wallets).values({ userId: user.id }).onConflictDoNothing();
 
   if (referrer) {

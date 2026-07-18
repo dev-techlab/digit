@@ -15,6 +15,7 @@ interface CsConfig {
 export function CsConfigScreen() {
   const [config, setConfig] = useState<CsConfig | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     api<{ config: CsConfig }>('/api/agent/cs-config').then((d) => setConfig(d.config));
@@ -23,9 +24,14 @@ export function CsConfigScreen() {
   if (!config) return <p className="p-6 text-sm text-slate-400">Loading…</p>;
 
   const save = async () => {
-    await api('/api/agent/cs-config', { method: 'PUT', body: JSON.stringify(config) });
-    setMsg('Configuration saved');
-    setTimeout(() => setMsg(null), 2500);
+    setErr(null);
+    try {
+      await api('/api/agent/cs-config', { method: 'PUT', body: JSON.stringify(config) });
+      setMsg('Configuration saved');
+      setTimeout(() => setMsg(null), 2500);
+    } catch (e) {
+      setErr((e as Error).message);
+    }
   };
 
   return (
@@ -41,6 +47,11 @@ export function CsConfigScreen() {
       {msg && (
         <p className="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-600">
           {msg}
+        </p>
+      )}
+      {err && (
+        <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-600">
+          {err}
         </p>
       )}
       <p className="mt-5 flex items-start gap-2 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-500">

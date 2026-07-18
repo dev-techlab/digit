@@ -114,8 +114,25 @@ export async function assignRole(adminId: string, roleSlug: string, assignedByAd
     .onConflictDoNothing();
 }
 
-/** Remove a role from an admin. */
-export async function removeRole(adminId: string, roleSlug: string) {
+/**
+ * Guard an admin-lifecycle action (suspend/reactivate/reset password) performed
+ * *by* an actor (skip for trusted server/seed/CLI contexts that pass no actor).
+ * Mirrors guardRoleGrant: a non-super actor needs `admins.manage` and can never
+ * act on an admin at or above their own highest role level.
+ */
+async function guardAdminAction(actorAdminId: string, targetAdminId: string): Promise<void> {
+  if (await isSuperAdmin(actorAdminId)) return;
+  if (!(await can(actorAdminId, 'admins.manage'))) {
+    throw new AuthzError('Forbidden: "admins.manage" is required to manage admins');
+  }
+  if ((await maxRoleLevel(targetAdminId)) >= (await maxRoleLevel(actorAdminId))) {
+    throw new AuthzError('Forbidden: cannot act on an admin at or above your own level');
+  }
+}
+
+/** Remove a role from an admin. When `actorAdminId` is provided, the removal is authorization-checked (guardRoleGrant), same as assignRole. */
+export async function removeRole(adminId: string, roleSlug: string, actorAdminId?: string) {
+  if (actorAdminId) await guardRoleGrant(actorAdminId, roleSlug);
   const roleId = await roleIdBySlug(roleSlug);
   await db
     .delete(s.adminRoles)
@@ -133,7 +150,8 @@ export async function rolesForAdmin(adminId: string): Promise<string[]> {
 }
 
 /** Reset an admin's password and revoke their active sessions. */
-export async function setPassword(adminId: string, password: string) {
+export async function setPassword(adminId: string, password: string, actorAdminId?: string) {
+  if (actorAdminId) await guardAdminAction(actorAdminId, adminId);
   const passwordHash = await bcrypt.hash(password, 10);
   await db.update(s.admins).set({ passwordHash }).where(eq(s.admins.id, adminId));
   await revokeAdminSessions(adminId);
@@ -148,13 +166,15 @@ export async function revokeAdminSessions(adminId: string) {
 }
 
 /** Suspend an admin: blocks new logins AND kills existing sessions. */
-export async function suspendAdmin(adminId: string) {
+export async function suspendAdmin(adminId: string, actorAdminId?: string) {
+  if (actorAdminId) await guardAdminAction(actorAdminId, adminId);
   await db.update(s.admins).set({ status: 'suspended' }).where(eq(s.admins.id, adminId));
   await revokeAdminSessions(adminId);
 }
 
 /** Re-activate a suspended admin (does not restore revoked sessions). */
-export async function reactivateAdmin(adminId: string) {
+export async function reactivateAdmin(adminId: string, actorAdminId?: string) {
+  if (actorAdminId) await guardAdminAction(actorAdminId, adminId);
   await db.update(s.admins).set({ status: 'active' }).where(eq(s.admins.id, adminId));
 }
 

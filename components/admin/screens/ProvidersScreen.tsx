@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { api, Btn, Field, Modal, Select, Table, TextInput, Toggle } from '@/components/agent/ui';
 
@@ -94,6 +95,7 @@ function ProviderIcon({ name, iconUrl }: { name: string; iconUrl: string }) {
 }
 
 export function ProvidersScreen() {
+  const router = useRouter();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -103,9 +105,11 @@ export function ProvidersScreen() {
   const load = () =>
     api<{ providers: Provider[] }>('/api/admin/providers')
       .then((d) => setProviders(d.providers))
+      .catch(() => router.replace('/admin/login'))
       .finally(() => setLoading(false));
   useEffect(() => {
     void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openAdd = () => {
@@ -195,10 +199,16 @@ export function ProvidersScreen() {
 
   const toggleActive = async (p: Provider, active: boolean) => {
     setProviders((rows) => rows.map((r) => (r.id === p.id ? { ...r, status: active ? 1 : 0 } : r)));
-    await api('/api/admin/providers', {
-      method: 'PUT',
-      body: JSON.stringify({ id: p.id, status: active ? 1 : 0 }),
-    });
+    try {
+      await api('/api/admin/providers', {
+        method: 'PUT',
+        body: JSON.stringify({ id: p.id, status: active ? 1 : 0 }),
+      });
+    } catch (e) {
+      // Roll back the optimistic flip — the PUT never landed.
+      setProviders((rows) => rows.map((r) => (r.id === p.id ? { ...r, status: p.status } : r)));
+      window.alert(e instanceof Error ? e.message : 'Failed to update provider status.');
+    }
   };
 
   const remove = async (p: Provider) => {

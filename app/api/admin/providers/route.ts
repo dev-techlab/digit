@@ -5,6 +5,7 @@ import * as s from '@/lib/db/schema';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission, PermissionError } from '@/lib/rbac-core';
 import { clientIp, logAdminAction } from '@/lib/audit-log';
+import { isUniqueViolation } from '@/lib/db-errors';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -100,8 +101,12 @@ export async function POST(req: Request) {
       ipAddress: clientIp(req),
     });
     return NextResponse.json({ provider: row }, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: 'A provider with that id already exists' }, { status: 409 });
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      return NextResponse.json({ error: 'A provider with that id already exists' }, { status: 409 });
+    }
+    console.error('POST /api/admin/providers', err);
+    return NextResponse.json({ error: 'Failed to create provider' }, { status: 500 });
   }
 }
 
@@ -149,8 +154,12 @@ export async function PUT(req: Request) {
       ipAddress: clientIp(req),
     });
     return NextResponse.json({ provider: row });
-  } catch {
-    return NextResponse.json({ error: 'Update failed' }, { status: 409 });
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      return NextResponse.json({ error: 'Update conflicts with an existing provider' }, { status: 409 });
+    }
+    console.error('PUT /api/admin/providers', err);
+    return NextResponse.json({ error: 'Update failed' }, { status: 500 });
   }
 }
 

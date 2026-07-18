@@ -128,7 +128,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <NavItem icon={Gamepad2} label="Providers" href="/admin/providers" />
       <NavItem icon={Layers} label="Platforms" href="/admin/platforms" />
       <div className="my-3 border-t border-slate-100" />
-      <NavItem icon={Lock} label="Change Password" href="/admin/forgot-password" />
+      <NavItem icon={Lock} label="Change Password" href="/admin/change-password" />
       <NavItem icon={Power} label="Logout" onClick={logout} />
     </nav>
   );

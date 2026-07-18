@@ -44,6 +44,7 @@ export function PromotionScreen() {
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [addOpen, setAddOpen] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   const [form, setForm] = useState({
     type: 'promotion_game',
     bonusPercent: '100',
@@ -64,9 +65,14 @@ export function PromotionScreen() {
   }, []);
 
   const create = async () => {
-    await api('/api/agent/promotions', { method: 'POST', body: JSON.stringify(form) });
-    setAddOpen(false);
-    void load();
+    setErr(null);
+    try {
+      await api('/api/agent/promotions', { method: 'POST', body: JSON.stringify(form) });
+      setAddOpen(false);
+      void load();
+    } catch (e) {
+      setErr((e as Error).message);
+    }
   };
 
   const toggleStatus = async (r: PromoRow) => {
@@ -133,7 +139,14 @@ export function PromotionScreen() {
       </Card>
 
       <Card>
-        <Btn variant="success" className="mb-4" onClick={() => setAddOpen(true)}>
+        <Btn
+          variant="success"
+          className="mb-4"
+          onClick={() => {
+            setErr(null);
+            setAddOpen(true);
+          }}
+        >
           <Plus size={16} /> Add Promotion
         </Btn>
         <Table
@@ -190,6 +203,7 @@ export function PromotionScreen() {
         }
       >
         <div className="space-y-5">
+          {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{err}</p>}
           <Field label="Promotion Type" required>
             <div className="space-y-2">
               {Object.entries(TYPE_LABEL).map(([k, l]) => (
