@@ -70,10 +70,10 @@ export async function roleIdBySlug(slug: string): Promise<string> {
   return role.id;
 }
 
-/** Create an admin (idempotent on email) and assign the given roles. */
+/** Create an admin (idempotent on email or username) and assign the given roles. */
 export async function createAdmin(input: CreateAdminInput) {
   const existing = await db.query.admins.findFirst({
-    where: (t, { eq }) => eq(t.email, input.email),
+    where: (t, { eq, or }) => or(eq(t.email, input.email), eq(t.username, input.username)),
   });
 
   let adminId: string;
