@@ -15,10 +15,10 @@ export class UserConflictError extends Error {
   }
 }
 
-/** Verify username + password; returns the user id or null. */
+/** Verify username + password; returns the user id or null. Blocked accounts cannot log in. */
 export async function verifyUserLogin(username: string, password: string): Promise<string | null> {
   const user = await db.query.users.findFirst({ where: (t, { eq }) => eq(t.username, username) });
-  if (!user) return null;
+  if (!user || user.status !== 'active') return null;
   return (await bcrypt.compare(password, user.passwordHash)) ? user.id : null;
 }
 
@@ -99,16 +99,18 @@ export async function createUserSession(userId: string, meta?: { userAgent?: str
   return { token, expiresAt };
 }
 
-/** Resolve a session token to a user id (unexpired + not revoked). */
+/** Resolve a session token to a user id (unexpired, not revoked, account active). */
 export async function userIdForToken(token: string): Promise<string | null> {
   const rows = await db
     .select({ userId: s.sessions.userId })
     .from(s.sessions)
+    .innerJoin(s.users, eq(s.users.id, s.sessions.userId))
     .where(
       and(
         eq(s.sessions.token, token),
         gt(s.sessions.expiresAt, new Date()),
-        isNull(s.sessions.revokedAt)
+        isNull(s.sessions.revokedAt),
+        eq(s.users.status, 'active')
       )
     )
     .limit(1);
@@ -162,8 +164,24 @@ export async function userIdByPhone(phone: string): Promise<string | null> {
 export async function setUserPassword(userId: string, newPassword: string): Promise<void> {
   const passwordHash = await bcrypt.hash(newPassword, 10);
   await db.update(s.users).set({ passwordHash }).where(eq(s.users.id, userId));
+  await revokeUserSessions(userId);
+}
+
+/** Revoke every active session for a user (immediate logout everywhere). */
+export async function revokeUserSessions(userId: string): Promise<void> {
   await db
     .update(s.sessions)
     .set({ revokedAt: new Date() })
     .where(and(eq(s.sessions.userId, userId), isNull(s.sessions.revokedAt)));
+}
+
+/** Block a player account: prevents new logins AND kills existing sessions. */
+export async function blockUser(userId: string): Promise<void> {
+  await db.update(s.users).set({ status: 'blocked' }).where(eq(s.users.id, userId));
+  await revokeUserSessions(userId);
+}
+
+/** Re-activate a blocked player account (does not restore revoked sessions). */
+export async function unblockUser(userId: string): Promise<void> {
+  await db.update(s.users).set({ status: 'active' }).where(eq(s.users.id, userId));
 }

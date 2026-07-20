@@ -7,6 +7,7 @@ export const kycStatusEnum = pgEnum('kyc_status', [
   'verified',
   'rejected',
 ]);
+export const userStatusEnum = pgEnum('user_status', ['active', 'blocked']);
 export const providerTypeEnum = pgEnum('provider_type', ['SC', 'GC']);
 export const orderStatusEnum = pgEnum('order_status', [
   'pending',

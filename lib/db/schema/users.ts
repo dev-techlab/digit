@@ -9,7 +9,13 @@ import {
   inet,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
-import { kycStatusEnum, otpPurposeEnum, postalStatusEnum, ticketStatusEnum } from './enums';
+import {
+  kycStatusEnum,
+  otpPurposeEnum,
+  postalStatusEnum,
+  ticketStatusEnum,
+  userStatusEnum,
+} from './enums';
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -22,6 +28,7 @@ export const users = pgTable('users', {
   avatarUrl: text('avatar_url'),
   avatarEmoji: text('avatar_emoji').notNull().default('🎰'),
   kycStatus: kycStatusEnum('kyc_status').notNull().default('unverified'),
+  status: userStatusEnum('status').notNull().default('active'),
   pwaInstalled: boolean('pwa_installed').notNull().default(false),
   inviteCode: text('invite_code').notNull().unique(),
   referredByUserId: uuid('referred_by_user_id').references((): AnyPgColumn => users.id),

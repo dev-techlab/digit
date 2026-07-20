@@ -12,6 +12,8 @@ import {
   X,
   IndentDecrease,
   ShieldCheck,
+  Users,
+  Store,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -29,6 +31,8 @@ const TITLES: Record<string, string> = {
   dashboard: 'Dashboard',
   providers: 'Providers',
   platforms: 'Platforms',
+  users: 'Users',
+  agents: 'Agents',
 };
 
 const AdminCtx = createContext<{ me: AdminMe } | null>(null);
@@ -127,6 +131,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <NavItem icon={Home} label="Dashboard" href="/admin/dashboard" />
       <NavItem icon={Gamepad2} label="Providers" href="/admin/providers" />
       <NavItem icon={Layers} label="Platforms" href="/admin/platforms" />
+      {(me.isSuperAdmin || me.permissions.includes('users.read')) && (
+        <NavItem icon={Users} label="Users" href="/admin/users" />
+      )}
+      {(me.isSuperAdmin || me.permissions.includes('agents.read')) && (
+        <NavItem icon={Store} label="Agents" href="/admin/agents" />
+      )}
       <div className="my-3 border-t border-slate-100" />
       <NavItem icon={Lock} label="Change Password" href="/admin/change-password" />
       <NavItem icon={Power} label="Logout" onClick={logout} />

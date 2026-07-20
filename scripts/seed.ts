@@ -406,6 +406,7 @@ async function seedRbac() {
   const matrix: Record<string, { group: string; actions: string[] }> = {
     users: { group: 'Players', actions: ['read', 'write'] },
     wallets: { group: 'Players', actions: ['read', 'write'] },
+    agents: { group: 'Access', actions: ['read', 'write'] },
     kyc: { group: 'Players', actions: ['read', 'write'] },
     orders: { group: 'Finance', actions: ['read', 'write'] },
     transactions: { group: 'Finance', actions: ['read', 'write'] },

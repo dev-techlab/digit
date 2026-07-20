@@ -43,6 +43,13 @@
       "when": 1784227402450,
       "tag": "0005_open_jigsaw",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784564226427,
+      "tag": "0006_warm_starfox",
+      "breakpoints": true
     }
   ]
 }
