@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { asc } from 'drizzle-orm';
+import { asc, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import * as s from '@/lib/db/schema';
 import { getAgentFromRequest } from '@/lib/agent-auth';
@@ -26,6 +26,7 @@ export async function GET(req: Request) {
   const platforms = await db
     .select()
     .from(s.gamePlatforms)
+    .where(isNull(s.gamePlatforms.deletedAt))
     .orderBy(asc(s.gamePlatforms.sort), asc(s.gamePlatforms.name));
   return NextResponse.json({ platforms });
 }

@@ -1,6 +1,6 @@
 import 'server-only';
 import { cookies } from 'next/headers';
-import { and, eq, asc, desc } from 'drizzle-orm';
+import { and, eq, asc, desc, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import * as s from '@/lib/db/schema';
 import { userIdForToken } from '@/lib/user-service';
@@ -45,7 +45,13 @@ export async function getProviders(providerType: 'SC' | 'GC'): Promise<GameProvi
   const rows = await db
     .select()
     .from(s.gameProviders)
-    .where(and(eq(s.gameProviders.providerType, providerType), eq(s.gameProviders.status, 1)))
+    .where(
+      and(
+        eq(s.gameProviders.providerType, providerType),
+        eq(s.gameProviders.status, 1),
+        isNull(s.gameProviders.deletedAt)
+      )
+    )
     .orderBy(asc(s.gameProviders.sort));
 
   const tiers = await db
@@ -164,7 +170,11 @@ export async function getTransactions(): Promise<Transaction[]> {
 // ── Bonuses (definition + this user's claim status) ──────────────────────────
 export async function getBonuses(): Promise<BonusReward[]> {
   const userId = await currentUserId();
-  const defs = await db.select().from(s.bonuses).orderBy(asc(s.bonuses.sort));
+  const defs = await db
+    .select()
+    .from(s.bonuses)
+    .where(isNull(s.bonuses.deletedAt))
+    .orderBy(asc(s.bonuses.sort));
   const claims = userId
     ? await db.select().from(s.userBonusClaims).where(eq(s.userBonusClaims.userId, userId))
     : [];

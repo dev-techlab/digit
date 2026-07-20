@@ -50,6 +50,13 @@
       "when": 1784564226427,
       "tag": "0006_warm_starfox",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1784567985993,
+      "tag": "0007_majestic_molly_hayes",
+      "breakpoints": true
     }
   ]
 }

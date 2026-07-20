@@ -150,7 +150,7 @@ export function PlatformsScreen() {
   const remove = async (p: Platform) => {
     if (
       !window.confirm(
-        `Deactivate "${p.name}"? It will be hidden from stores but its history is kept.`
+        `Delete "${p.name}"? It disappears from this list and from every store's Game Setting screen. Existing store configs, member game-account bindings, and transaction history are kept untouched.`
       )
     )
       return;
@@ -158,7 +158,7 @@ export function PlatformsScreen() {
       await api(`/api/admin/platforms?id=${encodeURIComponent(p.id)}`, { method: 'DELETE' });
       void load();
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : 'Failed to deactivate platform.');
+      window.alert(e instanceof Error ? e.message : 'Failed to delete platform.');
     }
   };
 
@@ -210,7 +210,7 @@ export function PlatformsScreen() {
                 <button
                   onClick={() => void remove(p)}
                   className="text-slate-400 hover:text-red-500"
-                  aria-label="Deactivate"
+                  aria-label="Delete"
                 >
                   <Trash2 size={15} />
                 </button>

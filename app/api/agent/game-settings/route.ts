@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import * as s from '@/lib/db/schema';
 import { getAgentFromRequest } from '@/lib/agent-auth';
@@ -15,7 +15,7 @@ export async function GET(req: Request) {
   const platforms = await db
     .select()
     .from(s.gamePlatforms)
-    .where(eq(s.gamePlatforms.isActive, true))
+    .where(and(eq(s.gamePlatforms.isActive, true), isNull(s.gamePlatforms.deletedAt)))
     .orderBy(asc(s.gamePlatforms.sort));
 
   const accounts = await db

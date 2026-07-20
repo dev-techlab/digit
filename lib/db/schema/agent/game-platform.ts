@@ -19,4 +19,9 @@ export const gamePlatforms = pgTable('game_platforms', {
   isActive: boolean('is_active').notNull().default(true),
   syncedAt: timestamp('synced_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  // Soft delete — admin removal hides the platform from every catalog/config
+  // view (agent Game Setting, admin list) without touching linked
+  // store_platform_accounts / member_platform_accounts / transactions /
+  // redemption_audits, so historical reports keep the real platform name.
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });

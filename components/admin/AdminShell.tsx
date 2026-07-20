@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Users,
   Store,
+  Gift,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -33,6 +34,7 @@ const TITLES: Record<string, string> = {
   platforms: 'Platforms',
   users: 'Users',
   agents: 'Agents',
+  bonuses: 'Bonuses',
 };
 
 const AdminCtx = createContext<{ me: AdminMe } | null>(null);
@@ -136,6 +138,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       )}
       {(me.isSuperAdmin || me.permissions.includes('agents.read')) && (
         <NavItem icon={Store} label="Agents" href="/admin/agents" />
+      )}
+      {(me.isSuperAdmin || me.permissions.includes('bonuses.read')) && (
+        <NavItem icon={Gift} label="Bonuses" href="/admin/bonuses" />
       )}
       <div className="my-3 border-t border-slate-100" />
       <NavItem icon={Lock} label="Change Password" href="/admin/change-password" />

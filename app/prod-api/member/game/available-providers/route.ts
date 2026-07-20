@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import * as s from '@/lib/db/schema';
 
@@ -22,6 +22,7 @@ export async function GET(req: Request) {
 
   const where = and(
     eq(s.gameProviders.status, 1),
+    isNull(s.gameProviders.deletedAt),
     providerType === 'SC' || providerType === 'GC'
       ? eq(s.gameProviders.providerType, providerType)
       : undefined

@@ -34,6 +34,9 @@ export const bonuses = pgTable('bonuses', {
   scheduleText: text('schedule_text').notNull().default(''),
   scheduleCountdownSeconds: integer('schedule_countdown_seconds'),
   sort: smallint('sort').notNull().default(0),
+  // Soft delete — admin removal hides the bonus from the player Bonus Center
+  // without touching linked user_bonus_claims, so claim history is kept.
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
 
 export const userBonusClaims = pgTable(

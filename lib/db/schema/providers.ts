@@ -31,6 +31,10 @@ export const gameProviders = pgTable('game_providers', {
   invalidPasswordState: smallint('invalid_password_state').notNull(),
   canChangePassword: smallint('can_change_password').notNull(),
   syncedAt: timestamp('synced_at', { withTimezone: true }).notNull().defaultNow(),
+  // Soft delete — admin removal hides the provider from the catalog without
+  // touching linked provider_deposit_tiers / user_provider_accounts (real
+  // player game credentials/balance), so nothing is destroyed.
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
 
 export const providerDepositTiers = pgTable('provider_deposit_tiers', {

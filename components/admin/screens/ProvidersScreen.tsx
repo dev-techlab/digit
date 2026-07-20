@@ -212,17 +212,14 @@ export function ProvidersScreen() {
   };
 
   const remove = async (p: Provider) => {
+    if (
+      !window.confirm(
+        `Delete "${p.name}"? It disappears from this list and the player game lobby. Player accounts (game credentials/balance) and deposit tiers for this provider are kept untouched.`
+      )
+    )
+      return;
     try {
-      const preview = await api<{ requiresConfirmation: true; linkedAccounts: number }>(
-        `/api/admin/providers?id=${p.id}`,
-        { method: 'DELETE' }
-      );
-      const blastRadius =
-        preview.linkedAccounts > 0
-          ? `This will permanently delete ${preview.linkedAccounts} player account${preview.linkedAccounts === 1 ? '' : 's'} (their game credentials and balance for this provider), plus its deposit tiers. This cannot be undone.`
-          : 'This also removes its deposit tiers. No player accounts are currently linked to it. This cannot be undone.';
-      if (!window.confirm(`Permanently delete "${p.name}"?\n\n${blastRadius}`)) return;
-      await api(`/api/admin/providers?id=${p.id}&confirm=true`, { method: 'DELETE' });
+      await api(`/api/admin/providers?id=${p.id}`, { method: 'DELETE' });
       void load();
     } catch (e) {
       window.alert(e instanceof Error ? e.message : 'Failed to delete provider.');

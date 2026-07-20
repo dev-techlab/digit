@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { asc, eq, sql } from 'drizzle-orm';
+import { asc, eq, isNotNull, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import * as s from '@/lib/db/schema';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
@@ -34,7 +34,7 @@ async function authorize(
   return { adminId, error: undefined };
 }
 
-/** GET /api/admin/providers — full provider catalog for management. */
+/** GET /api/admin/providers — full provider catalog (excluding soft-deleted) for management. */
 export async function GET(req: Request) {
   const { error } = await authorize(req, 'providers.read');
   if (error) return error;
@@ -42,6 +42,7 @@ export async function GET(req: Request) {
   const providers = await db
     .select()
     .from(s.gameProviders)
+    .where(isNull(s.gameProviders.deletedAt))
     .orderBy(asc(s.gameProviders.sort), asc(s.gameProviders.name));
   return NextResponse.json({ providers });
 }
@@ -69,29 +70,44 @@ export async function POST(req: Request) {
   if (!providerType)
     return NextResponse.json({ error: 'providerType must be SC or GC' }, { status: 400 });
 
+  const values: typeof s.gameProviders.$inferInsert = {
+    id,
+    name,
+    providerCode,
+    launchUrlTemplate,
+    iconUrl,
+    providerType,
+    status: int(body.status, 1),
+    sort: int(body.sort, 0),
+    createType: int(body.createType, 1),
+    operate: int(body.operate, 0),
+    needInitBalance: int(body.needInitBalance, 0),
+    canManualInput: int(body.canManualInput, 1),
+    iframeSupported: bool(body.iframeSupported, false),
+    isMachineSupported: int(body.isMachineSupported, 0),
+    redeemField: int(body.redeemField, 0),
+    invalidPasswordState: int(body.invalidPasswordState, 0),
+    canChangePassword: int(body.canChangePassword, 1),
+  };
+
   try {
+    // A same-id conflict against a soft-deleted row restores it (with the new
+    // values) instead of failing — the id is otherwise invisible/reusable
+    // from the admin's point of view once deleted. A conflict against a
+    // still-active row is a real conflict and falls through to the WHERE
+    // clause not matching, leaving `row` undefined.
     const [row] = await db
       .insert(s.gameProviders)
-      .values({
-        id,
-        name,
-        providerCode,
-        launchUrlTemplate,
-        iconUrl,
-        providerType,
-        status: int(body.status, 1),
-        sort: int(body.sort, 0),
-        createType: int(body.createType, 1),
-        operate: int(body.operate, 0),
-        needInitBalance: int(body.needInitBalance, 0),
-        canManualInput: int(body.canManualInput, 1),
-        iframeSupported: bool(body.iframeSupported, false),
-        isMachineSupported: int(body.isMachineSupported, 0),
-        redeemField: int(body.redeemField, 0),
-        invalidPasswordState: int(body.invalidPasswordState, 0),
-        canChangePassword: int(body.canChangePassword, 1),
+      .values(values)
+      .onConflictDoUpdate({
+        target: s.gameProviders.id,
+        set: { ...values, deletedAt: null },
+        setWhere: isNotNull(s.gameProviders.deletedAt),
       })
       .returning();
+    if (!row) {
+      return NextResponse.json({ error: 'A provider with that id already exists' }, { status: 409 });
+    }
     await logAdminAction({
       adminId,
       action: 'provider.create',
@@ -164,48 +180,32 @@ export async function PUT(req: Request) {
 }
 
 /**
- * DELETE /api/admin/providers?id=... — permanently remove a provider (and its
- * deposit tiers/accounts, cascade).
- *
- * Two-phase: without `&confirm=true` this only reports how many player
- * accounts (`user_provider_accounts` — real player game credentials/balance
- * for this provider) would be destroyed, and deletes nothing. The caller
- * must re-request with `confirm=true` to actually perform the (irreversible)
- * delete — this lets the UI show the real blast radius before committing,
- * instead of a generic "are you sure?" with no idea what it destroys.
+ * DELETE /api/admin/providers?id=... — soft delete: stamps `deletedAt` and
+ * hides the provider from the catalog (this list, the player /game lobby).
+ * Nothing is destroyed — existing `provider_deposit_tiers` and
+ * `user_provider_accounts` (real player game credentials/balance) are left
+ * exactly as they were. There is no separate hard-delete path.
  */
 export async function DELETE(req: Request) {
   const { error, adminId } = await authorize(req, 'providers.write');
   if (error) return error;
 
-  const url = new URL(req.url);
-  const id = int(url.searchParams.get('id'), NaN);
+  const id = int(new URL(req.url).searchParams.get('id'), NaN);
   if (!Number.isFinite(id)) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
-  const [existing] = await db
-    .select({ id: s.gameProviders.id })
-    .from(s.gameProviders)
-    .where(eq(s.gameProviders.id, id));
-  if (!existing) return NextResponse.json({ error: 'not found' }, { status: 404 });
-
-  const [{ count }] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(s.userProviderAccounts)
-    .where(eq(s.userProviderAccounts.providerId, id));
-
-  if (url.searchParams.get('confirm') !== 'true') {
-    return NextResponse.json({ requiresConfirmation: true, linkedAccounts: count });
-  }
-
-  const [row] = await db.delete(s.gameProviders).where(eq(s.gameProviders.id, id)).returning();
+  const [row] = await db
+    .update(s.gameProviders)
+    .set({ deletedAt: new Date() })
+    .where(eq(s.gameProviders.id, id))
+    .returning();
   if (!row) return NextResponse.json({ error: 'not found' }, { status: 404 });
   await logAdminAction({
     adminId,
     action: 'provider.delete',
     entityType: 'game_provider',
     entityId: String(id),
-    changes: { provider: row, linkedAccountsRemoved: count },
+    changes: { provider: row },
     ipAddress: clientIp(req),
   });
-  return NextResponse.json({ ok: true, linkedAccountsRemoved: count });
+  return NextResponse.json({ ok: true });
 }
