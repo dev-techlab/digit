@@ -60,6 +60,7 @@ export async function GET(req: Request) {
       nickname: s.agents.nickname,
       email: s.agents.email,
       ratioPct: s.agents.ratioPct,
+      discountPer: s.agents.discountPer,
       onlineBalance: s.agents.onlineBalance,
       inviteCode: s.agents.inviteCode,
       status: s.agents.status,
@@ -103,6 +104,7 @@ export async function POST(req: Request) {
         storeId: agent.storeId,
         parentAgentId: agent.id,
         ratioPct: Number.isFinite(Number(body.ratioPct)) ? String(body.ratioPct) : '0',
+        discountPer: Number.isFinite(Number(body.discountPer)) ? String(body.discountPer) : '0',
         inviteCode: `MC${randomBytes(8).toString('hex').toUpperCase()}`,
         remark: typeof body.remark === 'string' ? body.remark.slice(0, 300) : null,
       })
@@ -128,6 +130,8 @@ export async function PUT(req: Request) {
   const set: Partial<typeof s.agents.$inferInsert> = {};
   if (body.ratioPct != null && Number.isFinite(Number(body.ratioPct)))
     set.ratioPct = String(body.ratioPct);
+  if (body.discountPer != null && Number.isFinite(Number(body.discountPer)))
+    set.discountPer = String(body.discountPer);
   if (body.status === 'active' || body.status === 'disabled') set.status = body.status;
   if (typeof body.remark === 'string') set.remark = body.remark.slice(0, 300);
   if (typeof body.nickname === 'string') set.nickname = body.nickname;

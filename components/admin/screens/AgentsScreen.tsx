@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Copy, Plus } from 'lucide-react';
+import { Copy, Edit, Plus } from 'lucide-react';
 import {
   api,
   Btn,
@@ -23,6 +23,7 @@ interface AgentRow {
   nickname: string | null;
   email: string | null;
   inviteCode: string;
+  discountPer: string;
   onlineBalance: string;
   status: 'active' | 'disabled';
   remark: string | null;
@@ -30,7 +31,7 @@ interface AgentRow {
   createdAt: string;
 }
 
-const emptyForm = () => ({ username: '', password: '', nickname: '', email: '', remark: '' });
+const emptyForm = () => ({ username: '', password: '', nickname: '', email: '', discountPer: '0.00', remark: '' });
 
 /** Top-level store/agent accounts — the B2B side that resells game credits to members. */
 export function AgentsScreen() {
@@ -46,6 +47,12 @@ export function AgentsScreen() {
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [created, setCreated] = useState<{ username: string; password: string } | null>(null);
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editRow, setEditRow] = useState<AgentRow | null>(null);
+  const [editForm, setEditForm] = useState({ nickname: '', email: '', discountPer: '0', remark: '' });
+  const [editBusy, setEditBusy] = useState(false);
+  const [editErr, setEditErr] = useState<string | null>(null);
 
   const load = useCallback(
     (p = page, q = search) =>
@@ -84,6 +91,30 @@ export function AgentsScreen() {
       setErr(e instanceof Error ? e.message : 'Failed to create agent.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const saveEdit = async () => {
+    if (!editRow) return;
+    setEditErr(null);
+    setEditBusy(true);
+    try {
+      await api('/api/admin/agents', {
+        method: 'PUT',
+        body: JSON.stringify({
+          id: editRow.id,
+          nickname: editForm.nickname,
+          email: editForm.email,
+          discountPer: editForm.discountPer,
+          remark: editForm.remark,
+        }),
+      });
+      void load(page, search);
+      setEditOpen(false);
+    } catch (e) {
+      setEditErr(e instanceof Error ? e.message : 'Failed to update agent.');
+    } finally {
+      setEditBusy(false);
     }
   };
 
@@ -143,6 +174,7 @@ export function AgentsScreen() {
             'Username',
             'Nickname',
             'Email',
+            'Discount',
             'Online Balance',
             'Invite Code',
             'Last Login',
@@ -157,6 +189,7 @@ export function AgentsScreen() {
               <td className="px-4 py-3 font-medium text-slate-700">{r.username}</td>
               <td className="px-4 py-3">{r.nickname ?? '-'}</td>
               <td className="px-4 py-3">{r.email ?? '-'}</td>
+              <td className="px-4 py-3">{r.discountPer ?? '-'}</td>
               <td className="px-4 py-3 font-semibold text-green-600">{fmtMoney(r.onlineBalance)}</td>
               <td className="px-4 py-3 font-mono text-xs text-slate-500">{r.inviteCode}</td>
               <td className="px-4 py-3">{fmtDateTime(r.lastLoginAt)}</td>
@@ -173,15 +206,33 @@ export function AgentsScreen() {
                 </span>
               </td>
               <td className="px-4 py-3">
-                <Btn
-                  variant={r.status === 'active' ? 'danger' : 'success'}
-                  className="px-3 py-1.5 text-xs"
-                  disabled={busyId === r.id}
-                  onClick={() => void toggleStatus(r)}
-                >
-                  {r.status === 'active' ? 'Block Access' : 'Restore Access'}
-                </Btn>
-              </td>
+                  <Btn
+                    variant="ghost"
+                    className="px-1 text-xs mr-2"
+                    disabled={editBusy && editRow?.id === r.id}
+                    onClick={() => {
+                      setEditRow(r);
+                      setEditForm({
+                        nickname: r.nickname ?? '',
+                        email: r.email ?? '',
+                        discountPer: r.discountPer,
+                        remark: r.remark ?? '',
+                      });
+                      setEditErr(null);
+                      setEditOpen(true);
+                    }}
+                  >
+                    <Edit size={14} />
+                  </Btn>
+                  <Btn
+                    variant={r.status === 'active' ? 'danger' : 'success'}
+                    className="px-3 py-1.5 text-xs"
+                    disabled={busyId === r.id}
+                    onClick={() => void toggleStatus(r)}
+                  >
+                    {r.status === 'active' ? 'Block Access' : 'Restore Access'}
+                  </Btn>
+                </td>
             </tr>
           ))}
         </Table>
@@ -228,7 +279,7 @@ export function AgentsScreen() {
                 placeholder="Min. 6 characters"
               />
             </Field>
-            <Field label="Nickname">
+              <Field label="Nickname">
               <TextInput
                 value={form.nickname}
                 onChange={(e) => setForm({ ...form, nickname: e.target.value })}
@@ -236,6 +287,13 @@ export function AgentsScreen() {
             </Field>
             <Field label="Email">
               <TextInput value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            </Field>
+            <Field label="Discount" hint="%">
+              <TextInput
+                type="number"
+                value={form.discountPer}
+                onChange={(e) => setForm({ ...form, discountPer: e.target.value })}
+              />
             </Field>
           </div>
           <Field label="Remark">
@@ -281,7 +339,55 @@ export function AgentsScreen() {
             </Btn>
           </div>
         )}
-      </Modal>
-    </div>
-  );
-}
+</Modal>
+
+       <Modal
+         title="Edit Agent"
+         open={editOpen}
+         onClose={() => setEditOpen(false)}
+         footer={
+           <>
+             <Btn variant="ghost" onClick={() => setEditOpen(false)}>
+               Cancel
+             </Btn>
+             <Btn onClick={saveEdit} disabled={editBusy}>
+               {editBusy ? 'Saving…' : 'Save'}
+             </Btn>
+           </>
+         }
+       >
+         <div className="space-y-4">
+           {editErr && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{editErr}</p>}
+           <div className="grid grid-cols-2 gap-4">
+             <Field label="Nickname">
+               <TextInput
+                 value={editForm.nickname}
+                 onChange={(e) => setEditForm({ ...editForm, nickname: e.target.value })}
+               />
+             </Field>
+             <Field label="Email">
+               <TextInput
+                 value={editForm.email}
+                 onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+               />
+             </Field>
+             <Field label="Discount" hint="%">
+               <TextInput
+                 type="number"
+                 value={editForm.discountPer}
+                 onChange={(e) => setEditForm({ ...editForm, discountPer: e.target.value })}
+               />
+             </Field>
+           </div>
+           <Field label="Remark">
+             <TextInput
+               value={editForm.remark}
+               onChange={(e) => setEditForm({ ...editForm, remark: e.target.value })}
+               placeholder="Optional note"
+             />
+           </Field>
+         </div>
+       </Modal>
+     </div>
+   );
+ }

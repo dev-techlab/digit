@@ -65,6 +65,7 @@ export async function GET(req: Request) {
         nickname: s.agents.nickname,
         email: s.agents.email,
         inviteCode: s.agents.inviteCode,
+        discountPer: s.agents.discountPer,
         onlineBalance: s.agents.onlineBalance,
         status: s.agents.status,
         remark: s.agents.remark,
@@ -115,6 +116,7 @@ export async function POST(req: Request) {
         passwordHash: await bcrypt.hash(password, 10),
         nickname: nickname || username,
         email: email || null,
+        discountPer: Number.isFinite(Number(body.discountPer)) ? String(body.discountPer) : '0',
         inviteCode: `MC${randomBytes(8).toString('hex').toUpperCase()}`,
         remark,
       })
@@ -147,7 +149,7 @@ export async function POST(req: Request) {
   }
 }
 
-/** PUT /api/admin/agents — { id, status?, password? } toggle access / reset a store's password. */
+/** PUT /api/admin/agents — { id, status?, discountPer?, password?, nickname?, email?, remark? } update any store agent field. */
 export async function PUT(req: Request) {
   const { error, adminId } = await authorize(req, 'agents.write');
   if (error) return error;
@@ -158,9 +160,14 @@ export async function PUT(req: Request) {
 
   const set: Partial<typeof s.agents.$inferInsert> = {};
   if (body.status === 'active' || body.status === 'disabled') set.status = body.status;
+  if (body.discountPer != null && Number.isFinite(Number(body.discountPer)))
+    set.discountPer = String(body.discountPer);
   if (typeof body.password === 'string' && body.password.length >= 6) {
     set.passwordHash = await bcrypt.hash(body.password, 10);
   }
+  if (typeof body.nickname === 'string') set.nickname = body.nickname.trim() || null;
+  if (typeof body.email === 'string') set.email = body.email.trim() || null;
+  if (typeof body.remark === 'string') set.remark = body.remark.slice(0, 300) || null;
   if (Object.keys(set).length === 0) {
     return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
   }
@@ -179,11 +186,20 @@ export async function PUT(req: Request) {
       .where(and(eq(s.agentSessions.agentId, id), isNull(s.agentSessions.revokedAt)));
   }
 
+  const changes: Record<string, unknown> = {};
+  if (set.nickname !== undefined) changes.nickname = set.nickname;
+  if (set.email !== undefined) changes.email = set.email;
+  if (set.remark !== undefined) changes.remark = set.remark;
+  if (set.discountPer !== undefined) changes.discountPer = set.discountPer;
+  if (set.passwordHash !== undefined) changes.password = '[redacted]';
+  if (set.status !== undefined) changes.status = set.status;
+
   await logAdminAction({
     adminId,
-    action: set.status ? `agent.${set.status === 'active' ? 'unblock' : 'block'}` : 'agent.reset_password',
+    action: set.status ? `agent.${set.status === 'active' ? 'unblock' : 'block'}` : 'agent.update',
     entityType: 'agent',
     entityId: id,
+    changes,
     ipAddress: clientIp(req),
   });
   return NextResponse.json({ ok: true });

@@ -23,6 +23,7 @@ export const agents = pgTable(
     storeId: uuid('store_id').references((): AnyPgColumn => agents.id, { onDelete: 'cascade' }),
     parentAgentId: uuid('parent_agent_id').references((): AnyPgColumn => agents.id),
     ratioPct: numeric('ratio_pct', { precision: 6, scale: 2 }).notNull().default('0'),
+    discountPer: numeric('discount_per', { precision: 6, scale: 2 }).notNull().default('0'),
     inviteCode: text('invite_code').notNull().unique(),
     onlineBalance: numeric('online_balance', { precision: 14, scale: 2 }).notNull().default('0'),
     tipsBalance: numeric('tips_balance', { precision: 14, scale: 2 }).notNull().default('0'),
