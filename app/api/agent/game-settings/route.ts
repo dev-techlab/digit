@@ -13,10 +13,30 @@ export async function GET(req: Request) {
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const platforms = await db
-    .select()
-    .from(s.gamePlatforms)
-    .where(and(eq(s.gamePlatforms.isActive, true), isNull(s.gamePlatforms.deletedAt)))
-    .orderBy(asc(s.gamePlatforms.sort));
+    .select({
+      id: s.gamePlatforms.id,
+      name: s.gamePlatforms.name,
+      slug: s.gamePlatforms.slug,
+      iconUrl: s.gamePlatforms.iconUrl,
+      externalId: s.gamePlatforms.externalId,
+      providerCode: s.gamePlatforms.providerCode,
+      providerType: s.gamePlatforms.providerType,
+      launchUrl: s.gamePlatforms.launchUrl,
+      sort: s.gamePlatforms.sort,
+      isActive: s.gamePlatforms.isActive,
+      syncedAt: s.gamePlatforms.syncedAt,
+      createdAt: s.gamePlatforms.createdAt,
+    })
+    .from(s.agentPlatformMappings)
+    .innerJoin(s.gamePlatforms, eq(s.gamePlatforms.id, s.agentPlatformMappings.platformId))
+    .where(
+      and(
+        eq(s.agentPlatformMappings.agentId, agent.id),
+        eq(s.gamePlatforms.isActive, true),
+        isNull(s.gamePlatforms.deletedAt)
+      )
+    )
+    .orderBy(asc(s.gamePlatforms.sort), asc(s.gamePlatforms.name));
 
   const accounts = await db
     .select()

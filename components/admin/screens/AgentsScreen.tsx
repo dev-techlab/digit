@@ -31,6 +31,20 @@ interface AgentRow {
   createdAt: string;
 }
 
+interface PlatformOption {
+  id: string;
+  name: string;
+  assigned: boolean;
+  availableFromTime?: string;
+  availableToTime?: string;
+}
+
+interface GameAssignment {
+  platformId: string;
+  availableFromTime?: string;
+  availableToTime?: string;
+}
+
 const emptyForm = () => ({ username: '', password: '', nickname: '', email: '', discountPer: '0.00', remark: '' });
 
 /** Top-level store/agent accounts — the B2B side that resells game credits to members. */
@@ -53,6 +67,9 @@ export function AgentsScreen() {
   const [editForm, setEditForm] = useState({ nickname: '', email: '', discountPer: '0', remark: '' });
   const [editBusy, setEditBusy] = useState(false);
   const [editErr, setEditErr] = useState<string | null>(null);
+  const [platforms, setPlatforms] = useState<PlatformOption[]>([]);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<GameAssignment[]>([]);
+  const [gameSearch, setGameSearch] = useState('');
 
   const load = useCallback(
     (p = page, q = search) =>
@@ -68,7 +85,41 @@ export function AgentsScreen() {
   );
   useEffect(() => {
     void load(1, '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const loadPlatforms = useCallback(async (agentId?: string) => {
+    if (agentId) {
+      const data = await api<{
+        platforms: Array<{
+          id: string;
+          name: string;
+          assigned: boolean;
+          availableFromTime?: string;
+          availableToTime?: string;
+        }>;
+      }>(`/api/admin/agent-platforms?agentId=${encodeURIComponent(agentId)}`);
+      setPlatforms(data.platforms);
+      setSelectedPlatforms(
+        data.platforms
+          .filter((p) => p.assigned)
+          .map((p) => ({
+            platformId: p.id,
+            availableFromTime: p.availableFromTime || undefined,
+            availableToTime: p.availableToTime || undefined,
+          }))
+      );
+      return;
+    }
+
+    const data = await api<{ platforms: Array<{ id: string; name: string; isActive?: boolean }> }>(
+      '/api/admin/platforms'
+    );
+    const options = data.platforms
+      .filter((platform) => platform.isActive !== false)
+      .map((platform) => ({ id: platform.id, name: platform.name, assigned: false }));
+    setPlatforms(options);
+    setSelectedPlatforms([]);
+    setGameSearch('');
   }, []);
 
   const create = async () => {
@@ -79,12 +130,22 @@ export function AgentsScreen() {
     }
     setSaving(true);
     try {
-      const data = await api<{ agent: { username: string; password: string } }>('/api/admin/agents', {
+      const agentData = await api<{ agent: { id: string; username: string; password: string } }>('/api/admin/agents', {
         method: 'POST',
         body: JSON.stringify(form),
       });
-      setCreated(data.agent);
+
+      if (selectedPlatforms.length > 0) {
+        await api('/api/admin/agent-platforms', {
+          method: 'PUT',
+          body: JSON.stringify({ agentId: agentData.agent.id, assignments: selectedPlatforms }),
+        });
+      }
+
+      setCreated({ username: agentData.agent.username, password: agentData.agent.password });
       setForm(emptyForm());
+      setSelectedPlatforms([]);
+      setGameSearch('');
       void load(1, '');
       setPage(1);
     } catch (e) {
@@ -109,6 +170,10 @@ export function AgentsScreen() {
           remark: editForm.remark,
         }),
       });
+      await api('/api/admin/agent-platforms', {
+        method: 'PUT',
+        body: JSON.stringify({ agentId: editRow.id, assignments: selectedPlatforms }),
+      });
       void load(page, search);
       setEditOpen(false);
     } catch (e) {
@@ -130,6 +195,96 @@ export function AgentsScreen() {
     } finally {
       setBusyId(null);
     }
+  };
+
+  const renderGameSelector = (label = 'Platforms') => {
+    const filtered = platforms.filter((p) => p.name.toLowerCase().includes(gameSearch.toLowerCase()));
+
+    return (
+      <Field label={label}>
+        <div className="space-y-2 rounded-lg border border-slate-200">
+          <div className="border-b border-slate-100 p-3">
+            <TextInput
+              placeholder="Search platforms..."
+              value={gameSearch}
+              onChange={(e) => setGameSearch(e.target.value)}
+              className="text-sm"
+            />
+          </div>
+          <div className="max-h-56 space-y-0 overflow-auto">
+            {filtered.length === 0 ? (
+              <p className="px-3 py-4 text-sm text-slate-500">No matching platforms.</p>
+            ) : (
+              filtered.map((platform) => {
+                const selected = selectedPlatforms.find((g) => g.platformId === platform.id);
+                const checked = !!selected;
+                return (
+                  <div
+                    key={platform.id}
+                    className={
+                      checked
+                        ? 'border-b border-slate-50 bg-blue-50/40'
+                        : 'border-b border-slate-50 last:border-b-0'
+                    }
+                  >
+                    <label className="flex cursor-pointer items-center gap-3 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50/60">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          setSelectedPlatforms((current) => {
+                            if (current.find((g) => g.platformId === platform.id)) {
+                              return current.filter((g) => g.platformId !== platform.id);
+                            }
+                            return [...current, { platformId: platform.id }];
+                          });
+                        }}
+                        className="h-4 w-4 rounded border-slate-300 text-blue-500 focus:ring-blue-500"
+                      />
+                      <span className="flex-1 font-medium">{platform.name}</span>
+                    </label>
+                    {checked && (
+                      <div className="flex gap-3 px-3 pb-3">
+                        <div className="flex-1">
+                          <span className="mb-1 block text-xs font-medium text-slate-500">Available from</span>
+                          <input
+                            type="time"
+                            value={selected.availableFromTime || ''}
+                            onChange={(e) => {
+                              setSelectedPlatforms((current) =>
+                                current.map((g) =>
+                                  g.platformId === platform.id ? { ...g, availableFromTime: e.target.value } : g
+                                )
+                              );
+                            }}
+                            className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 outline-none focus:border-blue-400"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <span className="mb-1 block text-xs font-medium text-slate-500">Available to</span>
+                          <input
+                            type="time"
+                            value={selected.availableToTime || ''}
+                            onChange={(e) => {
+                              setSelectedPlatforms((current) =>
+                                current.map((g) =>
+                                  g.platformId === platform.id ? { ...g, availableToTime: e.target.value } : g
+                                )
+                              );
+                            }}
+                            className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 outline-none focus:border-blue-400"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </Field>
+    );
   };
 
   return (
@@ -161,9 +316,12 @@ export function AgentsScreen() {
         <Btn
           variant="success"
           className="mb-4"
-          onClick={() => {
+          onClick={async () => {
             setErr(null);
             setForm(emptyForm());
+            setSelectedPlatforms([]);
+            setGameSearch('');
+            await loadPlatforms();
             setOpen(true);
           }}
         >
@@ -206,33 +364,34 @@ export function AgentsScreen() {
                 </span>
               </td>
               <td className="px-4 py-3">
-                  <Btn
-                    variant="ghost"
-                    className="px-1 text-xs mr-2"
-                    disabled={editBusy && editRow?.id === r.id}
-                    onClick={() => {
-                      setEditRow(r);
-                      setEditForm({
-                        nickname: r.nickname ?? '',
-                        email: r.email ?? '',
-                        discountPer: r.discountPer,
-                        remark: r.remark ?? '',
-                      });
-                      setEditErr(null);
-                      setEditOpen(true);
-                    }}
-                  >
-                    <Edit size={14} />
-                  </Btn>
-                  <Btn
-                    variant={r.status === 'active' ? 'danger' : 'success'}
-                    className="px-3 py-1.5 text-xs"
-                    disabled={busyId === r.id}
-                    onClick={() => void toggleStatus(r)}
-                  >
-                    {r.status === 'active' ? 'Block Access' : 'Restore Access'}
-                  </Btn>
-                </td>
+                <Btn
+                  variant="ghost"
+                  className="px-1 text-xs mr-2"
+                  disabled={editBusy && editRow?.id === r.id}
+                  onClick={() => {
+                    setEditRow(r);
+                    setEditForm({
+                      nickname: r.nickname ?? '',
+                      email: r.email ?? '',
+                      discountPer: r.discountPer,
+                      remark: r.remark ?? '',
+                    });
+                    setEditErr(null);
+                    void loadPlatforms(r.id);
+                    setEditOpen(true);
+                  }}
+                >
+                  <Edit size={14} />
+                </Btn>
+                <Btn
+                  variant={r.status === 'active' ? 'danger' : 'success'}
+                  className="px-3 py-1.5 text-xs"
+                  disabled={busyId === r.id}
+                  onClick={() => void toggleStatus(r)}
+                >
+                  {r.status === 'active' ? 'Block Access' : 'Restore Access'}
+                </Btn>
+              </td>
             </tr>
           ))}
         </Table>
@@ -279,7 +438,7 @@ export function AgentsScreen() {
                 placeholder="Min. 6 characters"
               />
             </Field>
-              <Field label="Nickname">
+            <Field label="Nickname">
               <TextInput
                 value={form.nickname}
                 onChange={(e) => setForm({ ...form, nickname: e.target.value })}
@@ -296,6 +455,7 @@ export function AgentsScreen() {
               />
             </Field>
           </div>
+          {renderGameSelector('Platforms')}
           <Field label="Remark">
             <TextInput
               value={form.remark}
@@ -339,55 +499,47 @@ export function AgentsScreen() {
             </Btn>
           </div>
         )}
-</Modal>
+      </Modal>
 
-       <Modal
-         title="Edit Agent"
-         open={editOpen}
-         onClose={() => setEditOpen(false)}
-         footer={
-           <>
-             <Btn variant="ghost" onClick={() => setEditOpen(false)}>
-               Cancel
-             </Btn>
-             <Btn onClick={saveEdit} disabled={editBusy}>
-               {editBusy ? 'Saving…' : 'Save'}
-             </Btn>
-           </>
-         }
-       >
-         <div className="space-y-4">
-           {editErr && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{editErr}</p>}
-           <div className="grid grid-cols-2 gap-4">
-             <Field label="Nickname">
-               <TextInput
-                 value={editForm.nickname}
-                 onChange={(e) => setEditForm({ ...editForm, nickname: e.target.value })}
-               />
-             </Field>
-             <Field label="Email">
-               <TextInput
-                 value={editForm.email}
-                 onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-               />
-             </Field>
-             <Field label="Discount" hint="%">
-               <TextInput
-                 type="number"
-                 value={editForm.discountPer}
-                 onChange={(e) => setEditForm({ ...editForm, discountPer: e.target.value })}
-               />
-             </Field>
-           </div>
-           <Field label="Remark">
-             <TextInput
-               value={editForm.remark}
-               onChange={(e) => setEditForm({ ...editForm, remark: e.target.value })}
-               placeholder="Optional note"
-             />
-           </Field>
-         </div>
-       </Modal>
-     </div>
-   );
- }
+      <Modal title="Edit Agent" open={editOpen} onClose={() => setEditOpen(false)} footer={
+        <>
+          <Btn variant="ghost" onClick={() => setEditOpen(false)}>Cancel</Btn>
+          <Btn onClick={saveEdit} disabled={editBusy}>{editBusy ? 'Saving…' : 'Save'}</Btn>
+        </>
+      }>
+        <div className="space-y-4">
+          {editErr && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{editErr}</p>}
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Nickname">
+              <TextInput
+                value={editForm.nickname}
+                onChange={(e) => setEditForm({ ...editForm, nickname: e.target.value })}
+              />
+            </Field>
+            <Field label="Email">
+              <TextInput
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+              />
+            </Field>
+            <Field label="Discount" hint="%">
+              <TextInput
+                type="number"
+                value={editForm.discountPer}
+                onChange={(e) => setEditForm({ ...editForm, discountPer: e.target.value })}
+              />
+            </Field>
+          </div>
+          {renderGameSelector('Platforms')}
+          <Field label="Remark">
+            <TextInput
+              value={editForm.remark}
+              onChange={(e) => setEditForm({ ...editForm, remark: e.target.value })}
+              placeholder="Optional note"
+            />
+          </Field>
+        </div>
+      </Modal>
+    </div>
+  );
+}

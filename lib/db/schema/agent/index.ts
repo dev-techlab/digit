@@ -3,6 +3,7 @@
 export * from './enums';
 export * from './game-platform';
 export * from './agent';
+export * from './agent-platform';
 export * from './agent-session';
 export * from './store-setting';
 export * from './store-platform-account';

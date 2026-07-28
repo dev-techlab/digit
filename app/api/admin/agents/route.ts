@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'node:crypto';
-import { and, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, ilike, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import * as s from '@/lib/db/schema';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
@@ -34,8 +34,9 @@ async function authorize(
 /**
  * GET /api/admin/agents?page=&pageSize=&search= — top-level store/agent
  * accounts (the B2B side that resells game credits to members). Only
- * `type = 'store'` root accounts are managed here; each store then creates
- * its own sale/sub agents and store administrators from its own panel.
+ * `type = 'store'` root accounts that have logged in are managed here;
+ * each store then creates its own sale/sub agents and store administrators
+ * from its own panel.
  */
 export async function GET(req: Request) {
   const { error } = await authorize(req, 'agents.read');
@@ -48,6 +49,7 @@ export async function GET(req: Request) {
 
   const where = and(
     eq(s.agents.type, 'store'),
+    isNotNull(s.agents.lastLoginAt),
     search
       ? or(
           ilike(s.agents.username, `%${search}%`),
@@ -127,6 +129,15 @@ export async function POST(req: Request) {
       .insert(s.storeSettings)
       .values({ storeId: created.id })
       .onConflictDoNothing();
+
+    const platformIds = Array.isArray(body.platformIds)
+      ? body.platformIds.filter((id: unknown): id is string => typeof id === 'string')
+      : [];
+    if (platformIds.length > 0) {
+      await db.insert(s.agentPlatformMappings).values(
+        platformIds.map((platformId: string) => ({ agentId: created.id, platformId }))
+      );
+    }
 
     await logAdminAction({
       adminId,
