@@ -64,10 +64,12 @@ export async function GET(req: Request) {
       sort: s.gamePlatforms.sort,
       isActive: s.gamePlatforms.isActive,
       createdAt: s.gamePlatforms.createdAt,
-      agentCount: sql<number>`count(${s.storePlatformAccounts.storeId})::int`,
+      agentCount: sql<number>`count(distinct ${s.storePlatformAccounts.storeId})::int`,
+      customerCount: sql<number>`count(distinct ${s.memberPlatformAccounts.memberId})::int`,
     })
     .from(s.gamePlatforms)
     .leftJoin(s.storePlatformAccounts, eq(s.storePlatformAccounts.platformId, s.gamePlatforms.id))
+    .leftJoin(s.memberPlatformAccounts, eq(s.memberPlatformAccounts.platformId, s.gamePlatforms.id))
     .where(isNull(s.gamePlatforms.deletedAt))
     .groupBy(s.gamePlatforms.id)
     .orderBy(asc(s.gamePlatforms.sort), asc(s.gamePlatforms.name));

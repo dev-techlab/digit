@@ -335,9 +335,9 @@ async function seedBanners() {
     return;
   }
   const rows = [
-    { imageUrl: 'https://media.digitlink.mobi/banners/weekend-reload.png', sort: 0 },
-    { imageUrl: 'https://media.digitlink.mobi/banners/refer-friend.png', sort: 1 },
-    { imageUrl: 'https://media.digitlink.mobi/banners/vip-loyalty.png', sort: 2 },
+    { imageUrl: '/banners/weekend-reload.png', sort: 0 },
+    { imageUrl: '/banners/refer-friend.png', sort: 1 },
+    { imageUrl: '/banners/vip-loyalty.png', sort: 2 },
   ];
   await db.insert(s.banners).values(rows);
   console.log(`  banners: ${rows.length}`);
@@ -348,7 +348,7 @@ async function seedSettings() {
     { key: 'site.name', value: 'Octan Link', type: 'string', group: 'branding' },
     {
       key: 'site.logo_url',
-      value: 'https://digitlink.mobi/img/icons/icon-192x192.png',
+      value: '/logo.png',
       type: 'image',
       group: 'branding',
     },
@@ -373,7 +373,7 @@ async function seedSettings() {
   const internalRows: (typeof s.siteSettings.$inferInsert)[] = [
     {
       key: 'provider.api_base_url',
-      value: 'https://digitlink.mobi/prod-api/member/game/available-providers',
+      value: '/member/game/available-providers',
       type: 'url',
       group: 'integration',
       label: 'Provider catalog API base URL',

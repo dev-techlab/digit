@@ -1,6 +1,6 @@
-# Digit Link — Database Diagram & Schema
+# Octan Link — Database Diagram & Schema
 
-This document is the **single source of truth** for making the Digit Link clone
+This document is the **single source of truth** for making the Octan Link clone
 fully dynamic (DB-backed) instead of mock-JSON-backed. Every screen currently
 fed by `data/mock/*.json`, `data/providers.*.json`, `lib/*.ts` config, and the
 in-memory `AuthProvider` maps onto exactly one table below.
@@ -733,10 +733,10 @@ panel can render sections, and typed so the client parses `value` correctly.
 
 | key | value | type | group |
 |---|---|---|---|
-| `site.name` | `Digit Link` | string | branding |
-| `site.logo_url` | `https://digitlink.mobi/img/icons/icon-192x192.png` | image | branding |
-| `site.url` | `https://digitlink.mobi` | url | general |
-| `support.email` | `support@digitlink.mobi` | email | contact |
+| `site.name` | `Octan Link` | string | branding |
+| `site.logo_url` | `https://octanlink.com/img/icons/icon-192x192.png` | image | branding |
+| `site.url` | `https://octanlink.com` | url | general |
+| `support.email` | `support@octanlink.com` | email | contact |
 | `support.livechat_enabled` | `true` | boolean | feature |
 | `currency.gc_label` | `Gold Coins` | string | branding |
 | `currency.sc_label` | `Sweepstakes Coins` | string | branding |
@@ -768,14 +768,14 @@ dynamically instead of hardcoding icons/URLs.
 
 | platform | label | url | sort |
 |---|---|---|---|
-| `telegram` | Telegram | `https://t.me/digitlink` | 0 |
-| `facebook` | Facebook | `https://facebook.com/digitlink` | 1 |
-| `instagram` | Instagram | `https://instagram.com/digitlink` | 2 |
-| `twitter` | X (Twitter) | `https://x.com/digitlink` | 3 |
-| `youtube` | YouTube | `https://youtube.com/@digitlink` | 4 |
-| `tiktok` | TikTok | `https://tiktok.com/@digitlink` | 5 |
+| `telegram` | Telegram | `https://t.me/octanlink` | 0 |
+| `facebook` | Facebook | `https://facebook.com/octanlink` | 1 |
+| `instagram` | Instagram | `https://instagram.com/octanlink` | 2 |
+| `twitter` | X (Twitter) | `https://x.com/octanlink` | 3 |
+| `youtube` | YouTube | `https://youtube.com/@octanlink` | 4 |
+| `tiktok` | TikTok | `https://tiktok.com/@octanlink` | 5 |
 | `whatsapp` | WhatsApp | `https://wa.me/10000000000` | 6 |
-| `email` | Email | `mailto:support@digitlink.mobi` | 7 |
+| `email` | Email | `mailto:support@octanlink.com` | 7 |
 
 **Rendered by:** `components/shell/Footer.tsx`,
 `app/(shell)/(legal)/contact-us/page.tsx` (via a `getSocialLinks()` server read).
@@ -1245,13 +1245,13 @@ R2_ACCOUNT_ID=
 R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
 R2_BUCKET=octanlink-media
-R2_PUBLIC_BASE_URL=https://media.digitlink.mobi   # public bucket / CDN domain
+R2_PUBLIC_BASE_URL=https://media.octanlink.com   # public bucket / CDN domain
 ```
 SDK: `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` pointed at the R2
 endpoint `https://<account_id>.r2.cloudflarestorage.com`.
 
 **Migration note:** the seed step downloads each existing
-`static.digitlink.mobi` provider icon, re-uploads to R2 under `providers/`, and
+`static.octanlink.com` provider icon, re-uploads to R2 under `providers/`, and
 records the `r2_key` — so nothing hotlinks the source CDN after go-live.
 
 ---

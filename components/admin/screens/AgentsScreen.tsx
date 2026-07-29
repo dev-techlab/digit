@@ -11,12 +11,9 @@ import {
   fmtDateTime,
   fmtMoney,
   Modal,
-  Pagination,
-  ResetBtn,
-  SearchBtn,
-  Table,
   TextInput,
 } from '@/components/agent/ui';
+import { DataTable } from '@/components/ui/DataTable';
 
 interface AgentRow {
   id: string;
@@ -245,30 +242,7 @@ export function AgentsScreen() {
   };
 
   return (
-    <div className="space-y-4">
-      <Card className="flex flex-wrap items-center gap-3">
-        <span className="text-sm text-slate-500">Search</span>
-        <TextInput
-          className="w-full sm:w-64"
-          placeholder="Username, nickname or email"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <SearchBtn
-          onClick={() => {
-            setPage(1);
-            void load(1);
-          }}
-        />
-        <ResetBtn
-          onClick={() => {
-            setSearch('');
-            setPage(1);
-            void load(1, '');
-          }}
-        />
-      </Card>
-
+    <div className="space-y-5">
       <Card>
         <Btn
           variant="success"
@@ -284,36 +258,67 @@ export function AgentsScreen() {
         >
           <Plus size={16} /> Add Agent
         </Btn>
-        <Table
-          headers={[
-            'Username',
-            'Nickname',
-            'Email',
-            'Withdraw Comm. %',
-            'Online Balance',
-            'Invite Code',
-            'Last Login',
-            'Created',
-            'Status',
-            'Operations',
-          ]}
-          empty={!loading && rows.length === 0}
-        >
-          {rows.map((r) => (
-            <tr key={r.id}>
-              <td className="px-4 py-3 font-medium text-slate-700">
-                <Link href={`/admin/agents/${r.id}`} className="text-blue-600 hover:underline">
+        <DataTable
+          data={rows}
+          rowKey={(r) => r.id}
+          manualPagination
+          totalRows={total}
+          currentPage={page}
+          onPageChange={(p) => {
+            setPage(p);
+            void load(p);
+          }}
+          globalSearch={search}
+          onSearchChange={setSearch}
+          columns={[
+            {
+              header: 'Username',
+              accessorKey: 'username',
+              cell: (r) => (
+                <Link href={`/admin/agents/${r.id}`} className="font-medium text-blue-600 hover:underline">
                   {r.username}
                 </Link>
-              </td>
-              <td className="px-4 py-3">{r.nickname ?? '-'}</td>
-              <td className="px-4 py-3">{r.email ?? '-'}</td>
-              <td className="px-4 py-3">{r.commissionPer ?? '-'}</td>
-              <td className="px-4 py-3 font-semibold text-green-600">{fmtMoney(r.onlineBalance)}</td>
-              <td className="px-4 py-3 font-mono text-xs text-slate-500">{r.inviteCode}</td>
-              <td className="px-4 py-3">{fmtDateTime(r.lastLoginAt)}</td>
-              <td className="px-4 py-3">{fmtDateTime(r.createdAt)}</td>
-              <td className="px-4 py-3">
+              )
+            },
+            {
+              header: 'Nickname',
+              accessorKey: 'nickname',
+              cell: (r) => r.nickname ?? '-'
+            },
+            {
+              header: 'Email',
+              accessorKey: 'email',
+              cell: (r) => r.email ?? '-'
+            },
+            {
+              header: 'Withdraw Comm. %',
+              accessorKey: 'commissionPer',
+              cell: (r) => r.commissionPer ?? '-'
+            },
+            {
+              header: 'Online Balance',
+              accessorKey: 'onlineBalance',
+              cell: (r) => <span className="font-semibold text-green-600">{fmtMoney(r.onlineBalance)}</span>
+            },
+            {
+              header: 'Invite Code',
+              accessorKey: 'inviteCode',
+              cell: (r) => <span className="font-mono text-xs text-slate-500">{r.inviteCode}</span>
+            },
+            {
+              header: 'Last Login',
+              accessorKey: 'lastLoginAt',
+              cell: (r) => fmtDateTime(r.lastLoginAt)
+            },
+            {
+              header: 'Created',
+              accessorKey: 'createdAt',
+              cell: (r) => fmtDateTime(r.createdAt)
+            },
+            {
+              header: 'Status',
+              accessorKey: 'status',
+              cell: (r) => (
                 <span
                   className={
                     r.status === 'active'
@@ -323,47 +328,45 @@ export function AgentsScreen() {
                 >
                   {r.status === 'active' ? 'Active' : 'Disabled'}
                 </span>
-              </td>
-              <td className="px-4 py-3">
-                <Btn
-                  variant="ghost"
-                  className="px-1 text-xs mr-2"
-                  disabled={editBusy && editRow?.id === r.id}
-                  onClick={() => {
-                    setEditRow(r);
-                    setEditForm({
-                      nickname: r.nickname ?? '',
-                      email: r.email ?? '',
-                      commissionPer: r.commissionPer,
-                      remark: r.remark ?? '',
-                    });
-                    setEditErr(null);
-                    void loadPlatforms(r.id);
-                    setEditOpen(true);
-                  }}
-                >
-                  <Edit size={14} />
-                </Btn>
-                <Btn
-                  variant={r.status === 'active' ? 'danger' : 'success'}
-                  className="px-3 py-1.5 text-xs"
-                  disabled={busyId === r.id}
-                  onClick={() => void toggleStatus(r)}
-                >
-                  {r.status === 'active' ? 'Block Access' : 'Restore Access'}
-                </Btn>
-              </td>
-            </tr>
-          ))}
-        </Table>
-        <Pagination
-          total={total}
-          page={page}
-          pageSize={20}
-          onPage={(p) => {
-            setPage(p);
-            void load(p);
-          }}
+              )
+            },
+            {
+              header: 'Operations',
+              enableSorting: false,
+              enableGlobalFilter: false,
+              cell: (r) => (
+                <div className="flex items-center gap-2">
+                  <Btn
+                    variant="ghost"
+                    className="px-1 text-xs"
+                    disabled={editBusy && editRow?.id === r.id}
+                    onClick={() => {
+                      setEditRow(r);
+                      setEditForm({
+                        nickname: r.nickname ?? '',
+                        email: r.email ?? '',
+                        commissionPer: r.commissionPer,
+                        remark: r.remark ?? '',
+                      });
+                      setEditErr(null);
+                      void loadPlatforms(r.id);
+                      setEditOpen(true);
+                    }}
+                  >
+                    <Edit size={14} />
+                  </Btn>
+                  <Btn
+                    variant={r.status === 'active' ? 'danger' : 'success'}
+                    className="px-3 py-1.5 text-xs"
+                    disabled={busyId === r.id}
+                    onClick={() => void toggleStatus(r)}
+                  >
+                    {r.status === 'active' ? 'Block Access' : 'Restore Access'}
+                  </Btn>
+                </div>
+              )
+            }
+          ]}
         />
       </Card>
 

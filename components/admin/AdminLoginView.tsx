@@ -63,9 +63,11 @@ export function AdminLoginView() {
 
       <div className="relative z-10 my-6 w-full max-w-[440px] rounded-[24px] bg-white/95 p-6 shadow-[0_25px_70px_rgba(60,30,120,0.28)] sm:rounded-[28px] sm:p-8">
         <div className="flex justify-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg">
-            <span className="text-3xl font-semibold text-white">{APP_NAME[0]}</span>
-          </div>
+          <img
+            src="/logo.png"
+            alt="Logo"
+            className="h-14 w-14 rounded-2xl object-contain shadow-lg"
+          />
         </div>
 
         <div className="mt-4 text-center">
@@ -142,7 +144,7 @@ export function AdminLoginView() {
       </div>
 
       <div className="absolute bottom-3 left-0 right-0 px-4 text-center text-xs text-white/85 sm:text-sm">
-        Copyright © 2026 All Rights Reserved.
+        Copyright © {new Date().getFullYear()} All Rights Reserved.
       </div>
     </div>
   );

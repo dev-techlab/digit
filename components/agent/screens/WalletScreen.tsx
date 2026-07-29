@@ -20,9 +20,9 @@ import {
   fmtMoney,
   fmtDateTime,
   Modal,
-  Table,
   TextInput,
 } from '../ui';
+import { DataTable } from '@/components/ui/DataTable';
 import { cn } from '@/lib/cn';
 
 interface LogRow {
@@ -149,7 +149,7 @@ export function WalletScreen() {
 
   if (!data) return <p className="p-6 text-sm text-slate-400">Loading…</p>;
 
-  const inviteLink = `https://digitlink.mobi?inviteCode=${data.store.inviteCode}`;
+  const inviteLink = `${process.env.NEXT_PUBLIC_SITE_URL}?inviteCode=${data.store.inviteCode}`;
   const dateRange = `${new Date(Date.now() - 4 * 864e5).toLocaleDateString('en-US')} 00:00:00 - ${new Date().toLocaleDateString('en-US')} 00:00:00`;
 
   const saveSettings = async () => {
@@ -586,145 +586,82 @@ export function WalletScreen() {
           {dateFilter}
 
           {logTab === 'Report' && (
-            <Table
-              headers={['Start Time', 'End Time', 'Deposit', 'Deposit Fee', 'Deposit Orders']}
-              empty={data.report.length === 0}
-            >
-              {data.report.map((r) => (
-                <tr key={r.day}>
-                  <td className="px-4 py-3">{r.day} 00:00:00</td>
-                  <td className="px-4 py-3">{r.day} 23:59:59</td>
-                  <td className="px-4 py-3 font-semibold text-green-600">{fmtMoney(r.deposit)}</td>
-                  <td className="px-4 py-3 font-semibold text-amber-500">
-                    {fmtMoney(r.depositFee)}
-                  </td>
-                  <td className="px-4 py-3">{r.depositOrders}</td>
-                </tr>
-              ))}
-            </Table>
+            <DataTable
+              data={data.report}
+              rowKey={(r) => r.day}
+              columns={[
+                { header: 'Start Time', accessorKey: 'day', cell: (r) => `${r.day} 00:00:00` },
+                { header: 'End Time', cell: (r) => `${r.day} 23:59:59` },
+                { header: 'Deposit', accessorKey: 'deposit', cell: (r) => <span className="font-semibold text-green-600">{fmtMoney(r.deposit)}</span> },
+                { header: 'Deposit Fee', accessorKey: 'depositFee', cell: (r) => <span className="font-semibold text-amber-500">{fmtMoney(r.depositFee)}</span> },
+                { header: 'Deposit Orders', accessorKey: 'depositOrders' },
+              ]}
+            />
           )}
 
           {logTab === 'Agent Deposit Log' && (
-            <Table
-              headers={['Order No.', 'Deposit Amount', 'Payment Method', 'Status', 'Time', 'Actions']}
-              empty={deposits.length === 0}
-            >
-              {deposits.map((l) => (
-                <tr key={l.id}>
-                  <td className="px-4 py-3 font-mono text-xs">{orderNo(l.id)}</td>
-                  <td className="px-4 py-3">{fmtMoney(l.amount)}</td>
-                  <td className="px-4 py-3">{l.method ? METHOD_LABEL[l.method] ?? l.method : '-'}</td>
-                  <td className="px-4 py-3">{statusChip(l.status)}</td>
-                  <td className="px-4 py-3">{fmtDateTime(l.createdAt)}</td>
-                  <td className="px-4 py-3">
-                    {l.status === 'pending' ? (
-                      <button
-                        className="text-red-500 hover:underline"
-                        onClick={() => void cancelTx(l.id)}
-                      >
-                        Cancel
-                      </button>
-                    ) : (
-                      '-'
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </Table>
+            <DataTable
+              data={deposits}
+              rowKey={(r) => r.id}
+              columns={[
+                { header: 'Order No.', accessorKey: 'id', cell: (r) => <span className="font-mono text-xs">{orderNo(r.id)}</span> },
+                { header: 'Deposit Amount', accessorKey: 'amount', cell: (r) => fmtMoney(r.amount) },
+                { header: 'Payment Method', accessorKey: 'method', cell: (r) => r.method ? METHOD_LABEL[r.method] ?? r.method : '-' },
+                { header: 'Status', accessorKey: 'status', cell: (r) => statusChip(r.status) },
+                { header: 'Time', accessorKey: 'createdAt', cell: (r) => fmtDateTime(r.createdAt) },
+                { header: 'Actions', enableSorting: false, enableGlobalFilter: false, cell: (r) => r.status === 'pending' ? <button className="text-red-500 hover:underline" onClick={() => void cancelTx(r.id)}>Cancel</button> : '-' },
+              ]}
+            />
           )}
 
           {logTab === 'Agent Withdraw Log' && (
-            <Table
-              headers={[
-                'Order No',
-                'Requested Amount',
-                'Commission %',
-                'Commission Amount',
-                'Net Payable Amount',
-                'Balance Before',
-                'Balance After',
-                'Order Status',
-                'Reason',
-                'Actions',
+            <DataTable
+              data={withdrawals}
+              rowKey={(r) => r.id}
+              columns={[
+                { header: 'Order No', accessorKey: 'id', cell: (r) => <span className="font-mono text-xs">{orderNo(r.id)}</span> },
+                { header: 'Requested Amount', accessorKey: 'amount', cell: (r) => fmtMoney(r.amount) },
+                { header: 'Commission %', accessorKey: 'commissionPer', cell: (r) => r.commissionPer ? `${r.commissionPer}%` : '-' },
+                { header: 'Commission Amount', accessorKey: 'fee', cell: (r) => <span className="text-amber-500 font-medium">{fmtMoney(r.fee)}</span> },
+                { header: 'Net Payable Amount', accessorKey: 'netAmount', cell: (r) => <span className="text-green-600 font-semibold">{r.netAmount != null ? fmtMoney(r.netAmount) : '-'}</span> },
+                { header: 'Balance Before', accessorKey: 'balanceBefore', cell: (r) => r.balanceBefore != null ? fmtMoney(r.balanceBefore) : '-' },
+                { header: 'Balance After', accessorKey: 'balanceAfter', cell: (r) => r.balanceAfter != null ? fmtMoney(r.balanceAfter) : '-' },
+                { header: 'Order Status', accessorKey: 'status', cell: (r) => statusChip(r.status) },
+                { header: 'Reason', accessorKey: 'remark', cell: (r) => <div className="max-w-[150px] truncate" title={r.remark || undefined}>{r.remark || '-'}</div> },
+                { header: 'Actions', enableSorting: false, enableGlobalFilter: false, cell: (r) => r.status === 'pending' ? <button className="text-red-500 hover:underline" onClick={() => void cancelTx(r.id)}>Cancel</button> : '-' },
               ]}
-              empty={withdrawals.length === 0}
-            >
-              {withdrawals.map((l) => (
-                <tr key={l.id}>
-                  <td className="px-4 py-3 font-mono text-xs">{orderNo(l.id)}</td>
-                  <td className="px-4 py-3">{fmtMoney(l.amount)}</td>
-                  <td className="px-4 py-3">{l.commissionPer ? `${l.commissionPer}%` : '-'}</td>
-                  <td className="px-4 py-3 text-amber-500 font-medium">{fmtMoney(l.fee)}</td>
-                  <td className="px-4 py-3 text-green-600 font-semibold">{l.netAmount != null ? fmtMoney(l.netAmount) : '-'}</td>
-                  <td className="px-4 py-3">
-                    {l.balanceBefore != null ? fmtMoney(l.balanceBefore) : '-'}
-                  </td>
-                  <td className="px-4 py-3">
-                    {l.balanceAfter != null ? fmtMoney(l.balanceAfter) : '-'}
-                  </td>
-                  <td className="px-4 py-3">{statusChip(l.status)}</td>
-                  <td className="px-4 py-3 max-w-[150px] truncate" title={l.remark || undefined}>
-                    {l.remark || '-'}
-                  </td>
-                  <td className="px-4 py-3">
-                    {l.status === 'pending' ? (
-                      <button
-                        className="text-red-500 hover:underline"
-                        onClick={() => void cancelTx(l.id)}
-                      >
-                        Cancel
-                      </button>
-                    ) : (
-                      '-'
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </Table>
+            />
           )}
 
           {logTab === 'Agent Transfer Log' && (
-            <Table
-              headers={['Transaction ID', 'Type', 'Sender', 'Receiver', 'Amount', 'Remark', 'Time']}
-              empty={transfers.length === 0}
-            >
-              {transfers.map((l) => (
-                <tr key={l.id}>
-                  <td className="px-4 py-3 font-mono text-xs">{orderNo(l.id)}</td>
-                  <td className="px-4 py-3 capitalize">Transfer</td>
-                  <td className="px-4 py-3">{data.store.username}</td>
-                  <td className="px-4 py-3">{l.counterparty ?? '-'}</td>
-                  <td className="px-4 py-3">{fmtMoney(l.amount)}</td>
-                  <td className="max-w-48 truncate px-4 py-3">{l.remark ?? '-'}</td>
-                  <td className="px-4 py-3">{fmtDateTime(l.createdAt)}</td>
-                </tr>
-              ))}
-            </Table>
+            <DataTable
+              data={transfers}
+              rowKey={(r) => r.id}
+              columns={[
+                { header: 'Transaction ID', accessorKey: 'id', cell: (r) => <span className="font-mono text-xs">{orderNo(r.id)}</span> },
+                { header: 'Type', accessorKey: 'type', cell: () => <span className="capitalize">Transfer</span> },
+                { header: 'Sender', cell: () => data.store.username },
+                { header: 'Receiver', accessorKey: 'counterparty', cell: (r) => r.counterparty ?? '-' },
+                { header: 'Amount', accessorKey: 'amount', cell: (r) => fmtMoney(r.amount) },
+                { header: 'Remark', accessorKey: 'remark', cell: (r) => <div className="max-w-48 truncate">{r.remark ?? '-'}</div> },
+                { header: 'Time', accessorKey: 'createdAt', cell: (r) => fmtDateTime(r.createdAt) },
+              ]}
+            />
           )}
 
           {logTab === 'Agent Transfer Request Log' && (
-            <Table
-              headers={['Transaction ID', 'From', 'To', 'Amount', 'Status', 'Actions']}
-              empty={transferRequests.length === 0}
-            >
-              {transferRequests.map((l) => (
-                <tr key={l.id}>
-                  <td className="px-4 py-3 font-mono text-xs">{orderNo(l.id)}</td>
-                  <td className="px-4 py-3">{data.store.username}</td>
-                  <td className="px-4 py-3">{l.counterparty ?? '-'}</td>
-                  <td className="px-4 py-3">{fmtMoney(l.amount)}</td>
-                  <td className="px-4 py-3">{statusChip(l.status)}</td>
-                  <td className="px-4 py-3">
-                    <button
-                      className="text-red-500 hover:underline"
-                      onClick={() => void cancelTx(l.id)}
-                    >
-                      Cancel
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </Table>
+            <DataTable
+              data={transferRequests}
+              rowKey={(r) => r.id}
+              columns={[
+                { header: 'Transaction ID', accessorKey: 'id', cell: (r) => <span className="font-mono text-xs">{orderNo(r.id)}</span> },
+                { header: 'From', cell: () => data.store.username },
+                { header: 'To', accessorKey: 'counterparty', cell: (r) => r.counterparty ?? '-' },
+                { header: 'Amount', accessorKey: 'amount', cell: (r) => fmtMoney(r.amount) },
+                { header: 'Status', accessorKey: 'status', cell: (r) => statusChip(r.status) },
+                { header: 'Actions', enableSorting: false, enableGlobalFilter: false, cell: (r) => <button className="text-red-500 hover:underline" onClick={() => void cancelTx(r.id)}>Cancel</button> },
+              ]}
+            />
           )}
         </div>
       </Card>

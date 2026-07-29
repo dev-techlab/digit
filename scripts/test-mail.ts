@@ -11,7 +11,7 @@ const samples: MailPayload[] = [
   {
     template: 'admin-invite',
     to: 'newadmin@example.com',
-    inviteUrl: 'https://digitlink.mobi/admin/accept?token=abc123',
+    inviteUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/admin/accept?token=abc123`,
     invitedByName: 'Super Admin',
     role: 'finance',
     expiresAt: 'in 48 hours',
@@ -28,7 +28,7 @@ const samples: MailPayload[] = [
     template: 'verify-email',
     to: 'player@example.com',
     username: 'player_2481',
-    verifyUrl: 'https://digitlink.mobi/verify-email?token=xyz',
+    verifyUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/verify-email?token=xyz`,
     code: '482913',
     expiresMinutes: 30,
   },
@@ -36,7 +36,7 @@ const samples: MailPayload[] = [
     template: 'admin-alert',
     title: 'New withdrawal pending review',
     message: 'player_2481 requested a $45.25 PYUSD withdrawal.',
-    actionUrl: 'https://digitlink.mobi/admin/withdrawals/999',
+    actionUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/admin/withdrawals/999`,
     actionLabel: 'Review withdrawal',
   },
 ];

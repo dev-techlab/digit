@@ -155,9 +155,11 @@ export function Sidebar({
             <X size={20} />
           </button>
           <Link href="/game" onClick={onClose} className="flex items-center gap-2">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white">
-              {APP_NAME[0]}
-            </span>
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="h-7 w-7 shrink-0 rounded-md object-contain"
+            />
             <span className="text-sm font-black uppercase tracking-wide">{APP_NAME}</span>
           </Link>
           <button

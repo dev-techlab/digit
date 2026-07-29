@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Pencil, Plus, Trash2, Users } from 'lucide-react';
-import { api, Btn, Field, Modal, Select, Table, TextInput, Toggle, fmtDateTime } from '@/components/agent/ui';
+import { api, Btn, Field, Modal, Select, TextInput, Toggle, fmtDateTime } from '@/components/agent/ui';
+import { DataTable } from '@/components/ui/DataTable';
 import Link from 'next/link';
 
 interface Platform {
@@ -17,6 +18,7 @@ interface Platform {
   sort: number;
   isActive: boolean;
   agentCount: number;
+  customerCount: number;
 }
 
 type Draft = {
@@ -82,6 +84,9 @@ export function PlatformsScreen() {
   const [connectedAgents, setConnectedAgents] = useState<any[]>([]);
   const [agentsLoading, setAgentsLoading] = useState(false);
   const [agentSearch, setAgentSearch] = useState('');
+
+  const [deleteTarget, setDeleteTarget] = useState<Platform | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = () =>
     api<{ platforms: Platform[] }>('/api/admin/platforms')
@@ -155,18 +160,17 @@ export function PlatformsScreen() {
     }
   };
 
-  const remove = async (p: Platform) => {
-    if (
-      !window.confirm(
-        `Delete "${p.name}"? It disappears from this list and from every store's Game Setting screen. Existing store configs, member game-account bindings, and transaction history are kept untouched.`
-      )
-    )
-      return;
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await api(`/api/admin/platforms?id=${encodeURIComponent(p.id)}`, { method: 'DELETE' });
-      void load();
+      await api(`/api/admin/platforms?id=${encodeURIComponent(deleteTarget.id)}`, { method: 'DELETE' });
+      setDeleteTarget(null);
+      await load();
     } catch (e) {
       window.alert(e instanceof Error ? e.message : 'Failed to delete platform.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -210,14 +214,14 @@ export function PlatformsScreen() {
         </Btn>
       </div>
 
-      <Table
-        headers={['#', 'Platform', 'Code', 'Type', 'Agents Count', 'Sort', 'Active', 'Actions']}
-        empty={!loading && platforms.length === 0}
-      >
-        {platforms.map((p, i) => (
-          <tr key={p.id} className="hover:bg-slate-50/60">
-            <td className="px-4 py-2.5 text-slate-400">{i + 1}</td>
-            <td className="px-4 py-2.5">
+      <DataTable
+        data={platforms}
+        rowKey={(p) => p.id}
+        columns={[
+          {
+            header: 'Platform',
+            accessorKey: 'name',
+            cell: (p) => (
               <div className="flex items-center gap-2.5">
                 <PlatformIcon name={p.name} iconUrl={p.iconUrl} />
                 <div className="min-w-0">
@@ -225,17 +229,42 @@ export function PlatformsScreen() {
                   <div className="truncate text-xs text-slate-400">{p.slug}</div>
                 </div>
               </div>
-            </td>
-            <td className="px-4 py-2.5 font-mono text-xs text-slate-500">
-              {p.providerCode || '--'}
-            </td>
-            <td className="px-4 py-2.5">{p.providerType || '--'}</td>
-            <td className="px-4 py-2.5 font-medium text-blue-600">{p.agentCount ?? 0}</td>
-            <td className="px-4 py-2.5">{p.sort}</td>
-            <td className="px-4 py-2.5">
-              <Toggle checked={p.isActive} onChange={(v) => void toggleActive(p, v)} />
-            </td>
-            <td className="px-4 py-2.5">
+            )
+          },
+          {
+            header: 'Code',
+            accessorKey: 'providerCode',
+            cell: (p) => <span className="font-mono text-xs text-slate-500">{p.providerCode || '--'}</span>
+          },
+          {
+            header: 'Type',
+            accessorKey: 'providerType',
+            cell: (p) => p.providerType || '--'
+          },
+          {
+            header: 'Agents Count',
+            accessorKey: 'agentCount',
+            cell: (p) => <span className="font-medium text-blue-600">{p.agentCount ?? 0}</span>
+          },
+          {
+            header: 'Customers Count',
+            accessorKey: 'customerCount',
+            cell: (p) => <span className="font-medium text-emerald-600">{p.customerCount ?? 0}</span>
+          },
+          {
+            header: 'Sort',
+            accessorKey: 'sort'
+          },
+          {
+            header: 'Active',
+            accessorKey: 'isActive',
+            cell: (p) => <Toggle checked={p.isActive} onChange={(v) => void toggleActive(p, v)} />
+          },
+          {
+            header: 'Actions',
+            enableSorting: false,
+            enableGlobalFilter: false,
+            cell: (p) => (
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => openAgentsModal(p)}
@@ -253,17 +282,17 @@ export function PlatformsScreen() {
                   <Pencil size={15} />
                 </button>
                 <button
-                  onClick={() => void remove(p)}
+                  onClick={() => setDeleteTarget(p)}
                   className="text-slate-400 hover:text-red-500"
                   aria-label="Delete"
                 >
                   <Trash2 size={15} />
                 </button>
               </div>
-            </td>
-          </tr>
-        ))}
-      </Table>
+            )
+          }
+        ]}
+      />
 
       <Modal
         title={draft?.id ? 'Edit Platform' : 'Add Platform'}
@@ -364,32 +393,76 @@ export function PlatformsScreen() {
             value={agentSearch}
             onChange={(e) => setAgentSearch(e.target.value)}
           />
-          <Table
-            headers={['Username', 'Nickname', 'Email', 'Status', 'Assigned At']}
-            empty={!agentsLoading && connectedAgents.length === 0}
-          >
-            {agentsLoading ? (
-              <tr>
-                <td colSpan={5} className="py-4 text-center text-slate-500">Loading...</td>
-              </tr>
-            ) : (
-              connectedAgents.map((a) => (
-                <tr key={a.id} className="hover:bg-slate-50/60">
-                  <td className="px-4 py-2.5 font-medium text-blue-600">
-                    <Link href={`/admin/agents/${a.id}`} className="hover:underline">{a.username}</Link>
-                  </td>
-                  <td className="px-4 py-2.5">{a.nickname || '-'}</td>
-                  <td className="px-4 py-2.5">{a.email || '-'}</td>
-                  <td className="px-4 py-2.5">
+          {agentsLoading ? (
+            <div className="py-8 text-center text-slate-500">Loading...</div>
+          ) : (
+            <DataTable
+              data={connectedAgents}
+              rowKey={(a) => a.id}
+              columns={[
+                {
+                  header: 'Username',
+                  accessorKey: 'username',
+                  cell: (a) => (
+                    <Link href={`/admin/agents/${a.id}`} className="font-medium text-blue-600 hover:underline">
+                      {a.username}
+                    </Link>
+                  ),
+                },
+                {
+                  header: 'Nickname',
+                  accessorKey: 'nickname',
+                  cell: (a) => a.nickname || '-',
+                },
+                {
+                  header: 'Email',
+                  accessorKey: 'email',
+                  cell: (a) => a.email || '-',
+                },
+                {
+                  header: 'Status',
+                  accessorKey: 'status',
+                  cell: (a) => (
                     <span className={`px-2 py-1 rounded text-xs font-medium capitalize ${a.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {a.status}
                     </span>
-                  </td>
-                  <td className="px-4 py-2.5 text-xs text-slate-500">{fmtDateTime(a.assignedAt)}</td>
-                </tr>
-              ))
-            )}
-          </Table>
+                  ),
+                },
+                {
+                  header: 'Assigned At',
+                  accessorKey: 'assignedAt',
+                  cell: (a) => <span className="text-xs text-slate-500">{fmtDateTime(a.assignedAt)}</span>,
+                },
+              ]}
+            />
+          )}
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        title="Delete Platform"
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        footer={
+          <>
+            <Btn variant="ghost" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Btn>
+            <Btn variant="danger" onClick={confirmDelete} disabled={deleting}>
+              {deleting ? 'Deleting…' : 'Delete'}
+            </Btn>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-slate-600">
+            Are you sure you want to delete <strong>{deleteTarget?.name}</strong>?
+          </p>
+          <p className="text-sm text-slate-500">
+            It will disappear from this list and from every store's Game Setting screen. Existing
+            store configs, member game-account bindings, and transaction history are kept untouched.
+          </p>
         </div>
       </Modal>
     </div>

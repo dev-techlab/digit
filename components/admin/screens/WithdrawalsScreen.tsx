@@ -10,12 +10,9 @@ import {
   fmtDateTime,
   fmtMoney,
   Modal,
-  Pagination,
-  ResetBtn,
-  SearchBtn,
-  Table,
   TextInput,
 } from '@/components/agent/ui';
+import { DataTable } from '@/components/ui/DataTable';
 
 interface WithdrawalRow {
   id: string;
@@ -126,116 +123,102 @@ export function WithdrawalsScreen() {
   };
 
   return (
-    <div className="space-y-4">
-      <Card className="flex flex-wrap items-center gap-3">
-        <span className="text-sm text-slate-500">Status</span>
-        <select
-          className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500"
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
-            setPage(1);
-            void load(1, search, e.target.value);
-          }}
-        >
-          <option value="">All</option>
-          <option value="pending">Pending</option>
-          <option value="completed">Completed</option>
-          <option value="failed">Failed / Rejected</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
-
-        <span className="text-sm text-slate-500 ml-2">Search</span>
-        <TextInput
-          className="w-full sm:w-64"
-          placeholder="Username or Transaction ID"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <SearchBtn
-          onClick={() => {
-            setPage(1);
-            void load(1, search, statusFilter);
-          }}
-        />
-        <ResetBtn
-          onClick={() => {
-            setSearch('');
-            setStatusFilter('pending');
-            setPage(1);
-            void load(1, '', 'pending');
-          }}
-        />
-      </Card>
-
+    <div className="space-y-5">
       <Card>
-        <Table
-          headers={[
-            'Order No',
-            'Agent',
-            'Requested Amount',
-            'Net Payable',
-            'Method',
-            'Address',
-            'Status',
-            'Reason',
-            'Created',
-            'Actions',
-          ]}
-          empty={!loading && rows.length === 0}
-        >
-          {rows.map((r) => (
-            <tr key={r.id}>
-              <td className="px-4 py-3 font-mono text-xs" title={r.id}>
-                {r.id.split('-')[0].toUpperCase()}...
-              </td>
-              <td className="px-4 py-3 font-medium text-slate-700">{r.username}</td>
-              <td className="px-4 py-3">{fmtMoney(r.amount)}</td>
-              <td className="px-4 py-3 font-semibold text-green-600">
-                {r.netAmount != null ? fmtMoney(r.netAmount) : '-'}
-              </td>
-              <td className="px-4 py-3">{r.method ? WITHDRAW_METHODS[r.method] || r.method : '-'}</td>
-              <td className="px-4 py-3 max-w-[150px] truncate" title={r.address || ''}>
-                {r.address || '-'}
-              </td>
-              <td className="px-4 py-3">{statusChip(r.status)}</td>
-              <td className="px-4 py-3 max-w-[150px] truncate" title={r.remark || ''}>
-                {r.remark || '-'}
-              </td>
-              <td className="px-4 py-3 text-xs">{fmtDateTime(r.createdAt)}</td>
-              <td className="px-4 py-3">
-                {r.status === 'pending' ? (
-                  <div className="flex gap-2">
-                    <Btn
-                      variant="success"
-                      className="px-2 py-1 text-xs"
-                      onClick={() => openAction('accept', r)}
-                    >
-                      <Check size={14} className="mr-1" /> Accept
-                    </Btn>
-                    <Btn
-                      variant="danger"
-                      className="px-2 py-1 text-xs"
-                      onClick={() => openAction('reject', r)}
-                    >
-                      <X size={14} className="mr-1" /> Reject
-                    </Btn>
-                  </div>
-                ) : (
-                  <span className="text-slate-400">-</span>
-                )}
-              </td>
-            </tr>
-          ))}
-        </Table>
-        <Pagination
-          total={total}
-          page={page}
-          pageSize={20}
-          onPage={(p) => {
+        <DataTable
+          data={rows}
+          rowKey={(r) => r.id}
+          manualPagination
+          totalRows={total}
+          currentPage={page}
+          onPageChange={(p) => {
             setPage(p);
             void load(p, search, statusFilter);
           }}
+          globalSearch={search}
+          onSearchChange={setSearch}
+          extraToolbar={
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-500">Status:</span>
+              <select
+                className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 outline-none focus:border-blue-500"
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                  void load(1, search, e.target.value);
+                }}
+              >
+                <option value="">All</option>
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+                <option value="failed">Failed / Rejected</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+          }
+          columns={[
+            {
+              header: 'Order No',
+              accessorKey: 'id',
+              cell: (r) => (
+                <span className="font-mono text-xs" title={r.id}>
+                  {r.id.split('-')[0].toUpperCase()}...
+                </span>
+              )
+            },
+            { header: 'Agent', accessorKey: 'username', cell: (r) => <span className="font-medium text-slate-700">{r.username}</span> },
+            { header: 'Requested Amount', accessorKey: 'amount', cell: (r) => fmtMoney(r.amount) },
+            {
+              header: 'Net Payable',
+              accessorKey: 'netAmount',
+              cell: (r) => <span className="font-semibold text-green-600">{r.netAmount != null ? fmtMoney(r.netAmount) : '-'}</span>
+            },
+            { header: 'Method', accessorKey: 'method', cell: (r) => r.method ? WITHDRAW_METHODS[r.method] || r.method : '-' },
+            {
+              header: 'Address',
+              accessorKey: 'address',
+              cell: (r) => (
+                <div className="max-w-[150px] truncate" title={r.address || ''}>
+                  {r.address || '-'}
+                </div>
+              )
+            },
+            { header: 'Status', accessorKey: 'status', cell: (r) => statusChip(r.status) },
+            {
+              header: 'Reason',
+              accessorKey: 'remark',
+              cell: (r) => (
+                <div className="max-w-[150px] truncate" title={r.remark || ''}>
+                  {r.remark || '-'}
+                </div>
+              )
+            },
+            { header: 'Created', accessorKey: 'createdAt', cell: (r) => <span className="text-xs">{fmtDateTime(r.createdAt)}</span> },
+            {
+              header: 'Actions',
+              enableSorting: false,
+              enableGlobalFilter: false,
+              cell: (r) => r.status === 'pending' ? (
+                <div className="flex gap-2">
+                  <Btn
+                    variant="success"
+                    className="px-2 py-1 text-xs"
+                    onClick={() => openAction('accept', r)}
+                  >
+                    <Check size={14} className="mr-1" /> Accept
+                  </Btn>
+                  <Btn
+                    variant="danger"
+                    className="px-2 py-1 text-xs"
+                    onClick={() => openAction('reject', r)}
+                  >
+                    <X size={14} className="mr-1" /> Reject
+                  </Btn>
+                </div>
+              ) : <span className="text-slate-400">-</span>
+            }
+          ]}
         />
       </Card>
 

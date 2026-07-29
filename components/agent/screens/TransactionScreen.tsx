@@ -9,13 +9,9 @@ import {
   fmtDateTime,
   fmtMoney,
   Modal,
-  Pagination,
-  ResetBtn,
-  SearchBtn,
   Select,
-  Table,
-  TextInput,
 } from '../ui';
+import { DataTable } from '@/components/ui/DataTable';
 
 interface TxRow {
   id: string;
@@ -130,38 +126,6 @@ export function TransactionScreen() {
 
       {tab === 'list' ? (
         <>
-          <Card className="flex flex-wrap items-center gap-3">
-            <span className="text-sm text-slate-500">Search</span>
-            <TextInput
-              className="w-full sm:w-64"
-              placeholder="Member Username/Game PlayerId"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <span className="text-sm text-slate-500">Transaction Type</span>
-            <Select className="w-full sm:w-36" value={type} onChange={(e) => setType(e.target.value)}>
-              <option value="">All</option>
-              <option value="recharge">Recharge</option>
-              <option value="redeem">Redeem</option>
-              <option value="bonus">Bonus</option>
-              <option value="transfer">Transfer</option>
-            </Select>
-            <SearchBtn
-              onClick={() => {
-                setPage(1);
-                void load(1);
-              }}
-            />
-            <ResetBtn
-              onClick={() => {
-                setSearch('');
-                setType('');
-                setPage(1);
-                void load(1);
-              }}
-            />
-          </Card>
-
           {summary && (
             <Card className="p-0">
               <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-slate-100 sm:grid-cols-4 xl:grid-cols-8">
@@ -181,99 +145,98 @@ export function TransactionScreen() {
           )}
 
           <Card>
-            <Table
-              headers={[
-                'User Detail',
-                'Create Time',
-                'Amount',
-                'Online SC Changes',
-                'Store Balance Vary',
-                'Game & Product',
-                'Type',
-                'Status',
-              ]}
-              empty={rows.length === 0}
-            >
-              {rows.map((r) => (
-                <tr key={r.id}>
-                  <td className="px-4 py-3 font-medium text-slate-700">{r.username ?? '-'}</td>
-                  <td className="px-4 py-3">{fmtDateTime(r.createdAt)}</td>
-                  <td className="px-4 py-3">{fmtMoney(r.amount)}</td>
-                  <td className="px-4 py-3">{fmtMoney(r.onlineScChange)}</td>
-                  <td className="px-4 py-3">{fmtMoney(r.storeBalanceVary)}</td>
-                  <td className="px-4 py-3">{r.game ?? '-'}</td>
-                  <td className="px-4 py-3 capitalize">
-                    {r.type} · {r.channel}
-                  </td>
-                  <td className="px-4 py-3 capitalize">{r.status}</td>
-                </tr>
-              ))}
-            </Table>
-            <Pagination
-              total={summary?.total ?? 0}
-              page={page}
-              pageSize={PAGE_SIZE}
-              onPage={(p) => {
+            <DataTable
+              data={rows}
+              rowKey={(r) => r.id}
+              manualPagination
+              totalRows={summary?.total ?? 0}
+              currentPage={page}
+              onPageChange={(p) => {
                 setPage(p);
                 void load(p);
               }}
+              globalSearch={search}
+              onSearchChange={setSearch}
+              extraToolbar={
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-500">Transaction Type:</span>
+                  <Select className="w-36 py-1.5" value={type} onChange={(e) => {
+                    const val = e.target.value;
+                    setType(val);
+                    setPage(1);
+                    api<{ transactions: TxRow[]; summary: Summary }>(
+                      `/api/agent/transactions?search=${encodeURIComponent(search)}&type=${val}&page=1&pageSize=${PAGE_SIZE}`
+                    ).then((d) => {
+                      setRows(d.transactions);
+                      setSummary(d.summary);
+                    });
+                  }}>
+                    <option value="">All</option>
+                    <option value="recharge">Recharge</option>
+                    <option value="redeem">Redeem</option>
+                    <option value="bonus">Bonus</option>
+                    <option value="transfer">Transfer</option>
+                  </Select>
+                </div>
+              }
+              columns={[
+                { header: 'User Detail', accessorKey: 'username', cell: (r) => <span className="font-medium text-slate-700">{r.username ?? '-'}</span> },
+                { header: 'Create Time', accessorKey: 'createdAt', cell: (r) => fmtDateTime(r.createdAt) },
+                { header: 'Amount', accessorKey: 'amount', cell: (r) => fmtMoney(r.amount) },
+                { header: 'Online SC Changes', accessorKey: 'onlineScChange', cell: (r) => fmtMoney(r.onlineScChange) },
+                { header: 'Store Balance Vary', accessorKey: 'storeBalanceVary', cell: (r) => fmtMoney(r.storeBalanceVary) },
+                { header: 'Game & Product', accessorKey: 'game', cell: (r) => r.game ?? '-' },
+                { header: 'Type', accessorKey: 'type', cell: (r) => <span className="capitalize">{r.type} · {r.channel}</span> },
+                { header: 'Status', accessorKey: 'status', cell: (r) => <span className="capitalize">{r.status}</span> },
+              ]}
             />
           </Card>
         </>
       ) : (
         <>
-          <Card className="flex flex-wrap items-center gap-3">
-            <span className="text-sm text-slate-500">Status</span>
-            <Select
-              className="w-full sm:w-44"
-              value={auditStatus}
-              onChange={(e) => {
-                setAuditStatus(e.target.value);
-                void loadAudits(e.target.value);
-              }}
-            >
-              <option value="pending">Pending Review</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </Select>
-            <SearchBtn onClick={() => void loadAudits()} />
-            <ResetBtn onClick={() => void loadAudits('pending')} />
-          </Card>
           <Card>
-            <Table
-              headers={['Store Name', 'Submit Time', 'Player', 'Game Platform', 'Amount', 'Operations']}
-              empty={audits.length === 0}
-            >
-              {audits.map((a) => (
-                <tr key={a.id}>
-                  <td className="px-4 py-3">—</td>
-                  <td className="px-4 py-3">{fmtDateTime(a.submittedAt)}</td>
-                  <td className="px-4 py-3 font-medium">{a.player ?? '-'}</td>
-                  <td className="px-4 py-3">{a.platform ?? '-'}</td>
-                  <td className="px-4 py-3">{fmtMoney(a.amount)}</td>
-                  <td className="px-4 py-3">
-                    {a.status === 'pending' ? (
-                      <div className="flex gap-3">
-                        <button
-                          className="text-green-600 hover:underline"
-                          onClick={() => void review(a.id, 'approved')}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          className="text-red-500 hover:underline"
-                          onClick={() => void review(a.id, 'rejected')}
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="capitalize text-slate-400">{a.status}</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </Table>
+            <DataTable
+              data={audits}
+              rowKey={(r) => r.id}
+              extraToolbar={
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-500">Status:</span>
+                  <Select
+                    className="w-44 py-1.5"
+                    value={auditStatus}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAuditStatus(val);
+                      void loadAudits(val);
+                    }}
+                  >
+                    <option value="pending">Pending Review</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                  </Select>
+                </div>
+              }
+              columns={[
+                { header: 'Store Name', accessorKey: 'id', cell: (r) => '—' },
+                { header: 'Submit Time', accessorKey: 'submittedAt', cell: (r) => fmtDateTime(r.submittedAt) },
+                { header: 'Player', accessorKey: 'player', cell: (r) => <span className="font-medium">{r.player ?? '-'}</span> },
+                { header: 'Game Platform', accessorKey: 'platform', cell: (r) => r.platform ?? '-' },
+                { header: 'Amount', accessorKey: 'amount', cell: (r) => fmtMoney(r.amount) },
+                {
+                  header: 'Operations',
+                  enableSorting: false,
+                  enableGlobalFilter: false,
+                  cell: (r) => r.status === 'pending' ? (
+                    <div className="flex gap-3">
+                      <button className="text-green-600 hover:underline" onClick={() => void review(r.id, 'approved')}>Approve</button>
+                      <button className="text-red-500 hover:underline" onClick={() => void review(r.id, 'rejected')}>Reject</button>
+                    </div>
+                  ) : (
+                    <span className="capitalize text-slate-400">{r.status}</span>
+                  )
+                }
+              ]}
+            />
           </Card>
         </>
       )}
@@ -283,46 +246,38 @@ export function TransactionScreen() {
           <div className="space-y-6">
             <div>
               <h4 className="mb-2 font-semibold text-slate-700">Daily Breakdown</h4>
-              <Table
-                headers={['Date', 'Store Balance Vary', 'TotalIn', 'TotalOut', 'Gross Net', 'Bonus', 'Game Deposit Fee', 'Platform Fee', 'TotalNet']}
-                empty={report.daily.length === 0}
-              >
-                {report.daily.map((d) => (
-                  <tr key={d.date}>
-                    <td className="px-4 py-3">{d.date}</td>
-                    <td className="px-4 py-3">{fmtMoney(d.storeBalanceVary)}</td>
-                    <td className="px-4 py-3">{fmtMoney(d.totalIn)}</td>
-                    <td className="px-4 py-3">{fmtMoney(d.totalOut)}</td>
-                    <td className="px-4 py-3">{fmtMoney(Number(d.totalIn) - Number(d.totalOut))}</td>
-                    <td className="px-4 py-3">{fmtMoney(d.bonus)}</td>
-                    <td className="px-4 py-3">{fmtMoney(d.gameDepositFee)}</td>
-                    <td className="px-4 py-3">{fmtMoney(d.platformFee)}</td>
-                    <td className="px-4 py-3 font-semibold">
-                      {fmtMoney(Number(d.totalIn) - Number(d.totalOut) - Number(d.platformFee))}
-                    </td>
-                  </tr>
-                ))}
-              </Table>
+              <DataTable
+                data={report.daily}
+                rowKey={(r) => r.date}
+                columns={[
+                  { header: 'Date', accessorKey: 'date' },
+                  { header: 'Store Balance Vary', accessorKey: 'storeBalanceVary', cell: (r) => fmtMoney(r.storeBalanceVary) },
+                  { header: 'TotalIn', accessorKey: 'totalIn', cell: (r) => fmtMoney(r.totalIn) },
+                  { header: 'TotalOut', accessorKey: 'totalOut', cell: (r) => fmtMoney(r.totalOut) },
+                  { header: 'Gross Net', accessorKey: 'grossNet', cell: (r) => fmtMoney(Number(r.totalIn) - Number(r.totalOut)) },
+                  { header: 'Bonus', accessorKey: 'bonus', cell: (r) => fmtMoney(r.bonus) },
+                  { header: 'Game Deposit Fee', accessorKey: 'gameDepositFee', cell: (r) => fmtMoney(r.gameDepositFee) },
+                  { header: 'Platform Fee', accessorKey: 'platformFee', cell: (r) => fmtMoney(r.platformFee) },
+                  { header: 'TotalNet', accessorKey: 'totalNet', cell: (r) => <span className="font-semibold">{fmtMoney(Number(r.totalIn) - Number(r.totalOut) - Number(r.platformFee))}</span> },
+                ]}
+              />
             </div>
             <div>
               <h4 className="mb-2 font-semibold text-slate-700">Game Breakdown</h4>
-              <Table
-                headers={['Game', 'Store Balance Vary', 'TotalIn', 'TotalOut', 'Gross Net', 'Bonus', 'Game Deposit Fee', 'Platform Fee']}
-                empty={report.byGame.length === 0}
-              >
-                {report.byGame.map((g) => (
-                  <tr key={g.game}>
-                    <td className="px-4 py-3">{g.game}</td>
-                    <td className="px-4 py-3">{fmtMoney(g.storeBalanceVary)}</td>
-                    <td className="px-4 py-3">{fmtMoney(g.totalIn)}</td>
-                    <td className="px-4 py-3">{fmtMoney(g.totalOut)}</td>
-                    <td className="px-4 py-3">{fmtMoney(Number(g.totalIn) - Number(g.totalOut))}</td>
-                    <td className="px-4 py-3">{fmtMoney(g.bonus)}</td>
-                    <td className="px-4 py-3">{fmtMoney(g.gameDepositFee)}</td>
-                    <td className="px-4 py-3">{fmtMoney(g.platformFee)}</td>
-                  </tr>
-                ))}
-              </Table>
+              <DataTable
+                data={report.byGame}
+                rowKey={(r) => r.game}
+                columns={[
+                  { header: 'Game', accessorKey: 'game' },
+                  { header: 'Store Balance Vary', accessorKey: 'storeBalanceVary', cell: (r) => fmtMoney(r.storeBalanceVary) },
+                  { header: 'TotalIn', accessorKey: 'totalIn', cell: (r) => fmtMoney(r.totalIn) },
+                  { header: 'TotalOut', accessorKey: 'totalOut', cell: (r) => fmtMoney(r.totalOut) },
+                  { header: 'Gross Net', accessorKey: 'grossNet', cell: (r) => fmtMoney(Number(r.totalIn) - Number(r.totalOut)) },
+                  { header: 'Bonus', accessorKey: 'bonus', cell: (r) => fmtMoney(r.bonus) },
+                  { header: 'Game Deposit Fee', accessorKey: 'gameDepositFee', cell: (r) => fmtMoney(r.gameDepositFee) },
+                  { header: 'Platform Fee', accessorKey: 'platformFee', cell: (r) => fmtMoney(r.platformFee) },
+                ]}
+              />
             </div>
           </div>
         )}

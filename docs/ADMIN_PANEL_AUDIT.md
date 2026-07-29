@@ -1,6 +1,6 @@
-# Digit Link — Agent/Store Admin Panel: Comprehensive Audit
+# Octan Link — Agent/Store Admin Panel: Comprehensive Audit
 
-> Source: 22 reference screenshots of the production Digit Link agent panel (`digitlink.mobi`,
+> Source: 22 reference screenshots of the production Octan Link agent panel (`octanlink.com`,
 > logged in as store agent **Deluxe001**), captured 2026-07-16, plus the saved page snapshot
 > `demo.html` (Vue 3 + vxe-ui SPA). This document audits every screen, its fields and behaviors,
 > maps each to the database entities required to power it, and closes with a gap analysis against
@@ -10,7 +10,7 @@
 
 ## 1. What this panel is
 
-The agent panel is the **B2B side** of Digit Link. Digit Link is a distribution/recharge hub that
+The agent panel is the **B2B side** of Octan Link. Octan Link is a distribution/recharge hub that
 sits on top of ~47 third-party sweepstakes game platforms (Orion Stars, Juwa, Fire Kirin, Vegas X,
 Game Vault, …). A **store** (agent) resells game credits to **members** (players):
 
@@ -75,7 +75,7 @@ platform; members table with `createdAt` and last-played tracking.
 - **Balance cards**: `Online Balance $104.81` (purple gradient), `Tips $0.00` (yellow, `Clear`
   action).
 - **Identity block**: masked Email + `Change Email` button; **Invite Link**
-  `https://digitlink.mobi?inviteCode=MC223717111J000I` with copy button; hint that members
+  `https://octanlink.com?inviteCode=MC223717111J000I` with copy button; hint that members
   self-register through the link.
 - **Basic settings form**: Store Name (0/20 chars), Daily Max Redeem (USD/day, e.g. 5000), Daily
   Max Withdraw (USD/day, 500), Phone Bind Reward SC (3), Store Logo upload (JPG/PNG/GIF/WEBP ≤

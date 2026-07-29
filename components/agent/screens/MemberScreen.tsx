@@ -10,12 +10,9 @@ import {
   fmtDateTime,
   fmtMoney,
   Modal,
-  Pagination,
-  ResetBtn,
-  SearchBtn,
-  Table,
   TextInput,
 } from '../ui';
+import { DataTable } from '@/components/ui/DataTable';
 
 interface MemberRow {
   id: string;
@@ -102,75 +99,66 @@ export function MemberScreen() {
 
   return (
     <div className="space-y-4">
-      <Card className="flex flex-wrap items-center gap-3">
-        <span className="text-sm text-slate-500">Search</span>
-        <TextInput
-          className="w-full sm:w-56"
-          placeholder="Enter username"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <span className="text-sm text-slate-500">Phone</span>
-        <TextInput
-          className="w-full sm:w-48"
-          placeholder="Phone"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-        />
-        <SearchBtn
-          onClick={() => {
-            setPage(1);
-            void load(1);
-          }}
-        />
-        <ResetBtn
-          onClick={() => {
-            setSearch('');
-            setPhone('');
-            setPage(1);
-            void load(1, '', '');
-          }}
-        />
-      </Card>
-
       <Card>
         <Btn variant="success" className="mb-4" onClick={() => setAddOpen(true)}>
           <Plus size={16} /> Add Member
         </Btn>
-        <Table
-          headers={[
-            'Username',
-            'Phone',
-            'Sale Agent',
-            'Online SC',
-            'Deposit',
-            'Withdraw',
-            'TotalNet',
-            'TotalIn Score',
-            'TotalOut Score',
-            'Operations',
-          ]}
-          empty={rows.length === 0}
-        >
-          {rows.map((r) => (
-            <tr key={r.id}>
-              <td className="px-4 py-3">
-                <span className="font-medium text-slate-700">{r.username}</span>
-                {!r.scRewardEnabled && (
-                  <span className="ml-2 rounded bg-red-50 px-1.5 py-0.5 text-xs text-red-500">
-                    No SC Reward
-                  </span>
-                )}
-              </td>
-              <td className="px-4 py-3">{r.phone ?? ''}</td>
-              <td className="px-4 py-3">{r.saleAgent ?? '-'}</td>
-              <td className="px-4 py-3 font-semibold text-green-600">{fmtMoney(r.onlineSc)}</td>
-              <td className="px-4 py-3">{fmtMoney(r.deposit)}</td>
-              <td className="px-4 py-3">{fmtMoney(r.withdraw)}</td>
-              <td className="px-4 py-3 font-semibold text-green-600">{fmtMoney(r.totalNet)}</td>
-              <td className="px-4 py-3">{Number(r.totalIn).toFixed(2)}</td>
-              <td className="px-4 py-3">{Number(r.totalOut).toFixed(2)}</td>
-              <td className="px-4 py-3">
+        <DataTable
+          data={rows}
+          rowKey={(r) => r.id}
+          manualPagination
+          totalRows={total}
+          currentPage={page}
+          onPageChange={(p) => {
+            setPage(p);
+            void load(p);
+          }}
+          globalSearch={search}
+          onSearchChange={setSearch}
+          extraToolbar={
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-500">Phone:</span>
+              <TextInput
+                className="w-32 py-1.5"
+                placeholder="Phone"
+                value={phone}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPhone(val);
+                  setPage(1);
+                  void load(1, search, val);
+                }}
+              />
+            </div>
+          }
+          columns={[
+            {
+              header: 'Username',
+              accessorKey: 'username',
+              cell: (r) => (
+                <>
+                  <span className="font-medium text-slate-700">{r.username}</span>
+                  {!r.scRewardEnabled && (
+                    <span className="ml-2 rounded bg-red-50 px-1.5 py-0.5 text-xs text-red-500">
+                      No SC Reward
+                    </span>
+                  )}
+                </>
+              )
+            },
+            { header: 'Phone', accessorKey: 'phone', cell: (r) => r.phone ?? '' },
+            { header: 'Sale Agent', accessorKey: 'saleAgent', cell: (r) => r.saleAgent ?? '-' },
+            { header: 'Online SC', accessorKey: 'onlineSc', cell: (r) => <span className="font-semibold text-green-600">{fmtMoney(r.onlineSc)}</span> },
+            { header: 'Deposit', accessorKey: 'deposit', cell: (r) => fmtMoney(r.deposit) },
+            { header: 'Withdraw', accessorKey: 'withdraw', cell: (r) => fmtMoney(r.withdraw) },
+            { header: 'TotalNet', accessorKey: 'totalNet', cell: (r) => <span className="font-semibold text-green-600">{fmtMoney(r.totalNet)}</span> },
+            { header: 'TotalIn Score', accessorKey: 'totalIn', cell: (r) => Number(r.totalIn).toFixed(2) },
+            { header: 'TotalOut Score', accessorKey: 'totalOut', cell: (r) => Number(r.totalOut).toFixed(2) },
+            {
+              header: 'Operations',
+              enableSorting: false,
+              enableGlobalFilter: false,
+              cell: (r) => (
                 <div className="flex gap-2 whitespace-nowrap">
                   <button
                     className="text-blue-500 hover:underline"
@@ -189,11 +177,10 @@ export function MemberScreen() {
                     More ▾
                   </button>
                 </div>
-              </td>
-            </tr>
-          ))}
-        </Table>
-        <Pagination total={total} page={page} pageSize={10} onPage={(p) => { setPage(p); void load(p); }} />
+              )
+            }
+          ]}
+        />
       </Card>
 
       <Modal
@@ -270,26 +257,26 @@ export function MemberScreen() {
           <div className="space-y-6">
             <div>
               <h4 className="mb-2 font-semibold text-slate-700">Game Platform Bindings</h4>
-              <Table headers={['Platform', 'Game Username']} empty={detail.bindings.length === 0}>
-                {detail.bindings.map((b, i) => (
-                  <tr key={i}>
-                    <td className="px-4 py-3">{b.platform}</td>
-                    <td className="px-4 py-3">{b.gameUsername ?? '-'}</td>
-                  </tr>
-                ))}
-              </Table>
+              <DataTable
+                data={detail.bindings}
+                rowKey={(r) => r.platform}
+                columns={[
+                  { header: 'Platform', accessorKey: 'platform' },
+                  { header: 'Game Username', accessorKey: 'gameUsername', cell: (r) => r.gameUsername ?? '-' },
+                ]}
+              />
             </div>
             <div>
               <h4 className="mb-2 font-semibold text-slate-700">Login History</h4>
-              <Table headers={['Time', 'IP', 'Device']} empty={detail.logins.length === 0}>
-                {detail.logins.map((l, i) => (
-                  <tr key={i}>
-                    <td className="px-4 py-3">{fmtDateTime(l.createdAt)}</td>
-                    <td className="px-4 py-3">{l.ipAddress ?? '-'}</td>
-                    <td className="px-4 py-3">{l.device ?? '-'}</td>
-                  </tr>
-                ))}
-              </Table>
+              <DataTable
+                data={detail.logins}
+                rowKey={(r) => r.createdAt}
+                columns={[
+                  { header: 'Time', accessorKey: 'createdAt', cell: (r) => fmtDateTime(r.createdAt) },
+                  { header: 'IP', accessorKey: 'ipAddress', cell: (r) => r.ipAddress ?? '-' },
+                  { header: 'Device', accessorKey: 'device', cell: (r) => r.device ?? '-' },
+                ]}
+              />
             </div>
           </div>
         )}

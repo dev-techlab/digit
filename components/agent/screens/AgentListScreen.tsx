@@ -13,9 +13,9 @@ import {
   ResetBtn,
   SearchBtn,
   Select,
-  Table,
   TextInput,
 } from '../ui';
+import { DataTable } from '@/components/ui/DataTable';
 
 interface AgentRow {
   id: string;
@@ -148,26 +148,29 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
             </span>
           )}
         </div>
-        <Table
-          headers={['Username', 'Ratio', 'Discount', 'Balance', 'Nickname', 'Email', 'Invite Link', 'Status', 'Remark']}
-          empty={filtered.length === 0}
-        >
-          {filtered.map((r) => (
-            <tr key={r.id}>
-              <td className="px-4 py-3 font-medium text-slate-700">{r.username}</td>
-              <td className="px-4 py-3">{Number(r.ratioPct).toFixed(2)}%</td>
-              <td className="px-4 py-3">{Number(r.commissionPer).toFixed(2)}%</td>
-              <td className="px-4 py-3">{fmtMoney(r.onlineBalance)}</td>
-              <td className="px-4 py-3">{r.nickname ?? '-'}</td>
-              <td className="px-4 py-3">{r.email ?? '-'}</td>
-              <td className="max-w-56 truncate px-4 py-3 text-blue-500">
-                https://digitlink.mobi?inviteCode={r.inviteCode}
-              </td>
-              <td className="px-4 py-3 capitalize">{r.status}</td>
-              <td className="px-4 py-3">{r.remark ?? '-'}</td>
-            </tr>
-          ))}
-        </Table>
+        <DataTable
+          data={filtered}
+          rowKey={(r) => r.id}
+          columns={[
+            { header: 'Username', accessorKey: 'username', cell: (r) => <span className="font-medium text-slate-700">{r.username}</span> },
+            { header: 'Ratio', accessorKey: 'ratioPct', cell: (r) => `${Number(r.ratioPct).toFixed(2)}%` },
+            { header: 'Discount', accessorKey: 'commissionPer', cell: (r) => `${Number(r.commissionPer).toFixed(2)}%` },
+            { header: 'Balance', accessorKey: 'onlineBalance', cell: (r) => fmtMoney(r.onlineBalance) },
+            { header: 'Nickname', accessorKey: 'nickname', cell: (r) => r.nickname ?? '-' },
+            { header: 'Email', accessorKey: 'email', cell: (r) => r.email ?? '-' },
+            {
+              header: 'Invite Link',
+              accessorKey: 'inviteCode',
+              cell: (r) => (
+                <div className="max-w-56 truncate text-blue-500">
+                  {process.env.NEXT_PUBLIC_SITE_URL}?inviteCode={r.inviteCode}
+                </div>
+              )
+            },
+            { header: 'Status', accessorKey: 'status', cell: (r) => <span className="capitalize">{r.status}</span> },
+            { header: 'Remark', accessorKey: 'remark', cell: (r) => r.remark ?? '-' },
+          ]}
+        />
       </Card>
 
       <Drawer
@@ -239,38 +242,23 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
         onClose={() => setReportOpen(false)}
         wide
       >
-        <Table
-          headers={[
-            label,
-            'Deposit',
-            'Depositors',
-            'Withdrawal',
-            'Withdrawers',
-            'TotalIn Score',
-            'TotalOut Score',
-            'Gross Net Score',
-            'Total Bonus Score',
-            'Game Deposit Fee',
-            'Platform Fee',
+        <DataTable
+          data={report}
+          rowKey={(r) => r.agentId}
+          columns={[
+            { header: label, accessorKey: 'username', cell: (r) => <span className="font-medium">{r.username}</span> },
+            { header: 'Deposit', accessorKey: 'deposit', cell: (r) => fmtMoney(r.deposit) },
+            { header: 'Depositors', accessorKey: 'depositors' },
+            { header: 'Withdrawal', accessorKey: 'withdrawal', cell: (r) => fmtMoney(r.withdrawal) },
+            { header: 'Withdrawers', accessorKey: 'withdrawers' },
+            { header: 'TotalIn Score', accessorKey: 'totalIn', cell: (r) => fmtMoney(r.totalIn) },
+            { header: 'TotalOut Score', accessorKey: 'totalOut', cell: (r) => fmtMoney(r.totalOut) },
+            { header: 'Gross Net Score', accessorKey: 'agentId', cell: (r) => fmtMoney(Number(r.totalIn) - Number(r.totalOut)) },
+            { header: 'Total Bonus Score', accessorKey: 'bonus', cell: (r) => fmtMoney(r.bonus) },
+            { header: 'Game Deposit Fee', accessorKey: 'gameDepositFee', cell: (r) => fmtMoney(r.gameDepositFee) },
+            { header: 'Platform Fee', accessorKey: 'platformFee', cell: (r) => fmtMoney(r.platformFee) },
           ]}
-          empty={report.length === 0}
-        >
-          {report.map((r) => (
-            <tr key={r.agentId}>
-              <td className="px-4 py-3 font-medium">{r.username}</td>
-              <td className="px-4 py-3">{fmtMoney(r.deposit)}</td>
-              <td className="px-4 py-3">{r.depositors}</td>
-              <td className="px-4 py-3">{fmtMoney(r.withdrawal)}</td>
-              <td className="px-4 py-3">{r.withdrawers}</td>
-              <td className="px-4 py-3">{fmtMoney(r.totalIn)}</td>
-              <td className="px-4 py-3">{fmtMoney(r.totalOut)}</td>
-              <td className="px-4 py-3">{fmtMoney(Number(r.totalIn) - Number(r.totalOut))}</td>
-              <td className="px-4 py-3">{fmtMoney(r.bonus)}</td>
-              <td className="px-4 py-3">{fmtMoney(r.gameDepositFee)}</td>
-              <td className="px-4 py-3">{fmtMoney(r.platformFee)}</td>
-            </tr>
-          ))}
-        </Table>
+        />
       </Modal>
     </div>
   );

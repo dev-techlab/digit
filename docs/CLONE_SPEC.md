@@ -1,6 +1,6 @@
-# Digit Link — Clone Spec (Next.js + Tailwind CSS)
+# Octan Link — Clone Spec (Next.js + Tailwind CSS)
 
-Source: https://digitlink.mobi — "DigitLink", a mobile-first gaming-recharge / sweepstakes platform with two virtual currencies: **SC** (Sweepstakes Coins, redeemable) and **GC** (Gold Coins, play-only). The live site is a Vue 3 SPA (Vite build, `vue-router`, `vue-i18n`, EN + ES locales). This document specs out a **1:1 UI clone** built with **Next.js (App Router) + TypeScript + Tailwind CSS**.
+Source: https://octanlink.com — "OctanLink", a mobile-first gaming-recharge / sweepstakes platform with two virtual currencies: **SC** (Sweepstakes Coins, redeemable) and **GC** (Gold Coins, play-only). The live site is a Vue 3 SPA (Vite build, `vue-router`, `vue-i18n`, EN + ES locales). This document specs out a **1:1 UI clone** built with **Next.js (App Router) + TypeScript + Tailwind CSS**.
 
 Everything below was reverse-engineered from the live site: the shipped `index.html`, the main JS bundle (routes, component options, and the inlined i18n message dictionary — so most copy quoted here is the _actual_ production English text, not a paraphrase), the main CSS bundle (custom-property design tokens), the PWA manifest, and the one public API endpoint provided. No headless browser was available during research, so exact pixel spacing is inferred from CSS source rather than visual screenshots — treat spacing values as strong starting points, not gospel, and eyeball-correct against the live site while building.
 
@@ -14,7 +14,7 @@ Everything below was reverse-engineered from the live site: the shipped `index.h
 | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Game provider list                                                                      | **Public, unauthenticated GET API** — confirmed working                                                                            | Call it for real, cache the response to a static JSON file, serve from cache after (see §8)                                                                                           |
 | Everything else (auth, wallet, deposit/withdraw, orders, bonus, referral, KYC, profile) | Requires a logged-in session token on the real site (confirmed: hitting these endpoints returns `401 Token is invalid or expired`) | Build the real UI, backed by static/mock JSON fixtures with the same shape. No real payments, SMS, KYC, or geo-check — these are visual/UI only.                                      |
-| Assets (logo, provider icons, splash images)                                            | Hosted on `static.digitlink.mobi` CDN, publicly loadable                                                                           | Spec references the live CDN URLs for now; recommend downloading and self-hosting under `/public` before shipping anywhere real (don't permanently hotlink a third party's asset CDN) |
+| Assets (logo, provider icons, splash images)                                            | Hosted on `static.octanlink.com` CDN, publicly loadable                                                                           | Spec references the live CDN URLs for now; recommend downloading and self-hosting under `/public` before shipping anywhere real (don't permanently hotlink a third party's asset CDN) |
 
 Goal: every route below should be navigable and **look like the original**, with the Game page carrying real live data and every other page carrying realistic static data.
 
@@ -28,7 +28,7 @@ Goal: every route below should be navigable and **look like the original**, with
 - **Fonts**: system font stack, matching the original exactly — `-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`. SF Pro isn't web-licensable, so on non-Apple devices it already falls back the same way the original does — no font files to source, just declare the stack via `next/font` or plain Tailwind `fontFamily`.
 - **Theme**: light/dark/auto, toggled via `data-theme` attribute on `<html>` (matches the original's `html[data-theme='light']` override pattern) — implement with a small context + `localStorage`, not a heavy dependency.
 - **Motion**: Tailwind `keyframes`/`animation` entries for the catalog in §4.6; reach for Framer Motion only for the splash-screen exit transition and modal/drawer enter-exit if CSS transitions get awkward.
-- **Images**: `next/image` with `static.digitlink.mobi` in `remotePatterns` initially; swap to local `/public` assets when self-hosting.
+- **Images**: `next/image` with `static.octanlink.com` in `remotePatterns` initially; swap to local `/public` assets when self-hosting.
 
 ---
 
@@ -65,10 +65,10 @@ Extracted two independent ways (Vue Router `path:` definitions _and_ the lazy-lo
 
 ### 4.1 Brand
 
-- Name: **Digit Link** / short name **DigitLink**
+- Name: **Octan Link** / short name **OctanLink**
 - Tagline (splash screen, verbatim): **"Explore a bigger world..."**
 - `theme-color` / PWA background: `#041f16`
-- App icons: 512×512 / 192×192 maskable + any, source `https://static.digitlink.mobi/img/p/...` and `/img/icons/icon-*.png`
+- App icons: 512×512 / 192×192 maskable + any, source `https://static.octanlink.com/img/p/...` and `/img/icons/icon-*.png`
 
 ### 4.2 Color tokens
 
@@ -281,8 +281,8 @@ All four share a `LegalPageLayout` wrapper: simple header with back button + pag
 ### 8.1 The one real endpoint
 
 ```
-GET https://digitlink.mobi/prod-api/member/game/available-providers?inviteCode=&providerType=SC
-GET https://digitlink.mobi/prod-api/member/game/available-providers?inviteCode=&providerType=GC
+GET https://octanlink.com/prod-api/member/game/available-providers?inviteCode=&providerType=SC
+GET https://octanlink.com/prod-api/member/game/available-providers?inviteCode=&providerType=GC
 ```
 
 Response shape (confirmed live, 48 SC providers / 2 GC providers at time of writing):
@@ -297,7 +297,7 @@ Response shape (confirmed live, 48 SC providers / 2 GC providers at time of writ
       "name": "Golden Dragon",
       "providerCode": "goldenDragonCookie",
       "launchUrlTemplate": "https://www.playgd.mobi",
-      "iconUrl": "https://static.digitlink.mobi/img/p/gd.png",
+      "iconUrl": "https://static.octanlink.com/img/p/gd.png",
       "status": 1,
       "sort": 0,
       "createType": 1,

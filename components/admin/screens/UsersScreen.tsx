@@ -7,13 +7,9 @@ import {
   Card,
   fmtDateTime,
   fmtMoney,
-  Pagination,
-  ResetBtn,
-  SearchBtn,
   Select,
-  Table,
-  TextInput,
 } from '@/components/agent/ui';
+import { DataTable } from '@/components/ui/DataTable';
 
 interface UserRow {
   id: string;
@@ -73,72 +69,61 @@ export function UsersScreen() {
 
   return (
     <div className="space-y-4">
-      <Card className="flex flex-wrap items-center gap-3">
-        <span className="text-sm text-slate-500">Search</span>
-        <TextInput
-          className="w-full sm:w-64"
-          placeholder="Username, nickname, email or phone"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <span className="text-sm text-slate-500">Status</span>
-        <Select className="w-full sm:w-40" value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">All</option>
-          <option value="active">Active</option>
-          <option value="blocked">Blocked</option>
-        </Select>
-        <SearchBtn
-          onClick={() => {
-            setPage(1);
-            void load(1);
-          }}
-        />
-        <ResetBtn
-          onClick={() => {
-            setSearch('');
-            setStatus('');
-            setPage(1);
-            void load(1, '', '');
-          }}
-        />
-      </Card>
-
       <Card>
-        <Table
-          headers={[
-            'Username',
-            'Nickname',
-            'Email',
-            'Phone',
-            'KYC',
-            'Gold Coin',
-            'Online SC',
-            'Invite Code',
-            'Registered',
-            'Status',
-            'Operations',
-          ]}
-          empty={!loading && rows.length === 0}
-        >
-          {rows.map((r) => (
-            <tr key={r.id}>
-              <td className="px-4 py-3 font-medium text-slate-700">{r.username}</td>
-              <td className="px-4 py-3">{r.nickname}</td>
-              <td className="px-4 py-3">{r.email ?? '-'}</td>
-              <td className="px-4 py-3">
-                {r.phone ?? '-'}
-                {r.phoneBound && (
-                  <span className="ml-1.5 rounded bg-green-50 px-1.5 py-0.5 text-xs text-green-600">
-                    Bound
-                  </span>
-                )}
-              </td>
-              <td className="px-4 py-3 capitalize">{r.kycStatus}</td>
-              <td className="px-4 py-3">{fmtMoney(r.goldCoin)}</td>
-              <td className="px-4 py-3 font-semibold text-green-600">{fmtMoney(r.onlineSc)}</td>
-              <td className="px-4 py-3 font-mono text-xs text-slate-500">{r.inviteCode}</td>
-              <td className="px-4 py-3">{fmtDateTime(r.createdAt)}</td>
-              <td className="px-4 py-3">
+        <DataTable
+          data={rows}
+          rowKey={(r) => r.id}
+          manualPagination
+          totalRows={total}
+          currentPage={page}
+          onPageChange={(p) => {
+            setPage(p);
+            void load(p);
+          }}
+          globalSearch={search}
+          onSearchChange={setSearch}
+          extraToolbar={
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-500">Status:</span>
+              <Select className="w-32 py-1.5" value={status} onChange={(e) => {
+                const st = e.target.value;
+                setStatus(st);
+                setPage(1);
+                void load(1, search, st);
+              }}>
+                <option value="">All</option>
+                <option value="active">Active</option>
+                <option value="blocked">Blocked</option>
+              </Select>
+            </div>
+          }
+          columns={[
+            { header: 'Username', accessorKey: 'username', cell: (r) => <span className="font-medium text-slate-700">{r.username}</span> },
+            { header: 'Nickname', accessorKey: 'nickname' },
+            { header: 'Email', accessorKey: 'email', cell: (r) => r.email ?? '-' },
+            {
+              header: 'Phone',
+              accessorKey: 'phone',
+              cell: (r) => (
+                <>
+                  {r.phone ?? '-'}
+                  {r.phoneBound && (
+                    <span className="ml-1.5 rounded bg-green-50 px-1.5 py-0.5 text-xs text-green-600">
+                      Bound
+                    </span>
+                  )}
+                </>
+              )
+            },
+            { header: 'KYC', accessorKey: 'kycStatus', cell: (r) => <span className="capitalize">{r.kycStatus}</span> },
+            { header: 'Gold Coin', accessorKey: 'goldCoin', cell: (r) => fmtMoney(r.goldCoin) },
+            { header: 'Online SC', accessorKey: 'onlineSc', cell: (r) => <span className="font-semibold text-green-600">{fmtMoney(r.onlineSc)}</span> },
+            { header: 'Invite Code', accessorKey: 'inviteCode', cell: (r) => <span className="font-mono text-xs text-slate-500">{r.inviteCode}</span> },
+            { header: 'Registered', accessorKey: 'createdAt', cell: (r) => fmtDateTime(r.createdAt) },
+            {
+              header: 'Status',
+              accessorKey: 'status',
+              cell: (r) => (
                 <span
                   className={
                     r.status === 'active'
@@ -148,8 +133,13 @@ export function UsersScreen() {
                 >
                   {r.status === 'active' ? 'Active' : 'Blocked'}
                 </span>
-              </td>
-              <td className="px-4 py-3">
+              )
+            },
+            {
+              header: 'Operations',
+              enableSorting: false,
+              enableGlobalFilter: false,
+              cell: (r) => (
                 <Btn
                   variant={r.status === 'active' ? 'danger' : 'success'}
                   className="px-3 py-1.5 text-xs"
@@ -158,18 +148,9 @@ export function UsersScreen() {
                 >
                   {r.status === 'active' ? 'Block' : 'Unblock'}
                 </Btn>
-              </td>
-            </tr>
-          ))}
-        </Table>
-        <Pagination
-          total={total}
-          page={page}
-          pageSize={20}
-          onPage={(p) => {
-            setPage(p);
-            void load(p);
-          }}
+              )
+            }
+          ]}
         />
       </Card>
     </div>

@@ -58,7 +58,7 @@ function downloadPoster(p: Poster, inviteLink: string) {
 export function PostersScreen() {
   const { me } = usePanel();
   const [posters, setPosters] = useState<Poster[]>([]);
-  const inviteLink = `https://digitlink.mobi?inviteCode=${me.store?.inviteCode ?? ''}`;
+  const inviteLink = `${process.env.NEXT_PUBLIC_SITE_URL}?inviteCode=${me.store?.inviteCode ?? ''}`;
 
   useEffect(() => {
     api<{ posters: Poster[] }>('/api/agent/posters').then((d) => setPosters(d.posters));

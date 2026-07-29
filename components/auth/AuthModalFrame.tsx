@@ -44,7 +44,7 @@ export function AuthModalFrame({ open, onClose, tagline, children }: AuthModalFr
 
           <div className="relative h-20 w-20 overflow-hidden rounded-2xl shadow-lg">
             <Image
-              src="https://digitlink.mobi/img/icons/icon-192x192.png"
+              src="/logo.png"
               alt={APP_NAME}
               fill
               sizes="80px"

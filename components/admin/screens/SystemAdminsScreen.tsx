@@ -9,12 +9,9 @@ import {
   Field,
   fmtDateTime,
   Modal,
-  Pagination,
-  ResetBtn,
-  SearchBtn,
-  Table,
   TextInput,
 } from '@/components/agent/ui';
+import { DataTable } from '@/components/ui/DataTable';
 import { useAdminPanel } from '@/components/admin/AdminShell';
 
 interface SystemAdminRow {
@@ -138,29 +135,6 @@ export function SystemAdminsScreen() {
 
   return (
     <div className="space-y-4">
-      <Card className="flex flex-wrap items-center gap-3">
-        <span className="text-sm text-slate-500">Search</span>
-        <TextInput
-          className="w-full sm:w-64"
-          placeholder="Username or email"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <SearchBtn
-          onClick={() => {
-            setPage(1);
-            void load(1);
-          }}
-        />
-        <ResetBtn
-          onClick={() => {
-            setSearch('');
-            setPage(1);
-            void load(1, '');
-          }}
-        />
-      </Card>
-
       <Card>
         <Btn
           variant="success"
@@ -173,23 +147,39 @@ export function SystemAdminsScreen() {
         >
           <Plus size={16} /> Add System Admin
         </Btn>
-        <Table
-          headers={['Username', 'Email', 'Status', 'Last Login', 'Created', 'Operations']}
-          empty={!loading && rows.length === 0}
-        >
-          {rows.map((r) => (
-            <tr key={r.id}>
-              <td className="px-4 py-3 font-medium text-slate-700 flex items-center gap-2">
-                <ShieldCheck size={16} className="text-indigo-500" />
-                {r.username}
-                {r.id === me.adminId && (
-                  <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-700">
-                    You
-                  </span>
-                )}
-              </td>
-              <td className="px-4 py-3">{r.email}</td>
-              <td className="px-4 py-3">
+        <DataTable
+          data={rows}
+          rowKey={(r) => r.id}
+          manualPagination
+          totalRows={total}
+          currentPage={page}
+          onPageChange={(p) => {
+            setPage(p);
+            void load(p);
+          }}
+          globalSearch={search}
+          onSearchChange={setSearch}
+          columns={[
+            {
+              header: 'Username',
+              accessorKey: 'username',
+              cell: (r) => (
+                <div className="flex items-center gap-2 font-medium text-slate-700">
+                  <ShieldCheck size={16} className="text-indigo-500" />
+                  {r.username}
+                  {r.id === me.adminId && (
+                    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-bold text-blue-700">
+                      You
+                    </span>
+                  )}
+                </div>
+              )
+            },
+            { header: 'Email', accessorKey: 'email' },
+            {
+              header: 'Status',
+              accessorKey: 'status',
+              cell: (r) => (
                 <span
                   className={
                     r.status === 'active'
@@ -201,50 +191,56 @@ export function SystemAdminsScreen() {
                 >
                   {r.status === 'active' ? 'Active' : r.status === 'invited' ? 'Invited' : 'Suspended'}
                 </span>
-              </td>
-              <td className="px-4 py-3 text-sm text-slate-500">{fmtDateTime(r.lastLoginAt)}</td>
-              <td className="px-4 py-3 text-sm text-slate-500">{fmtDateTime(r.createdAt)}</td>
-              <td className="px-4 py-3">
-                <Btn
-                  variant="ghost"
-                  className="px-2 text-xs mr-2"
-                  disabled={editBusy && editRow?.id === r.id}
-                  onClick={() => {
-                    setEditRow(r);
-                    setEditForm({ email: r.email, password: '', status: r.status });
-                    setEditErr(null);
-                    setEditOpen(true);
-                  }}
-                >
-                  <Edit size={16} className="text-blue-500" />
-                </Btn>
-                {r.id !== me.adminId && (
+              )
+            },
+            {
+              header: 'Last Login',
+              accessorKey: 'lastLoginAt',
+              cell: (r) => <span className="text-sm text-slate-500">{fmtDateTime(r.lastLoginAt)}</span>
+            },
+            {
+              header: 'Created',
+              accessorKey: 'createdAt',
+              cell: (r) => <span className="text-sm text-slate-500">{fmtDateTime(r.createdAt)}</span>
+            },
+            {
+              header: 'Operations',
+              enableSorting: false,
+              enableGlobalFilter: false,
+              cell: (r) => (
+                <div className="flex items-center gap-2">
                   <Btn
                     variant="ghost"
                     className="px-2 text-xs"
-                    disabled={deleteBusy && deleteId === r.id}
+                    disabled={editBusy && editRow?.id === r.id}
                     onClick={() => {
-                      if (window.confirm(`Are you sure you want to permanently delete admin ${r.username}?`)) {
-                        setDeleteId(r.id);
-                        void removeAdmin();
-                      }
+                      setEditRow(r);
+                      setEditForm({ email: r.email, password: '', status: r.status });
+                      setEditErr(null);
+                      setEditOpen(true);
                     }}
                   >
-                    <Trash2 size={16} className="text-red-500" />
+                    <Edit size={16} className="text-blue-500" />
                   </Btn>
-                )}
-              </td>
-            </tr>
-          ))}
-        </Table>
-        <Pagination
-          total={total}
-          page={page}
-          pageSize={20}
-          onPage={(p) => {
-            setPage(p);
-            void load(p);
-          }}
+                  {r.id !== me.adminId && (
+                    <Btn
+                      variant="ghost"
+                      className="px-2 text-xs"
+                      disabled={deleteBusy && deleteId === r.id}
+                      onClick={() => {
+                        if (window.confirm(`Are you sure you want to permanently delete admin ${r.username}?`)) {
+                          setDeleteId(r.id);
+                          void removeAdmin();
+                        }
+                      }}
+                    >
+                      <Trash2 size={16} className="text-red-500" />
+                    </Btn>
+                  )}
+                </div>
+              )
+            }
+          ]}
         />
       </Card>
 

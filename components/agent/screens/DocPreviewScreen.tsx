@@ -244,9 +244,11 @@ export function DocPreviewScreen() {
               >
                 {n === 1 ? (
                   <div className="flex flex-col items-center gap-6 py-8 text-center">
-                    <span className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-blue-400 to-blue-600 text-5xl font-bold text-white sm:h-28 sm:w-28 sm:text-6xl">
-                      {APP_NAME[0]}
-                    </span>
+                    <img
+                      src="/logo.png"
+                      alt="Logo"
+                      className="h-24 w-24 rounded-3xl object-contain sm:h-28 sm:w-28"
+                    />
                     <div>
                       <p className="font-serif text-3xl font-bold text-[#00462D] sm:text-4xl">
                         DLink <span className="font-mono font-medium">Agents</span>

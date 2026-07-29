@@ -40,7 +40,7 @@ export async function Footer() {
   const [settings, socials] = await Promise.all([getSettings(), getSocialLinks()]);
   const siteName = (settings['site.name'] as string) ?? APP_NAME;
   const logoUrl =
-    (settings['site.logo_url'] as string) ?? 'https://digitlink.mobi/img/icons/icon-192x192.png';
+    (settings['site.logo_url'] as string) ?? '/logo.png';
 
   return (
     <footer className="mb-6 mt-8 border-t border-[var(--card-border)] px-6 py-8 text-center">
@@ -103,7 +103,7 @@ export async function Footer() {
       </p>
 
       <p className="mt-4 text-[11px] text-[var(--text-secondary)]">
-        Copyright © 2026 {APP_NAME}. All rights reserved.
+        Copyright © {new Date().getFullYear()} {APP_NAME}. All rights reserved.
       </p>
     </footer>
   );
