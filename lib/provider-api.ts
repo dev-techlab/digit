@@ -8,9 +8,6 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import * as s from '@/lib/db/schema';
 
-const DEFAULT_PROVIDER_API_BASE_URL =
-  'https://digitlink.mobi/prod-api/member/game/available-providers';
-
 /**
  * The upstream provider-catalog API base URL — an admin-managed integration
  * setting (`site_settings` key `provider.api_base_url`), not an env var, so
@@ -22,7 +19,7 @@ export async function getProviderApiBaseUrl(): Promise<string> {
     .select({ value: s.siteSettings.value })
     .from(s.siteSettings)
     .where(eq(s.siteSettings.key, 'provider.api_base_url'));
-  return row?.value || DEFAULT_PROVIDER_API_BASE_URL;
+  return row?.value;
 }
 
 interface ApiProvider {
