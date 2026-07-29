@@ -13,7 +13,9 @@ export const agentTransactions = pgTable(
     type: agentTxTypeEnum('type').notNull(),
     method: withdrawMethodEnum('method'),
     amount: numeric('amount', { precision: 14, scale: 2 }).notNull(),
-    fee: numeric('fee', { precision: 14, scale: 2 }).notNull().default('0'),
+    fee: numeric('fee', { precision: 14, scale: 2 }).notNull().default('0'), // Used as Commission Amount for withdrawals
+    commissionPer: numeric('commission_per', { precision: 5, scale: 2 }).notNull().default('0'),
+    netAmount: numeric('net_amount', { precision: 14, scale: 2 }),
     address: text('address'),
     counterpartyAgentId: uuid('counterparty_agent_id').references(() => agents.id),
     balanceBefore: numeric('balance_before', { precision: 14, scale: 2 }),

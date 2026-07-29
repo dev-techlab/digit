@@ -42,6 +42,8 @@ export async function GET(req: Request) {
       method: s.agentTransactions.method,
       amount: s.agentTransactions.amount,
       fee: s.agentTransactions.fee,
+      commissionPer: s.agentTransactions.commissionPer,
+      netAmount: s.agentTransactions.netAmount,
       address: s.agentTransactions.address,
       balanceBefore: s.agentTransactions.balanceBefore,
       balanceAfter: s.agentTransactions.balanceAfter,
@@ -233,17 +235,20 @@ export async function POST(req: Request) {
       ? (body.method as (typeof WITHDRAW_METHODS)[number])
       : null;
     if (!method) return NextResponse.json({ error: 'Select a withdrawal method' }, { status: 400 });
-    // Flat fee up to $2 on PYUSD/USDC rails (mirrors production fee badges).
-    const fee = method === 'paypal_pyusd' || method === 'cashapp_usdc' ? Math.min(2, amount) : 0;
+    
     try {
       await db.transaction(async (tx) => {
         // Lock the balance row for the life of the transaction so a concurrent
         // withdraw/transfer can't pass the same stale balance check twice.
         const [row] = await tx
-          .select({ balance: s.agents.onlineBalance })
+          .select({ balance: s.agents.onlineBalance, commissionPer: s.agents.commissionPer })
           .from(s.agents)
           .where(eq(s.agents.id, agent.storeId))
           .for('update');
+        
+        const commPer = Number(row.commissionPer || 0);
+        const fee = amount * (commPer / 100);
+        const netAmount = amount - fee;
         const balance = Number(row.balance);
         if (balance < amount) throw new InsufficientBalanceError();
         await tx.insert(s.agentTransactions).values({
@@ -252,6 +257,8 @@ export async function POST(req: Request) {
           method,
           amount: String(amount),
           fee: String(fee),
+          commissionPer: String(commPer),
+          netAmount: String(netAmount),
           address: typeof body.address === 'string' ? body.address : null,
           balanceBefore: String(balance),
           balanceAfter: String(balance - amount),

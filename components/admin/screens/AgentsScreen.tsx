@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Copy, Edit, Plus } from 'lucide-react';
 import {
   api,
@@ -23,7 +24,7 @@ interface AgentRow {
   nickname: string | null;
   email: string | null;
   inviteCode: string;
-  discountPer: string;
+  commissionPer: string;
   onlineBalance: string;
   status: 'active' | 'disabled';
   remark: string | null;
@@ -39,13 +40,8 @@ interface PlatformOption {
   availableToTime?: string;
 }
 
-interface GameAssignment {
-  platformId: string;
-  availableFromTime?: string;
-  availableToTime?: string;
-}
 
-const emptyForm = () => ({ username: '', password: '', nickname: '', email: '', discountPer: '0.00', remark: '' });
+const emptyForm = () => ({ username: '', password: '', nickname: '', email: '', commissionPer: '0.00', remark: '' });
 
 /** Top-level store/agent accounts — the B2B side that resells game credits to members. */
 export function AgentsScreen() {
@@ -64,11 +60,11 @@ export function AgentsScreen() {
 
   const [editOpen, setEditOpen] = useState(false);
   const [editRow, setEditRow] = useState<AgentRow | null>(null);
-  const [editForm, setEditForm] = useState({ nickname: '', email: '', discountPer: '0', remark: '' });
+  const [editForm, setEditForm] = useState({ nickname: '', email: '', commissionPer: '0', remark: '' });
   const [editBusy, setEditBusy] = useState(false);
   const [editErr, setEditErr] = useState<string | null>(null);
   const [platforms, setPlatforms] = useState<PlatformOption[]>([]);
-  const [selectedPlatforms, setSelectedPlatforms] = useState<GameAssignment[]>([]);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [gameSearch, setGameSearch] = useState('');
 
   const load = useCallback(
@@ -102,11 +98,7 @@ export function AgentsScreen() {
       setSelectedPlatforms(
         data.platforms
           .filter((p) => p.assigned)
-          .map((p) => ({
-            platformId: p.id,
-            availableFromTime: p.availableFromTime || undefined,
-            availableToTime: p.availableToTime || undefined,
-          }))
+          .map((p) => p.id)
       );
       return;
     }
@@ -132,13 +124,13 @@ export function AgentsScreen() {
     try {
       const agentData = await api<{ agent: { id: string; username: string; password: string } }>('/api/admin/agents', {
         method: 'POST',
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form }),
       });
 
       if (selectedPlatforms.length > 0) {
         await api('/api/admin/agent-platforms', {
           method: 'PUT',
-          body: JSON.stringify({ agentId: agentData.agent.id, assignments: selectedPlatforms }),
+          body: JSON.stringify({ agentId: agentData.agent.id, assignments: selectedPlatforms.map(id => ({ platformId: id })) }),
         });
       }
 
@@ -166,13 +158,13 @@ export function AgentsScreen() {
           id: editRow.id,
           nickname: editForm.nickname,
           email: editForm.email,
-          discountPer: editForm.discountPer,
+          commissionPer: editForm.commissionPer,
           remark: editForm.remark,
         }),
       });
       await api('/api/admin/agent-platforms', {
         method: 'PUT',
-        body: JSON.stringify({ agentId: editRow.id, assignments: selectedPlatforms }),
+        body: JSON.stringify({ agentId: editRow.id, assignments: selectedPlatforms.map(id => ({ platformId: id })) }),
       });
       void load(page, search);
       setEditOpen(false);
@@ -216,8 +208,7 @@ export function AgentsScreen() {
               <p className="px-3 py-4 text-sm text-slate-500">No matching platforms.</p>
             ) : (
               filtered.map((platform) => {
-                const selected = selectedPlatforms.find((g) => g.platformId === platform.id);
-                const checked = !!selected;
+                const checked = selectedPlatforms.includes(platform.id);
                 return (
                   <div
                     key={platform.id}
@@ -233,50 +224,16 @@ export function AgentsScreen() {
                         checked={checked}
                         onChange={() => {
                           setSelectedPlatforms((current) => {
-                            if (current.find((g) => g.platformId === platform.id)) {
-                              return current.filter((g) => g.platformId !== platform.id);
+                            if (current.includes(platform.id)) {
+                              return current.filter((id) => id !== platform.id);
                             }
-                            return [...current, { platformId: platform.id }];
+                            return [...current, platform.id];
                           });
                         }}
                         className="h-4 w-4 rounded border-slate-300 text-blue-500 focus:ring-blue-500"
                       />
                       <span className="flex-1 font-medium">{platform.name}</span>
                     </label>
-                    {checked && (
-                      <div className="flex gap-3 px-3 pb-3">
-                        <div className="flex-1">
-                          <span className="mb-1 block text-xs font-medium text-slate-500">Available from</span>
-                          <input
-                            type="time"
-                            value={selected.availableFromTime || ''}
-                            onChange={(e) => {
-                              setSelectedPlatforms((current) =>
-                                current.map((g) =>
-                                  g.platformId === platform.id ? { ...g, availableFromTime: e.target.value } : g
-                                )
-                              );
-                            }}
-                            className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 outline-none focus:border-blue-400"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <span className="mb-1 block text-xs font-medium text-slate-500">Available to</span>
-                          <input
-                            type="time"
-                            value={selected.availableToTime || ''}
-                            onChange={(e) => {
-                              setSelectedPlatforms((current) =>
-                                current.map((g) =>
-                                  g.platformId === platform.id ? { ...g, availableToTime: e.target.value } : g
-                                )
-                              );
-                            }}
-                            className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 outline-none focus:border-blue-400"
-                          />
-                        </div>
-                      </div>
-                    )}
                   </div>
                 );
               })
@@ -332,7 +289,7 @@ export function AgentsScreen() {
             'Username',
             'Nickname',
             'Email',
-            'Discount',
+            'Withdraw Comm. %',
             'Online Balance',
             'Invite Code',
             'Last Login',
@@ -344,10 +301,14 @@ export function AgentsScreen() {
         >
           {rows.map((r) => (
             <tr key={r.id}>
-              <td className="px-4 py-3 font-medium text-slate-700">{r.username}</td>
+              <td className="px-4 py-3 font-medium text-slate-700">
+                <Link href={`/admin/agents/${r.id}`} className="text-blue-600 hover:underline">
+                  {r.username}
+                </Link>
+              </td>
               <td className="px-4 py-3">{r.nickname ?? '-'}</td>
               <td className="px-4 py-3">{r.email ?? '-'}</td>
-              <td className="px-4 py-3">{r.discountPer ?? '-'}</td>
+              <td className="px-4 py-3">{r.commissionPer ?? '-'}</td>
               <td className="px-4 py-3 font-semibold text-green-600">{fmtMoney(r.onlineBalance)}</td>
               <td className="px-4 py-3 font-mono text-xs text-slate-500">{r.inviteCode}</td>
               <td className="px-4 py-3">{fmtDateTime(r.lastLoginAt)}</td>
@@ -373,7 +334,7 @@ export function AgentsScreen() {
                     setEditForm({
                       nickname: r.nickname ?? '',
                       email: r.email ?? '',
-                      discountPer: r.discountPer,
+                      commissionPer: r.commissionPer,
                       remark: r.remark ?? '',
                     });
                     setEditErr(null);
@@ -447,11 +408,11 @@ export function AgentsScreen() {
             <Field label="Email">
               <TextInput value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </Field>
-            <Field label="Discount" hint="%">
+            <Field label="Withdraw Comm." hint="%">
               <TextInput
                 type="number"
-                value={form.discountPer}
-                onChange={(e) => setForm({ ...form, discountPer: e.target.value })}
+                value={form.commissionPer}
+                onChange={(e) => setForm({ ...form, commissionPer: e.target.value })}
               />
             </Field>
           </div>
@@ -522,11 +483,11 @@ export function AgentsScreen() {
                 onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
               />
             </Field>
-            <Field label="Discount" hint="%">
+            <Field label="Withdraw Comm." hint="%">
               <TextInput
                 type="number"
-                value={editForm.discountPer}
-                onChange={(e) => setEditForm({ ...editForm, discountPer: e.target.value })}
+                value={editForm.commissionPer}
+                onChange={(e) => setEditForm({ ...editForm, commissionPer: e.target.value })}
               />
             </Field>
           </div>

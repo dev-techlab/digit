@@ -31,6 +31,8 @@ interface LogRow {
   method: string | null;
   amount: string;
   fee: string;
+  commissionPer?: string;
+  netAmount?: string | null;
   address: string | null;
   balanceBefore: string | null;
   balanceAfter: string | null;
@@ -635,8 +637,10 @@ export function WalletScreen() {
             <Table
               headers={[
                 'Order No',
-                'Withdrawal Amount',
-                'Fee',
+                'Requested Amount',
+                'Commission %',
+                'Commission Amount',
+                'Net Payable Amount',
                 'Balance Before',
                 'Balance After',
                 'Order Status',
@@ -648,7 +652,9 @@ export function WalletScreen() {
                 <tr key={l.id}>
                   <td className="px-4 py-3 font-mono text-xs">{orderNo(l.id)}</td>
                   <td className="px-4 py-3">{fmtMoney(l.amount)}</td>
-                  <td className="px-4 py-3">{fmtMoney(l.fee)}</td>
+                  <td className="px-4 py-3">{l.commissionPer ? `${l.commissionPer}%` : '-'}</td>
+                  <td className="px-4 py-3 text-amber-500 font-medium">{fmtMoney(l.fee)}</td>
+                  <td className="px-4 py-3 text-green-600 font-semibold">{l.netAmount != null ? fmtMoney(l.netAmount) : '-'}</td>
                   <td className="px-4 py-3">
                     {l.balanceBefore != null ? fmtMoney(l.balanceBefore) : '-'}
                   </td>

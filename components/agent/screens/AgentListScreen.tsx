@@ -23,7 +23,7 @@ interface AgentRow {
   nickname: string | null;
   email: string | null;
   ratioPct: string;
-  discountPer: string;
+  commissionPer: string;
   onlineBalance: string;
   inviteCode: string;
   status: string;
@@ -57,7 +57,7 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
     password: '',
     nickname: '',
     ratioPct: '0.00',
-    discountPer: '0.00',
+    commissionPer: '0.00',
     remark: '',
   });
   const [err, setErr] = useState<string | null>(null);
@@ -85,7 +85,7 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
     try {
       await api('/api/agent/agents', { method: 'POST', body: JSON.stringify({ ...form, type }) });
       setAddOpen(false);
-      setForm({ ...form, username: `p${Math.floor(10000 + Math.random() * 90000)}`, password: '', nickname: '', discountPer: '0.00', remark: '' });
+      setForm({ ...form, username: `p${Math.floor(10000 + Math.random() * 90000)}`, password: '', nickname: '', commissionPer: '0.00', remark: '' });
       void load();
     } catch (e) {
       setErr((e as Error).message);
@@ -156,7 +156,7 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
             <tr key={r.id}>
               <td className="px-4 py-3 font-medium text-slate-700">{r.username}</td>
               <td className="px-4 py-3">{Number(r.ratioPct).toFixed(2)}%</td>
-              <td className="px-4 py-3">{Number(r.discountPer).toFixed(2)}%</td>
+              <td className="px-4 py-3">{Number(r.commissionPer).toFixed(2)}%</td>
               <td className="px-4 py-3">{fmtMoney(r.onlineBalance)}</td>
               <td className="px-4 py-3">{r.nickname ?? '-'}</td>
               <td className="px-4 py-3">{r.email ?? '-'}</td>
@@ -218,8 +218,8 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
           <Field label="Discount" hint="%">
             <TextInput
               type="number"
-              value={form.discountPer}
-              onChange={(e) => setForm({ ...form, discountPer: e.target.value })}
+              value={form.commissionPer}
+              onChange={(e) => setForm({ ...form, commissionPer: e.target.value })}
             />
           </Field>
           <Field label="Remark" hint={`${form.remark.length} / 300`}>

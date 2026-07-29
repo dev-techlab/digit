@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
-import { api, Btn, Field, Modal, Select, Table, TextInput, Toggle } from '@/components/agent/ui';
+import { Pencil, Plus, Trash2, Users } from 'lucide-react';
+import { api, Btn, Field, Modal, Select, Table, TextInput, Toggle, fmtDateTime } from '@/components/agent/ui';
+import Link from 'next/link';
 
 interface Platform {
   id: string;
@@ -74,6 +75,12 @@ export function PlatformsScreen() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const [agentsModalOpen, setAgentsModalOpen] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState<Platform | null>(null);
+  const [connectedAgents, setConnectedAgents] = useState<any[]>([]);
+  const [agentsLoading, setAgentsLoading] = useState(false);
+  const [agentSearch, setAgentSearch] = useState('');
 
   const load = () =>
     api<{ platforms: Platform[] }>('/api/admin/platforms')
@@ -162,6 +169,34 @@ export function PlatformsScreen() {
     }
   };
 
+  const openAgentsModal = async (p: Platform) => {
+    setSelectedPlatform(p);
+    setAgentsModalOpen(true);
+    setAgentSearch('');
+    await loadAgents(p.id, '');
+  };
+
+  const loadAgents = async (platformId: string, search: string) => {
+    setAgentsLoading(true);
+    try {
+      const data = await api<{ agents: any[] }>(`/api/admin/platforms/${platformId}/agents?search=${encodeURIComponent(search)}`);
+      setConnectedAgents(data.agents);
+    } catch (e) {
+      console.error('Failed to load agents', e);
+    } finally {
+      setAgentsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedPlatform && agentsModalOpen) {
+      const timeoutId = setTimeout(() => {
+        void loadAgents(selectedPlatform.id, agentSearch);
+      }, 300);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [agentSearch]);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -200,6 +235,14 @@ export function PlatformsScreen() {
             </td>
             <td className="px-4 py-2.5">
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => openAgentsModal(p)}
+                  className="text-slate-400 hover:text-green-500"
+                  aria-label="Connected Agents"
+                  title="View Connected Agents"
+                >
+                  <Users size={15} />
+                </button>
                 <button
                   onClick={() => openEdit(p)}
                   className="text-slate-400 hover:text-blue-500"
@@ -304,6 +347,48 @@ export function PlatformsScreen() {
             </div>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        title={`Connected Agents - ${selectedPlatform?.name}`}
+        open={agentsModalOpen}
+        onClose={() => setAgentsModalOpen(false)}
+        wide
+        footer={<Btn onClick={() => setAgentsModalOpen(false)}>Close</Btn>}
+      >
+        <div className="space-y-4">
+          <TextInput
+            placeholder="Search agents by username, nickname or email..."
+            value={agentSearch}
+            onChange={(e) => setAgentSearch(e.target.value)}
+          />
+          <Table
+            headers={['Username', 'Nickname', 'Email', 'Status', 'Assigned At']}
+            empty={!agentsLoading && connectedAgents.length === 0}
+          >
+            {agentsLoading ? (
+              <tr>
+                <td colSpan={5} className="py-4 text-center text-slate-500">Loading...</td>
+              </tr>
+            ) : (
+              connectedAgents.map((a) => (
+                <tr key={a.id} className="hover:bg-slate-50/60">
+                  <td className="px-4 py-2.5 font-medium text-blue-600">
+                    <Link href={`/admin/agents/${a.id}`} className="hover:underline">{a.username}</Link>
+                  </td>
+                  <td className="px-4 py-2.5">{a.nickname || '-'}</td>
+                  <td className="px-4 py-2.5">{a.email || '-'}</td>
+                  <td className="px-4 py-2.5">
+                    <span className={`px-2 py-1 rounded text-xs font-medium capitalize ${a.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      {a.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5 text-xs text-slate-500">{fmtDateTime(a.assignedAt)}</td>
+                </tr>
+              ))
+            )}
+          </Table>
+        </div>
       </Modal>
     </div>
   );

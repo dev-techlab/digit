@@ -67,7 +67,7 @@ export async function GET(req: Request) {
         nickname: s.agents.nickname,
         email: s.agents.email,
         inviteCode: s.agents.inviteCode,
-        discountPer: s.agents.discountPer,
+        commissionPer: s.agents.commissionPer,
         onlineBalance: s.agents.onlineBalance,
         status: s.agents.status,
         remark: s.agents.remark,
@@ -118,7 +118,7 @@ export async function POST(req: Request) {
         passwordHash: await bcrypt.hash(password, 10),
         nickname: nickname || username,
         email: email || null,
-        discountPer: Number.isFinite(Number(body.discountPer)) ? String(body.discountPer) : '0',
+        commissionPer: Number.isFinite(Number(body.commissionPer)) ? String(body.commissionPer) : '0',
         inviteCode: `MC${randomBytes(8).toString('hex').toUpperCase()}`,
         remark,
       })
@@ -160,7 +160,7 @@ export async function POST(req: Request) {
   }
 }
 
-/** PUT /api/admin/agents — { id, status?, discountPer?, password?, nickname?, email?, remark? } update any store agent field. */
+/** PUT /api/admin/agents — { id, status?, commissionPer?, password?, nickname?, email?, remark? } update any store agent field. */
 export async function PUT(req: Request) {
   const { error, adminId } = await authorize(req, 'agents.write');
   if (error) return error;
@@ -171,14 +171,15 @@ export async function PUT(req: Request) {
 
   const set: Partial<typeof s.agents.$inferInsert> = {};
   if (body.status === 'active' || body.status === 'disabled') set.status = body.status;
-  if (body.discountPer != null && Number.isFinite(Number(body.discountPer)))
-    set.discountPer = String(body.discountPer);
+  if (body.commissionPer != null && Number.isFinite(Number(body.commissionPer)))
+    set.commissionPer = String(body.commissionPer);
   if (typeof body.password === 'string' && body.password.length >= 6) {
     set.passwordHash = await bcrypt.hash(body.password, 10);
   }
   if (typeof body.nickname === 'string') set.nickname = body.nickname.trim() || null;
   if (typeof body.email === 'string') set.email = body.email.trim() || null;
   if (typeof body.remark === 'string') set.remark = body.remark.slice(0, 300) || null;
+  
   if (Object.keys(set).length === 0) {
     return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
   }
@@ -188,6 +189,7 @@ export async function PUT(req: Request) {
     .set(set)
     .where(and(eq(s.agents.id, id), eq(s.agents.type, 'store')))
     .returning({ id: s.agents.id });
+    
   if (!row) return NextResponse.json({ error: 'not found' }, { status: 404 });
 
   if (set.status) {
@@ -201,7 +203,7 @@ export async function PUT(req: Request) {
   if (set.nickname !== undefined) changes.nickname = set.nickname;
   if (set.email !== undefined) changes.email = set.email;
   if (set.remark !== undefined) changes.remark = set.remark;
-  if (set.discountPer !== undefined) changes.discountPer = set.discountPer;
+  if (set.commissionPer !== undefined) changes.commissionPer = set.commissionPer;
   if (set.passwordHash !== undefined) changes.password = '[redacted]';
   if (set.status !== undefined) changes.status = set.status;
 

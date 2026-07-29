@@ -17,5 +17,8 @@ export const storeSettings = pgTable('store_settings', {
     .notNull()
     .default('3'),
   logoUrl: text('logo_url'),
+  agentWithdrawCommissionPer: numeric('agent_withdraw_commission_per', { precision: 5, scale: 2 })
+    .notNull()
+    .default('0'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
