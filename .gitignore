@@ -36,8 +36,6 @@ yarn-error.log*
 # vercel
 .vercel
 
-# Local-disk media (dev storage driver fallback)
-/public/media/
 
 
 /.playwright-mcp/*
