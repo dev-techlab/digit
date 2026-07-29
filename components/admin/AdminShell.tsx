@@ -6,7 +6,6 @@ import Link from 'next/link';
 import {
   Home,
   Gamepad2,
-  Layers,
   Lock,
   Power,
   X,
@@ -15,6 +14,7 @@ import {
   Users,
   Store,
   Gift,
+  Banknote,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -30,11 +30,12 @@ export interface AdminMe {
 
 const TITLES: Record<string, string> = {
   dashboard: 'Dashboard',
-  providers: 'Providers',
   platforms: 'Platforms',
   users: 'Users',
   agents: 'Agents',
+  withdrawals: 'Withdrawals',
   bonuses: 'Bonuses',
+  'system-admins': 'System Admins',
 };
 
 const AdminCtx = createContext<{ me: AdminMe } | null>(null);
@@ -131,13 +132,18 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const sidebarNav = (
     <nav className="flex-1 space-y-0.5 overflow-y-auto px-2.5 pb-4">
       <NavItem icon={Home} label="Dashboard" href="/admin/dashboard" />
-      <NavItem icon={Gamepad2} label="Providers" href="/admin/providers" />
-      <NavItem icon={Layers} label="Platforms" href="/admin/platforms" />
+      <NavItem icon={Gamepad2} label="Platforms" href="/admin/platforms" />
       {(me.isSuperAdmin || me.permissions.includes('users.read')) && (
         <NavItem icon={Users} label="Users" href="/admin/users" />
       )}
+      {me.isSuperAdmin && (
+        <NavItem icon={ShieldCheck} label="System Admins" href="/admin/system-admins" />
+      )}
       {(me.isSuperAdmin || me.permissions.includes('agents.read')) && (
         <NavItem icon={Store} label="Agents" href="/admin/agents" />
+      )}
+      {(me.isSuperAdmin || me.permissions.includes('agents.write')) && (
+        <NavItem icon={Banknote} label="Withdrawals" href="/admin/withdrawals" />
       )}
       {(me.isSuperAdmin || me.permissions.includes('bonuses.read')) && (
         <NavItem icon={Gift} label="Bonuses" href="/admin/bonuses" />

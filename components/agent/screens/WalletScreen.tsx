@@ -644,6 +644,7 @@ export function WalletScreen() {
                 'Balance Before',
                 'Balance After',
                 'Order Status',
+                'Reason',
                 'Actions',
               ]}
               empty={withdrawals.length === 0}
@@ -662,6 +663,9 @@ export function WalletScreen() {
                     {l.balanceAfter != null ? fmtMoney(l.balanceAfter) : '-'}
                   </td>
                   <td className="px-4 py-3">{statusChip(l.status)}</td>
+                  <td className="px-4 py-3 max-w-[150px] truncate" title={l.remark || undefined}>
+                    {l.remark || '-'}
+                  </td>
                   <td className="px-4 py-3">
                     {l.status === 'pending' ? (
                       <button

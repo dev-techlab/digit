@@ -30,7 +30,7 @@ export async function GET(req: Request) {
     .from(s.agentPlatformMappings)
     .innerJoin(s.gamePlatforms, eq(s.gamePlatforms.id, s.agentPlatformMappings.platformId))
     .where(
-      and(eq(s.agentPlatformMappings.agentId, agent.id), isNull(s.gamePlatforms.deletedAt))
+      and(eq(s.agentPlatformMappings.agentId, agent.storeId), isNull(s.gamePlatforms.deletedAt))
     )
     .orderBy(asc(s.gamePlatforms.sort), asc(s.gamePlatforms.name));
 

@@ -31,7 +31,7 @@ export async function GET(req: Request) {
     .innerJoin(s.gamePlatforms, eq(s.gamePlatforms.id, s.agentPlatformMappings.platformId))
     .where(
       and(
-        eq(s.agentPlatformMappings.agentId, agent.id),
+        eq(s.agentPlatformMappings.agentId, agent.storeId),
         eq(s.gamePlatforms.isActive, true),
         isNull(s.gamePlatforms.deletedAt)
       )

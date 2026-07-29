@@ -16,6 +16,7 @@ interface Platform {
   launchUrl: string | null;
   sort: number;
   isActive: boolean;
+  agentCount: number;
 }
 
 type Draft = {
@@ -210,7 +211,7 @@ export function PlatformsScreen() {
       </div>
 
       <Table
-        headers={['#', 'Platform', 'Code', 'Type', 'Sort', 'Active', 'Actions']}
+        headers={['#', 'Platform', 'Code', 'Type', 'Agents Count', 'Sort', 'Active', 'Actions']}
         empty={!loading && platforms.length === 0}
       >
         {platforms.map((p, i) => (
@@ -229,6 +230,7 @@ export function PlatformsScreen() {
               {p.providerCode || '--'}
             </td>
             <td className="px-4 py-2.5">{p.providerType || '--'}</td>
+            <td className="px-4 py-2.5 font-medium text-blue-600">{p.agentCount ?? 0}</td>
             <td className="px-4 py-2.5">{p.sort}</td>
             <td className="px-4 py-2.5">
               <Toggle checked={p.isActive} onChange={(v) => void toggleActive(p, v)} />

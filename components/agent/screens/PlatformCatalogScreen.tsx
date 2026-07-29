@@ -83,7 +83,7 @@ export function PlatformCatalogScreen() {
       </p>
 
       <Table
-        headers={['#', 'Platform', 'Code', 'Type', 'Sort', 'Active']}
+        headers={['#', 'Platform', 'Code', 'Type']}
         empty={!loading && platforms.length === 0}
       >
         {platforms.map((p, i) => (
@@ -102,10 +102,6 @@ export function PlatformCatalogScreen() {
               {p.providerCode || '--'}
             </td>
             <td className="px-4 py-2.5">{p.providerType || '--'}</td>
-            <td className="px-4 py-2.5">{p.sort}</td>
-            <td className="px-4 py-2.5">
-              <Toggle checked={p.isActive} onChange={() => {}} disabled />
-            </td>
           </tr>
         ))}
       </Table>

@@ -12,6 +12,8 @@ interface AgentDetails {
   email: string | null;
   onlineBalance: string;
   status: string;
+  totalUsers: number;
+  totalTransactions: number;
 }
 
 export function AgentDetailsScreen({ agentId }: { agentId: string }) {
@@ -105,7 +107,7 @@ export function AgentDetailsScreen({ agentId }: { agentId: string }) {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-slate-500 text-sm font-medium">Total Users</p>
-                  <h3 className="text-2xl font-bold text-slate-800 mt-1">1,234</h3>
+                  <h3 className="text-2xl font-bold text-slate-800 mt-1">{agent.totalUsers?.toLocaleString() ?? 0}</h3>
                 </div>
                 <div className="p-3 bg-indigo-50 text-indigo-500 rounded-xl">
                   <Users size={20} />
@@ -117,7 +119,7 @@ export function AgentDetailsScreen({ agentId }: { agentId: string }) {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-slate-500 text-sm font-medium">Total Transactions</p>
-                  <h3 className="text-2xl font-bold text-slate-800 mt-1">892</h3>
+                  <h3 className="text-2xl font-bold text-slate-800 mt-1">{agent.totalTransactions?.toLocaleString() ?? 0}</h3>
                 </div>
                 <div className="p-3 bg-emerald-50 text-emerald-500 rounded-xl">
                   <CreditCard size={20} />

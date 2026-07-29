@@ -2,7 +2,6 @@
 
 import { createPortal } from 'react-dom';
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
 import {
@@ -156,14 +155,9 @@ export function Sidebar({
             <X size={20} />
           </button>
           <Link href="/game" onClick={onClose} className="flex items-center gap-2">
-            <Image
-              src="https://digitlink.mobi/img/icons/icon-192x192.png"
-              alt={APP_NAME}
-              width={26}
-              height={26}
-              unoptimized
-              className="rounded-md"
-            />
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white">
+              {APP_NAME[0]}
+            </span>
             <span className="text-sm font-black uppercase tracking-wide">{APP_NAME}</span>
           </Link>
           <button

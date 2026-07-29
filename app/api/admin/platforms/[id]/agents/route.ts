@@ -29,11 +29,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       nickname: s.agents.nickname,
       email: s.agents.email,
       status: s.agents.status,
-      assignedAt: s.agentPlatformMappings.createdAt,
+      assignedAt: s.storePlatformAccounts.updatedAt,
     })
-    .from(s.agentPlatformMappings)
-    .innerJoin(s.agents, eq(s.agentPlatformMappings.agentId, s.agents.id))
-    .where(eq(s.agentPlatformMappings.platformId, platformId));
+    .from(s.storePlatformAccounts)
+    .innerJoin(s.agents, eq(s.storePlatformAccounts.storeId, s.agents.id))
+    .where(eq(s.storePlatformAccounts.platformId, platformId));
 
   const connectedAgents = await agentQuery;
 

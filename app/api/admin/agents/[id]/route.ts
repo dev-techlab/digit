@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import * as s from '@/lib/db/schema';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
@@ -46,5 +46,21 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
   }
 
-  return NextResponse.json({ agent });
+  const [{ count: totalUsers }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(s.members)
+    .where(eq(s.members.storeId, agentId));
+
+  const [{ count: totalTransactions }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(s.agentTransactions)
+    .where(eq(s.agentTransactions.agentId, agentId));
+
+  return NextResponse.json({ 
+    agent: {
+      ...agent,
+      totalUsers,
+      totalTransactions,
+    } 
+  });
 }

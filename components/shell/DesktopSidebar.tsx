@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
@@ -41,14 +40,9 @@ export function DesktopSidebar() {
         )}
       >
         <Link href="/game" className="flex items-center gap-2 overflow-hidden">
-          <Image
-            src="https://digitlink.mobi/img/icons/icon-192x192.png"
-            alt={APP_NAME}
-            width={28}
-            height={28}
-            unoptimized
-            className="shrink-0 rounded-md"
-          />
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white">
+            {APP_NAME[0]}
+          </span>
           {!collapsed && (
             <span className="truncate text-sm font-black uppercase tracking-wide">{APP_NAME}</span>
           )}

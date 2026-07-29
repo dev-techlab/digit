@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { asc, eq, isNull, or } from 'drizzle-orm';
+import { asc, eq, isNull, or, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import * as s from '@/lib/db/schema';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
@@ -53,9 +53,23 @@ export async function GET(req: Request) {
   if (error) return error;
 
   const platforms = await db
-    .select()
+    .select({
+      id: s.gamePlatforms.id,
+      name: s.gamePlatforms.name,
+      slug: s.gamePlatforms.slug,
+      iconUrl: s.gamePlatforms.iconUrl,
+      providerCode: s.gamePlatforms.providerCode,
+      providerType: s.gamePlatforms.providerType,
+      launchUrl: s.gamePlatforms.launchUrl,
+      sort: s.gamePlatforms.sort,
+      isActive: s.gamePlatforms.isActive,
+      createdAt: s.gamePlatforms.createdAt,
+      agentCount: sql<number>`count(${s.storePlatformAccounts.storeId})::int`,
+    })
     .from(s.gamePlatforms)
+    .leftJoin(s.storePlatformAccounts, eq(s.storePlatformAccounts.platformId, s.gamePlatforms.id))
     .where(isNull(s.gamePlatforms.deletedAt))
+    .groupBy(s.gamePlatforms.id)
     .orderBy(asc(s.gamePlatforms.sort), asc(s.gamePlatforms.name));
   return NextResponse.json({ platforms });
 }
