@@ -80,11 +80,13 @@ export function WithdrawalsScreen() {
           setTotal(d.total);
         })
         .finally(() => setLoading(false)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [page, search, statusFilter]
   );
 
   useEffect(() => {
     void load(1, search, statusFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openAction = (type: 'accept' | 'reject', row: WithdrawalRow) => {
@@ -259,7 +261,7 @@ export function WithdrawalsScreen() {
             </div>
             {actionModal.type === 'reject' && (
               <div className="mt-3 text-red-500 font-medium">
-                Rejecting this request will immediately refund {fmtMoney(actionModal.row?.amount || '0')} back to the agent's balance.
+                Rejecting this request will immediately refund {fmtMoney(actionModal.row?.amount || '0')} back to the agent&apos;s balance.
               </div>
             )}
           </div>

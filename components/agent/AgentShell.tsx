@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -224,11 +225,7 @@ export function AgentShell({ children }: { children: React.ReactNode }) {
 
   const brand = (
     <div className="flex items-center gap-2.5 px-5 py-4">
-      <img
-        src="/logo.png"
-        alt="Logo"
-        className="h-8 w-8 shrink-0 rounded-lg object-contain"
-      />
+      <Image src="/logo.png" alt="Logo" width={128} height={128} className="h-8 w-8 shrink-0 rounded-lg object-contain" />
       {!collapsed && <span className="text-lg font-bold text-slate-800">{APP_NAME}</span>}
     </div>
   );

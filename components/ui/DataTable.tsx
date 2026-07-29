@@ -84,7 +84,7 @@ export function DataTable<T>({
         return false;
       });
     });
-  }, [data, columns, globalFilter]);
+  }, [data, columns, globalFilter, manualPagination]);
 
   // 2. Sort
   const sortedData = useMemo(() => {

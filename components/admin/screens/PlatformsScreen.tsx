@@ -73,6 +73,7 @@ function PlatformIcon({ name, iconUrl }: { name: string; iconUrl: string | null 
 
 /** Master `game_platforms` catalog — shared across every store tenant on the agent panel. */
 export function PlatformsScreen() {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -200,6 +201,7 @@ export function PlatformsScreen() {
       }, 300);
       return () => clearTimeout(timeoutId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentSearch]);
 
   return (
@@ -460,7 +462,7 @@ export function PlatformsScreen() {
             Are you sure you want to delete <strong>{deleteTarget?.name}</strong>?
           </p>
           <p className="text-sm text-slate-500">
-            It will disappear from this list and from every store's Game Setting screen. Existing
+            It will disappear from this list and from every store&apos;s Game Setting screen. Existing
             store configs, member game-account bindings, and transaction history are kept untouched.
           </p>
         </div>

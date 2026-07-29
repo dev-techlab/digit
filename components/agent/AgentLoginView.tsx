@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Lock, UserRound } from 'lucide-react';
@@ -75,11 +76,7 @@ export function AgentLoginView() {
 
       <div className="relative z-10 my-6 w-full max-w-[440px] rounded-[24px] bg-white/95 p-6 shadow-[0_25px_70px_rgba(60,30,120,0.28)] sm:rounded-[28px] sm:p-8">
         <div className="flex justify-center">
-          <img
-            src="/logo.png"
-            alt="Logo"
-            className="h-14 w-14 rounded-2xl object-contain shadow-lg"
-          />
+          <Image src="/logo.png" alt="Logo" width={128} height={128} className="h-14 w-14 rounded-2xl object-contain shadow-lg" />
         </div>
 
         <div className="mt-4 text-center">

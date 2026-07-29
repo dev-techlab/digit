@@ -10,6 +10,7 @@ import {
   ChevronRight,
   List,
 } from 'lucide-react';
+import Image from 'next/image';
 import { Btn, Card } from '../ui';
 import { cn } from '@/lib/cn';
 import { APP_NAME } from '@/lib/constants';
@@ -244,9 +245,11 @@ export function DocPreviewScreen() {
               >
                 {n === 1 ? (
                   <div className="flex flex-col items-center gap-6 py-8 text-center">
-                    <img
+                    <Image
                       src="/logo.png"
                       alt="Logo"
+                      width={128}
+                      height={128}
                       className="h-24 w-24 rounded-3xl object-contain sm:h-28 sm:w-28"
                     />
                     <div>

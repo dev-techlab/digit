@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { ChevronsLeft, ChevronsRight, Settings, LogOut } from 'lucide-react';
@@ -40,9 +41,11 @@ export function DesktopSidebar() {
         )}
       >
         <Link href="/game" className="flex items-center gap-2 overflow-hidden">
-          <img
+          <Image
             src="/logo.png"
             alt="Logo"
+            width={28}
+            height={28}
             className="h-7 w-7 shrink-0 rounded-md object-contain"
           />
           {!collapsed && (
