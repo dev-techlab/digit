@@ -167,7 +167,9 @@ export function GameSettingScreen() {
                 '--'
               )}
             </p>
-            <p className="mt-2 text-xs text-slate-400">{p.kioskId ? 'Kiosk ID:' : 'Store Account:'}</p>
+            <p className="mt-2 text-xs text-slate-400">
+              {p.kioskId ? 'Kiosk ID:' : 'Store Account:'}
+            </p>
             <div className="mt-1 flex items-center gap-2">
               <span className="flex-1 truncate rounded-md bg-slate-50 px-3 py-1.5 font-mono text-xs text-slate-500">
                 {p.kioskId || p.posAccount || ''}
@@ -181,7 +183,9 @@ export function GameSettingScreen() {
                   setCopiedId(p.id);
                   setTimeout(() => setCopiedId(null), 1200);
                 }}
-                className={copiedId === p.id ? 'text-green-500' : 'text-slate-300 hover:text-blue-500'}
+                className={
+                  copiedId === p.id ? 'text-green-500' : 'text-slate-300 hover:text-blue-500'
+                }
               >
                 <Copy size={13} />
               </button>

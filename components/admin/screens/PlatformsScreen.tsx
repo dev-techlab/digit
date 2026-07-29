@@ -2,7 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { Pencil, Plus, Trash2, Users } from 'lucide-react';
-import { api, Btn, Field, Modal, Select, TextInput, Toggle, fmtDateTime } from '@/components/agent/ui';
+import {
+  api,
+  Btn,
+  Field,
+  Modal,
+  Select,
+  TextInput,
+  Toggle,
+  fmtDateTime,
+} from '@/components/agent/ui';
 import { DataTable } from '@/components/ui/DataTable';
 import Link from 'next/link';
 
@@ -165,7 +174,9 @@ export function PlatformsScreen() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await api(`/api/admin/platforms?id=${encodeURIComponent(deleteTarget.id)}`, { method: 'DELETE' });
+      await api(`/api/admin/platforms?id=${encodeURIComponent(deleteTarget.id)}`, {
+        method: 'DELETE',
+      });
       setDeleteTarget(null);
       await load();
     } catch (e) {
@@ -185,7 +196,9 @@ export function PlatformsScreen() {
   const loadAgents = async (platformId: string, search: string) => {
     setAgentsLoading(true);
     try {
-      const data = await api<{ agents: any[] }>(`/api/admin/platforms/${platformId}/agents?search=${encodeURIComponent(search)}`);
+      const data = await api<{ agents: any[] }>(
+        `/api/admin/platforms/${platformId}/agents?search=${encodeURIComponent(search)}`
+      );
       setConnectedAgents(data.agents);
     } catch (e) {
       console.error('Failed to load agents', e);
@@ -231,36 +244,40 @@ export function PlatformsScreen() {
                   <div className="truncate text-xs text-slate-400">{p.slug}</div>
                 </div>
               </div>
-            )
+            ),
           },
           {
             header: 'Code',
             accessorKey: 'providerCode',
-            cell: (p) => <span className="font-mono text-xs text-slate-500">{p.providerCode || '--'}</span>
+            cell: (p) => (
+              <span className="font-mono text-xs text-slate-500">{p.providerCode || '--'}</span>
+            ),
           },
           {
             header: 'Type',
             accessorKey: 'providerType',
-            cell: (p) => p.providerType || '--'
+            cell: (p) => p.providerType || '--',
           },
           {
             header: 'Agents Count',
             accessorKey: 'agentCount',
-            cell: (p) => <span className="font-medium text-blue-600">{p.agentCount ?? 0}</span>
+            cell: (p) => <span className="font-medium text-blue-600">{p.agentCount ?? 0}</span>,
           },
           {
             header: 'Customers Count',
             accessorKey: 'customerCount',
-            cell: (p) => <span className="font-medium text-emerald-600">{p.customerCount ?? 0}</span>
+            cell: (p) => (
+              <span className="font-medium text-emerald-600">{p.customerCount ?? 0}</span>
+            ),
           },
           {
             header: 'Sort',
-            accessorKey: 'sort'
+            accessorKey: 'sort',
           },
           {
             header: 'Active',
             accessorKey: 'isActive',
-            cell: (p) => <Toggle checked={p.isActive} onChange={(v) => void toggleActive(p, v)} />
+            cell: (p) => <Toggle checked={p.isActive} onChange={(v) => void toggleActive(p, v)} />,
           },
           {
             header: 'Actions',
@@ -291,8 +308,8 @@ export function PlatformsScreen() {
                   <Trash2 size={15} />
                 </button>
               </div>
-            )
-          }
+            ),
+          },
         ]}
       />
 
@@ -406,7 +423,10 @@ export function PlatformsScreen() {
                   header: 'Username',
                   accessorKey: 'username',
                   cell: (a) => (
-                    <Link href={`/admin/agents/${a.id}`} className="font-medium text-blue-600 hover:underline">
+                    <Link
+                      href={`/admin/agents/${a.id}`}
+                      className="font-medium text-blue-600 hover:underline"
+                    >
                       {a.username}
                     </Link>
                   ),
@@ -425,7 +445,9 @@ export function PlatformsScreen() {
                   header: 'Status',
                   accessorKey: 'status',
                   cell: (a) => (
-                    <span className={`px-2 py-1 rounded text-xs font-medium capitalize ${a.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    <span
+                      className={`rounded px-2 py-1 text-xs font-medium capitalize ${a.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
+                    >
                       {a.status}
                     </span>
                   ),
@@ -433,7 +455,9 @@ export function PlatformsScreen() {
                 {
                   header: 'Assigned At',
                   accessorKey: 'assignedAt',
-                  cell: (a) => <span className="text-xs text-slate-500">{fmtDateTime(a.assignedAt)}</span>,
+                  cell: (a) => (
+                    <span className="text-xs text-slate-500">{fmtDateTime(a.assignedAt)}</span>
+                  ),
                 },
               ]}
             />
@@ -462,8 +486,9 @@ export function PlatformsScreen() {
             Are you sure you want to delete <strong>{deleteTarget?.name}</strong>?
           </p>
           <p className="text-sm text-slate-500">
-            It will disappear from this list and from every store&apos;s Game Setting screen. Existing
-            store configs, member game-account bindings, and transaction history are kept untouched.
+            It will disappear from this list and from every store&apos;s Game Setting screen.
+            Existing store configs, member game-account bindings, and transaction history are kept
+            untouched.
           </p>
         </div>
       </Modal>

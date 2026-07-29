@@ -17,18 +17,14 @@ export const memberTransactions = pgTable(
     type: memberTxTypeEnum('type').notNull(),
     channel: memberTxChannelEnum('channel').notNull().default('online'),
     amount: numeric('amount', { precision: 14, scale: 2 }).notNull().default('0'),
-    onlineScChange: numeric('online_sc_change', { precision: 14, scale: 2 })
-      .notNull()
-      .default('0'),
+    onlineScChange: numeric('online_sc_change', { precision: 14, scale: 2 }).notNull().default('0'),
     storeBalanceVary: numeric('store_balance_vary', { precision: 14, scale: 2 })
       .notNull()
       .default('0'),
     inScore: numeric('in_score', { precision: 14, scale: 2 }).notNull().default('0'),
     outScore: numeric('out_score', { precision: 14, scale: 2 }).notNull().default('0'),
     bonusScore: numeric('bonus_score', { precision: 14, scale: 2 }).notNull().default('0'),
-    gameDepositFee: numeric('game_deposit_fee', { precision: 14, scale: 2 })
-      .notNull()
-      .default('0'),
+    gameDepositFee: numeric('game_deposit_fee', { precision: 14, scale: 2 }).notNull().default('0'),
     platformFee: numeric('platform_fee', { precision: 14, scale: 2 }).notNull().default('0'),
     status: agentTxStatusEnum('status').notNull().default('completed'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

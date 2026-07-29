@@ -14,7 +14,7 @@ Everything below was reverse-engineered from the live site: the shipped `index.h
 | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Game provider list                                                                      | **Public, unauthenticated GET API** — confirmed working                                                                            | Call it for real, cache the response to a static JSON file, serve from cache after (see §8)                                                                                           |
 | Everything else (auth, wallet, deposit/withdraw, orders, bonus, referral, KYC, profile) | Requires a logged-in session token on the real site (confirmed: hitting these endpoints returns `401 Token is invalid or expired`) | Build the real UI, backed by static/mock JSON fixtures with the same shape. No real payments, SMS, KYC, or geo-check — these are visual/UI only.                                      |
-| Assets (logo, provider icons, splash images)                                            | Hosted on `static.octanlink.com` CDN, publicly loadable                                                                           | Spec references the live CDN URLs for now; recommend downloading and self-hosting under `/public` before shipping anywhere real (don't permanently hotlink a third party's asset CDN) |
+| Assets (logo, provider icons, splash images)                                            | Hosted on `static.octanlink.com` CDN, publicly loadable                                                                            | Spec references the live CDN URLs for now; recommend downloading and self-hosting under `/public` before shipping anywhere real (don't permanently hotlink a third party's asset CDN) |
 
 Goal: every route below should be navigable and **look like the original**, with the Game page carrying real live data and every other page carrying realistic static data.
 
@@ -316,7 +316,7 @@ Response shape (confirmed live, 48 SC providers / 2 GC providers at time of writ
 }
 ```
 
-### 8.2 "Fetch once, DB from then on" *(superseded — see note)*
+### 8.2 "Fetch once, DB from then on" _(superseded — see note)_
 
 > **Current implementation:** the original plan below (disk-JSON cache-through
 > read on every request) was superseded by seeding the live snapshot straight

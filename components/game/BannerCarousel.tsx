@@ -32,16 +32,16 @@ export function BannerCarousel() {
     const interval = setInterval(() => {
       const el = scrollRef.current;
       if (!el) return;
-      
+
       const { scrollLeft, scrollWidth, clientWidth } = el;
       const child = el.firstElementChild as HTMLElement;
       if (!child) return;
-      
+
       // Calculate scroll step based on item width and gap
       const style = window.getComputedStyle(el);
       const gap = parseInt(style.gap || '12', 10);
       const itemWidth = child.offsetWidth + gap;
-      
+
       // If we are at the end, scroll back to start, else scroll next
       if (scrollLeft + clientWidth >= scrollWidth - 5) {
         el.scrollTo({ left: 0, behavior: 'smooth' });
@@ -49,14 +49,14 @@ export function BannerCarousel() {
         el.scrollBy({ left: itemWidth, behavior: 'smooth' });
       }
     }, 5000);
-    
+
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div 
+    <div
       ref={scrollRef}
-      className="flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 pt-4 md:gap-4 md:px-0 [&::-webkit-scrollbar]:hidden scroll-smooth"
+      className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-4 pb-1 pt-4 md:gap-4 md:px-0 [&::-webkit-scrollbar]:hidden"
     >
       {BANNERS.map((b) => (
         <div

@@ -48,7 +48,10 @@ export function TermsScreen() {
   const inherit = async () => {
     setErr(null);
     try {
-      await api('/api/agent/terms', { method: 'PUT', body: JSON.stringify({ locale, content: null }) });
+      await api('/api/agent/terms', {
+        method: 'PUT',
+        body: JSON.stringify({ locale, content: null }),
+      });
       setContent('');
       setMsg('Using inherited version');
       setTimeout(() => setMsg(null), 2500);
@@ -82,7 +85,9 @@ export function TermsScreen() {
               key={l}
               onClick={() => switchLocale(l)}
               className={
-                locale === l ? 'border-b-2 border-blue-500 pb-2 text-blue-500' : 'pb-2 text-slate-600'
+                locale === l
+                  ? 'border-b-2 border-blue-500 pb-2 text-blue-500'
+                  : 'pb-2 text-slate-600'
               }
             >
               {l.toUpperCase()}
@@ -105,11 +110,7 @@ export function TermsScreen() {
         </div>
       </div>
       {view === 'edit' ? (
-        <RichTextEditor
-          value={content}
-          onChange={setContent}
-          placeholder="Enter terms content…"
-        />
+        <RichTextEditor value={content} onChange={setContent} placeholder="Enter terms content…" />
       ) : (
         <div className="mt-4 min-h-[22rem] rounded-lg border border-slate-200 px-4 py-3 text-sm leading-relaxed text-slate-700">
           {content ? (

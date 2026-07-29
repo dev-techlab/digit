@@ -16,10 +16,17 @@ interface AdminRow {
 export function StoreAdminScreen() {
   const [rows, setRows] = useState<AdminRow[]>([]);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ username: '', password: '', nickname: '', email: '', status: 'active' });
+  const [form, setForm] = useState({
+    username: '',
+    password: '',
+    nickname: '',
+    email: '',
+    status: 'active',
+  });
   const [err, setErr] = useState<string | null>(null);
 
-  const load = () => api<{ admins: AdminRow[] }>('/api/agent/store-admins').then((d) => setRows(d.admins));
+  const load = () =>
+    api<{ admins: AdminRow[] }>('/api/agent/store-admins').then((d) => setRows(d.admins));
   useEffect(() => {
     void load();
   }, []);
@@ -62,7 +69,10 @@ export function StoreAdminScreen() {
               <td className="px-4 py-3 capitalize">{r.status}</td>
               <td className="px-4 py-3">{fmtDateTime(r.createdAt)}</td>
               <td className="px-4 py-3">
-                <button className="text-blue-500 hover:underline" onClick={() => void toggleStatus(r)}>
+                <button
+                  className="text-blue-500 hover:underline"
+                  onClick={() => void toggleStatus(r)}
+                >
                   {r.status === 'active' ? 'Disable' : 'Activate'}
                 </button>
               </td>
@@ -89,7 +99,10 @@ export function StoreAdminScreen() {
         <div className="space-y-4">
           {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{err}</p>}
           <Field label="Username" required>
-            <TextInput value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
+            <TextInput
+              value={form.username}
+              onChange={(e) => setForm({ ...form, username: e.target.value })}
+            />
           </Field>
           <Field label="Password" required>
             <TextInput
@@ -99,10 +112,16 @@ export function StoreAdminScreen() {
             />
           </Field>
           <Field label="Nickname">
-            <TextInput value={form.nickname} onChange={(e) => setForm({ ...form, nickname: e.target.value })} />
+            <TextInput
+              value={form.nickname}
+              onChange={(e) => setForm({ ...form, nickname: e.target.value })}
+            />
           </Field>
           <Field label="Email">
-            <TextInput value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <TextInput
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
           </Field>
           <Field label="Status">
             <div className="flex gap-5 text-sm text-slate-600">

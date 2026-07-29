@@ -56,11 +56,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     .from(s.agentTransactions)
     .where(eq(s.agentTransactions.agentId, agentId));
 
-  return NextResponse.json({ 
+  return NextResponse.json({
     agent: {
       ...agent,
       totalUsers,
       totalTransactions,
-    } 
+    },
   });
 }

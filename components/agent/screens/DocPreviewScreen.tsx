@@ -1,15 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import {
-  ArrowUp,
-  ZoomIn,
-  ZoomOut,
-  Maximize,
-  ChevronLeft,
-  ChevronRight,
-  List,
-} from 'lucide-react';
+import { ArrowUp, ZoomIn, ZoomOut, Maximize, ChevronLeft, ChevronRight, List } from 'lucide-react';
 import Image from 'next/image';
 import { Btn, Card } from '../ui';
 import { cn } from '@/lib/cn';
@@ -150,8 +142,11 @@ export function DocPreviewScreen() {
   };
 
   return (
-    <Card className="p-0" >
-      <div ref={viewerRef} className="flex max-h-[calc(100dvh-11rem)] flex-col bg-white [&:fullscreen]:max-h-none">
+    <Card className="p-0">
+      <div
+        ref={viewerRef}
+        className="flex max-h-[calc(100dvh-11rem)] flex-col bg-white [&:fullscreen]:max-h-none"
+      >
         <div className="border-b border-slate-100 px-5 py-4">
           <h3 className="w-fit border-b-2 border-blue-500 pb-1 text-base font-semibold text-blue-500">
             {MANUAL_TITLE}
@@ -202,7 +197,11 @@ export function DocPreviewScreen() {
           >
             <ZoomIn size={14} />
           </Btn>
-          <Btn variant="ghost" className="px-2.5 py-1.5 text-xs" onClick={() => setTocOpen((v) => !v)}>
+          <Btn
+            variant="ghost"
+            className="px-2.5 py-1.5 text-xs"
+            onClick={() => setTocOpen((v) => !v)}
+          >
             <List size={13} /> <span className="hidden sm:inline">Contents</span>
           </Btn>
           <Btn variant="ghost" className="px-2.5 py-1.5 text-xs" onClick={fullscreen}>
@@ -230,7 +229,10 @@ export function DocPreviewScreen() {
         {/* Page body — every page stacked so scrolling moves through the
             document naturally; the toolbar/TOC/dots stay in sync via the
             IntersectionObserver above rather than needing Next/Prev clicks. */}
-        <div ref={bodyRef} className="flex-1 space-y-4 overflow-auto bg-slate-200/70 p-3 sm:space-y-6 sm:p-6">
+        <div
+          ref={bodyRef}
+          className="flex-1 space-y-4 overflow-auto bg-slate-200/70 p-3 sm:space-y-6 sm:p-6"
+        >
           {MANUAL_PAGES.map((pg, i) => {
             const n = i + 1;
             return (

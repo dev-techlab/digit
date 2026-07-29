@@ -1,14 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import {
-  api,
-  Btn,
-  Card,
-  fmtDateTime,
-  fmtMoney,
-  Select,
-} from '@/components/agent/ui';
+import { api, Btn, Card, fmtDateTime, fmtMoney, Select } from '@/components/agent/ui';
 import { DataTable } from '@/components/ui/DataTable';
 
 interface UserRow {
@@ -58,7 +51,10 @@ export function UsersScreen() {
     setBusyId(row.id);
     setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, status: next } : r)));
     try {
-      await api('/api/admin/users', { method: 'PUT', body: JSON.stringify({ id: row.id, status: next }) });
+      await api('/api/admin/users', {
+        method: 'PUT',
+        body: JSON.stringify({ id: row.id, status: next }),
+      });
     } catch (e) {
       setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, status: row.status } : r)));
       window.alert(e instanceof Error ? e.message : 'Failed to update status.');
@@ -85,12 +81,16 @@ export function UsersScreen() {
           extraToolbar={
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-500">Status:</span>
-              <Select className="w-32 py-1.5" value={status} onChange={(e) => {
-                const st = e.target.value;
-                setStatus(st);
-                setPage(1);
-                void load(1, search, st);
-              }}>
+              <Select
+                className="w-32 py-1.5"
+                value={status}
+                onChange={(e) => {
+                  const st = e.target.value;
+                  setStatus(st);
+                  setPage(1);
+                  void load(1, search, st);
+                }}
+              >
                 <option value="">All</option>
                 <option value="active">Active</option>
                 <option value="blocked">Blocked</option>
@@ -98,7 +98,11 @@ export function UsersScreen() {
             </div>
           }
           columns={[
-            { header: 'Username', accessorKey: 'username', cell: (r) => <span className="font-medium text-slate-700">{r.username}</span> },
+            {
+              header: 'Username',
+              accessorKey: 'username',
+              cell: (r) => <span className="font-medium text-slate-700">{r.username}</span>,
+            },
             { header: 'Nickname', accessorKey: 'nickname' },
             { header: 'Email', accessorKey: 'email', cell: (r) => r.email ?? '-' },
             {
@@ -113,13 +117,31 @@ export function UsersScreen() {
                     </span>
                   )}
                 </>
-              )
+              ),
             },
-            { header: 'KYC', accessorKey: 'kycStatus', cell: (r) => <span className="capitalize">{r.kycStatus}</span> },
+            {
+              header: 'KYC',
+              accessorKey: 'kycStatus',
+              cell: (r) => <span className="capitalize">{r.kycStatus}</span>,
+            },
             { header: 'Gold Coin', accessorKey: 'goldCoin', cell: (r) => fmtMoney(r.goldCoin) },
-            { header: 'Online SC', accessorKey: 'onlineSc', cell: (r) => <span className="font-semibold text-green-600">{fmtMoney(r.onlineSc)}</span> },
-            { header: 'Invite Code', accessorKey: 'inviteCode', cell: (r) => <span className="font-mono text-xs text-slate-500">{r.inviteCode}</span> },
-            { header: 'Registered', accessorKey: 'createdAt', cell: (r) => fmtDateTime(r.createdAt) },
+            {
+              header: 'Online SC',
+              accessorKey: 'onlineSc',
+              cell: (r) => (
+                <span className="font-semibold text-green-600">{fmtMoney(r.onlineSc)}</span>
+              ),
+            },
+            {
+              header: 'Invite Code',
+              accessorKey: 'inviteCode',
+              cell: (r) => <span className="font-mono text-xs text-slate-500">{r.inviteCode}</span>,
+            },
+            {
+              header: 'Registered',
+              accessorKey: 'createdAt',
+              cell: (r) => fmtDateTime(r.createdAt),
+            },
             {
               header: 'Status',
               accessorKey: 'status',
@@ -133,7 +155,7 @@ export function UsersScreen() {
                 >
                   {r.status === 'active' ? 'Active' : 'Blocked'}
                 </span>
-              )
+              ),
             },
             {
               header: 'Operations',
@@ -148,8 +170,8 @@ export function UsersScreen() {
                 >
                   {r.status === 'active' ? 'Block' : 'Unblock'}
                 </Btn>
-              )
-            }
+              ),
+            },
           ]}
         />
       </Card>

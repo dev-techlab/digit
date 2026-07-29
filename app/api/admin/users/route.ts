@@ -17,12 +17,18 @@ async function authorize(
 ): Promise<{ adminId: string; error: undefined } | { adminId: undefined; error: NextResponse }> {
   const adminId = await getAdminIdFromRequest(req);
   if (!adminId)
-    return { adminId: undefined, error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+    return {
+      adminId: undefined,
+      error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+    };
   try {
     await requirePermission(adminId, permKey);
   } catch (e) {
     if (e instanceof PermissionError) {
-      return { adminId: undefined, error: NextResponse.json({ error: e.message }, { status: e.status }) };
+      return {
+        adminId: undefined,
+        error: NextResponse.json({ error: e.message }, { status: e.status }),
+      };
     }
     throw e;
   }
@@ -78,7 +84,10 @@ export async function GET(req: Request) {
       .orderBy(desc(s.users.createdAt))
       .limit(pageSize)
       .offset((page - 1) * pageSize),
-    db.select({ count: sql<number>`count(*)::int` }).from(s.users).where(where),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(s.users)
+      .where(where),
   ]);
 
   return NextResponse.json({ users: rows, total: count });

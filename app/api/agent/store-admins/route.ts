@@ -33,7 +33,10 @@ export async function POST(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (agent.type !== 'store') {
-    return NextResponse.json({ error: 'Only the store account can manage store administrators' }, { status: 403 });
+    return NextResponse.json(
+      { error: 'Only the store account can manage store administrators' },
+      { status: 403 }
+    );
   }
 
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);
@@ -66,7 +69,10 @@ export async function PUT(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (agent.type !== 'store') {
-    return NextResponse.json({ error: 'Only the store account can manage store administrators' }, { status: 403 });
+    return NextResponse.json(
+      { error: 'Only the store account can manage store administrators' },
+      { status: 403 }
+    );
   }
 
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);
@@ -84,8 +90,6 @@ export async function PUT(req: Request) {
   await db
     .update(s.storeAdministrators)
     .set(set)
-    .where(
-      and(eq(s.storeAdministrators.id, id), eq(s.storeAdministrators.storeId, agent.storeId))
-    );
+    .where(and(eq(s.storeAdministrators.id, id), eq(s.storeAdministrators.storeId, agent.storeId)));
   return NextResponse.json({ ok: true });
 }

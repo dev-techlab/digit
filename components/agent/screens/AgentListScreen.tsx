@@ -85,7 +85,14 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
     try {
       await api('/api/agent/agents', { method: 'POST', body: JSON.stringify({ ...form, type }) });
       setAddOpen(false);
-      setForm({ ...form, username: `p${Math.floor(10000 + Math.random() * 90000)}`, password: '', nickname: '', commissionPer: '0.00', remark: '' });
+      setForm({
+        ...form,
+        username: `p${Math.floor(10000 + Math.random() * 90000)}`,
+        password: '',
+        nickname: '',
+        commissionPer: '0.00',
+        remark: '',
+      });
       void load();
     } catch (e) {
       setErr((e as Error).message);
@@ -118,7 +125,11 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
           onChange={(e) => setCode(e.target.value)}
         />
         <span className="text-sm text-slate-500">Status</span>
-        <Select className="w-full sm:w-32" value={status} onChange={(e) => setStatus(e.target.value)}>
+        <Select
+          className="w-full sm:w-32"
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+        >
           <option value="all">All</option>
           <option value="active">Active</option>
           <option value="disabled">Disabled</option>
@@ -152,10 +163,26 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
           data={filtered}
           rowKey={(r) => r.id}
           columns={[
-            { header: 'Username', accessorKey: 'username', cell: (r) => <span className="font-medium text-slate-700">{r.username}</span> },
-            { header: 'Ratio', accessorKey: 'ratioPct', cell: (r) => `${Number(r.ratioPct).toFixed(2)}%` },
-            { header: 'Discount', accessorKey: 'commissionPer', cell: (r) => `${Number(r.commissionPer).toFixed(2)}%` },
-            { header: 'Balance', accessorKey: 'onlineBalance', cell: (r) => fmtMoney(r.onlineBalance) },
+            {
+              header: 'Username',
+              accessorKey: 'username',
+              cell: (r) => <span className="font-medium text-slate-700">{r.username}</span>,
+            },
+            {
+              header: 'Ratio',
+              accessorKey: 'ratioPct',
+              cell: (r) => `${Number(r.ratioPct).toFixed(2)}%`,
+            },
+            {
+              header: 'Discount',
+              accessorKey: 'commissionPer',
+              cell: (r) => `${Number(r.commissionPer).toFixed(2)}%`,
+            },
+            {
+              header: 'Balance',
+              accessorKey: 'onlineBalance',
+              cell: (r) => fmtMoney(r.onlineBalance),
+            },
             { header: 'Nickname', accessorKey: 'nickname', cell: (r) => r.nickname ?? '-' },
             { header: 'Email', accessorKey: 'email', cell: (r) => r.email ?? '-' },
             {
@@ -165,9 +192,13 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
                 <div className="max-w-56 truncate text-blue-500">
                   {process.env.NEXT_PUBLIC_SITE_URL}?inviteCode={r.inviteCode}
                 </div>
-              )
+              ),
             },
-            { header: 'Status', accessorKey: 'status', cell: (r) => <span className="capitalize">{r.status}</span> },
+            {
+              header: 'Status',
+              accessorKey: 'status',
+              cell: (r) => <span className="capitalize">{r.status}</span>,
+            },
             { header: 'Remark', accessorKey: 'remark', cell: (r) => r.remark ?? '-' },
           ]}
         />
@@ -246,17 +277,41 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
           data={report}
           rowKey={(r) => r.agentId}
           columns={[
-            { header: label, accessorKey: 'username', cell: (r) => <span className="font-medium">{r.username}</span> },
+            {
+              header: label,
+              accessorKey: 'username',
+              cell: (r) => <span className="font-medium">{r.username}</span>,
+            },
             { header: 'Deposit', accessorKey: 'deposit', cell: (r) => fmtMoney(r.deposit) },
             { header: 'Depositors', accessorKey: 'depositors' },
-            { header: 'Withdrawal', accessorKey: 'withdrawal', cell: (r) => fmtMoney(r.withdrawal) },
+            {
+              header: 'Withdrawal',
+              accessorKey: 'withdrawal',
+              cell: (r) => fmtMoney(r.withdrawal),
+            },
             { header: 'Withdrawers', accessorKey: 'withdrawers' },
             { header: 'TotalIn Score', accessorKey: 'totalIn', cell: (r) => fmtMoney(r.totalIn) },
-            { header: 'TotalOut Score', accessorKey: 'totalOut', cell: (r) => fmtMoney(r.totalOut) },
-            { header: 'Gross Net Score', accessorKey: 'agentId', cell: (r) => fmtMoney(Number(r.totalIn) - Number(r.totalOut)) },
+            {
+              header: 'TotalOut Score',
+              accessorKey: 'totalOut',
+              cell: (r) => fmtMoney(r.totalOut),
+            },
+            {
+              header: 'Gross Net Score',
+              accessorKey: 'agentId',
+              cell: (r) => fmtMoney(Number(r.totalIn) - Number(r.totalOut)),
+            },
             { header: 'Total Bonus Score', accessorKey: 'bonus', cell: (r) => fmtMoney(r.bonus) },
-            { header: 'Game Deposit Fee', accessorKey: 'gameDepositFee', cell: (r) => fmtMoney(r.gameDepositFee) },
-            { header: 'Platform Fee', accessorKey: 'platformFee', cell: (r) => fmtMoney(r.platformFee) },
+            {
+              header: 'Game Deposit Fee',
+              accessorKey: 'gameDepositFee',
+              cell: (r) => fmtMoney(r.gameDepositFee),
+            },
+            {
+              header: 'Platform Fee',
+              accessorKey: 'platformFee',
+              cell: (r) => fmtMoney(r.platformFee),
+            },
           ]}
         />
       </Modal>

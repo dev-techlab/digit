@@ -51,7 +51,10 @@ async function main() {
       .values({ name: U('platform'), slug: U('platform'), sort: 999 })
       .returning();
     platformId = row.id;
-    const [read] = await db.select().from(s.gamePlatforms).where(eq(s.gamePlatforms.id, platformId));
+    const [read] = await db
+      .select()
+      .from(s.gamePlatforms)
+      .where(eq(s.gamePlatforms.id, platformId));
     expect(read?.name === U('platform'), 'read-back name matches');
   });
   await step('UPDATE', async () => {
@@ -59,7 +62,10 @@ async function main() {
       .update(s.gamePlatforms)
       .set({ isActive: false })
       .where(eq(s.gamePlatforms.id, platformId));
-    const [read] = await db.select().from(s.gamePlatforms).where(eq(s.gamePlatforms.id, platformId));
+    const [read] = await db
+      .select()
+      .from(s.gamePlatforms)
+      .where(eq(s.gamePlatforms.id, platformId));
     expect(read?.isActive === false, 'isActive updated');
   });
   await step('UNIQUE name rejected', async () => {
@@ -136,7 +142,10 @@ async function main() {
       .insert(s.storeSettings)
       .values({ storeId, storeName: 'Renamed' })
       .onConflictDoUpdate({ target: s.storeSettings.storeId, set: { storeName: 'Renamed' } });
-    const [read] = await db.select().from(s.storeSettings).where(eq(s.storeSettings.storeId, storeId));
+    const [read] = await db
+      .select()
+      .from(s.storeSettings)
+      .where(eq(s.storeSettings.storeId, storeId));
     expect(read?.storeName === 'Renamed', 'upsert works');
   });
 
@@ -220,9 +229,7 @@ async function main() {
     expect(read?.onlineSc === '42.00' && read.scRewardEnabled === false, 'member updated');
     let threw = false;
     try {
-      await db
-        .insert(s.members)
-        .values({ storeId, username: U('member'), passwordHash: hash });
+      await db.insert(s.members).values({ storeId, username: U('member'), passwordHash: hash });
     } catch {
       threw = true;
     }
@@ -236,7 +243,10 @@ async function main() {
       ipAddress: '203.0.113.9',
       device: 'Windows 11 - Chrome (Desktop)',
     });
-    const rows = await db.select().from(s.memberLogins).where(eq(s.memberLogins.memberId, memberId));
+    const rows = await db
+      .select()
+      .from(s.memberLogins)
+      .where(eq(s.memberLogins.memberId, memberId));
     expect(rows.length === 1 && rows[0].device?.includes('Chrome'), 'login recorded');
   });
 

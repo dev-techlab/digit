@@ -1,12 +1,4 @@
-import {
-  pgTable,
-  uuid,
-  text,
-  boolean,
-  numeric,
-  timestamp,
-  uniqueIndex,
-} from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, boolean, numeric, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { agents } from './agent';
 import { gamePlatforms } from './game-platform';
 

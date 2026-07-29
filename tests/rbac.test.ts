@@ -12,17 +12,35 @@ const id: Record<string, string> = {};
 
 const EXPECT: Record<string, string[]> = {
   finance: [
-    'orders.read', 'orders.write', 'transactions.read', 'transactions.write',
-    'redemption_reviews.read', 'redemption_reviews.write', 'users.read', 'wallets.read',
+    'orders.read',
+    'orders.write',
+    'transactions.read',
+    'transactions.write',
+    'redemption_reviews.read',
+    'redemption_reviews.write',
+    'users.read',
+    'wallets.read',
     'audit_logs.read',
   ],
   content: [
-    'content_pages.read', 'content_pages.write', 'banners.read', 'banners.write',
-    'banners.delete', 'media.upload', 'media.delete', 'settings.read', 'social_links.manage',
+    'content_pages.read',
+    'content_pages.write',
+    'banners.read',
+    'banners.write',
+    'banners.delete',
+    'media.upload',
+    'media.delete',
+    'settings.read',
+    'social_links.manage',
   ],
   support: [
-    'users.read', 'kyc.read', 'support_tickets.read', 'support_tickets.write',
-    'postal_requests.read', 'postal_requests.write', 'orders.read',
+    'users.read',
+    'kyc.read',
+    'support_tickets.read',
+    'support_tickets.write',
+    'postal_requests.read',
+    'postal_requests.write',
+    'orders.read',
   ],
 };
 
@@ -59,8 +77,7 @@ describe('effective permissions match the seed design (§7.5)', () => {
 describe('super admin is the super_admin ROLE (dynamic, not a flag)', () => {
   it('resolves ALL permissions', async () =>
     expect(set(await effectivePermissions(id.super_admin))).toEqual(set(allKeys)));
-  it('isSuperAdmin() true', async () =>
-    expect(await isSuperAdmin(id.super_admin)).toBe(true));
+  it('isSuperAdmin() true', async () => expect(await isSuperAdmin(id.super_admin)).toBe(true));
   it('can("admins.manage") + can("permissions.manage")', async () => {
     expect(await can(id.super_admin, 'admins.manage')).toBe(true);
     expect(await can(id.super_admin, 'permissions.manage')).toBe(true);

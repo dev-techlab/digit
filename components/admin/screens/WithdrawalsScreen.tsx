@@ -45,8 +45,8 @@ const statusChip = (st: string) => (
       st === 'completed'
         ? 'bg-green-50 text-green-600'
         : st === 'pending'
-        ? 'bg-amber-50 text-amber-600'
-        : 'bg-slate-100 text-slate-500'
+          ? 'bg-amber-50 text-amber-600'
+          : 'bg-slate-100 text-slate-500'
     }`}
   >
     {st}
@@ -61,7 +61,11 @@ export function WithdrawalsScreen() {
   const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [loading, setLoading] = useState(true);
 
-  const [actionModal, setActionModal] = useState<{ open: boolean; type: 'accept' | 'reject'; row: WithdrawalRow | null }>({
+  const [actionModal, setActionModal] = useState<{
+    open: boolean;
+    type: 'accept' | 'reject';
+    row: WithdrawalRow | null;
+  }>({
     open: false,
     type: 'accept',
     row: null,
@@ -167,16 +171,28 @@ export function WithdrawalsScreen() {
                 <span className="font-mono text-xs" title={r.id}>
                   {r.id.split('-')[0].toUpperCase()}...
                 </span>
-              )
+              ),
             },
-            { header: 'Agent', accessorKey: 'username', cell: (r) => <span className="font-medium text-slate-700">{r.username}</span> },
+            {
+              header: 'Agent',
+              accessorKey: 'username',
+              cell: (r) => <span className="font-medium text-slate-700">{r.username}</span>,
+            },
             { header: 'Requested Amount', accessorKey: 'amount', cell: (r) => fmtMoney(r.amount) },
             {
               header: 'Net Payable',
               accessorKey: 'netAmount',
-              cell: (r) => <span className="font-semibold text-green-600">{r.netAmount != null ? fmtMoney(r.netAmount) : '-'}</span>
+              cell: (r) => (
+                <span className="font-semibold text-green-600">
+                  {r.netAmount != null ? fmtMoney(r.netAmount) : '-'}
+                </span>
+              ),
             },
-            { header: 'Method', accessorKey: 'method', cell: (r) => r.method ? WITHDRAW_METHODS[r.method] || r.method : '-' },
+            {
+              header: 'Method',
+              accessorKey: 'method',
+              cell: (r) => (r.method ? WITHDRAW_METHODS[r.method] || r.method : '-'),
+            },
             {
               header: 'Address',
               accessorKey: 'address',
@@ -184,7 +200,7 @@ export function WithdrawalsScreen() {
                 <div className="max-w-[150px] truncate" title={r.address || ''}>
                   {r.address || '-'}
                 </div>
-              )
+              ),
             },
             { header: 'Status', accessorKey: 'status', cell: (r) => statusChip(r.status) },
             {
@@ -194,32 +210,39 @@ export function WithdrawalsScreen() {
                 <div className="max-w-[150px] truncate" title={r.remark || ''}>
                   {r.remark || '-'}
                 </div>
-              )
+              ),
             },
-            { header: 'Created', accessorKey: 'createdAt', cell: (r) => <span className="text-xs">{fmtDateTime(r.createdAt)}</span> },
+            {
+              header: 'Created',
+              accessorKey: 'createdAt',
+              cell: (r) => <span className="text-xs">{fmtDateTime(r.createdAt)}</span>,
+            },
             {
               header: 'Actions',
               enableSorting: false,
               enableGlobalFilter: false,
-              cell: (r) => r.status === 'pending' ? (
-                <div className="flex gap-2">
-                  <Btn
-                    variant="success"
-                    className="px-2 py-1 text-xs"
-                    onClick={() => openAction('accept', r)}
-                  >
-                    <Check size={14} className="mr-1" /> Accept
-                  </Btn>
-                  <Btn
-                    variant="danger"
-                    className="px-2 py-1 text-xs"
-                    onClick={() => openAction('reject', r)}
-                  >
-                    <X size={14} className="mr-1" /> Reject
-                  </Btn>
-                </div>
-              ) : <span className="text-slate-400">-</span>
-            }
+              cell: (r) =>
+                r.status === 'pending' ? (
+                  <div className="flex gap-2">
+                    <Btn
+                      variant="success"
+                      className="px-2 py-1 text-xs"
+                      onClick={() => openAction('accept', r)}
+                    >
+                      <Check size={14} className="mr-1" /> Accept
+                    </Btn>
+                    <Btn
+                      variant="danger"
+                      className="px-2 py-1 text-xs"
+                      onClick={() => openAction('reject', r)}
+                    >
+                      <X size={14} className="mr-1" /> Reject
+                    </Btn>
+                  </div>
+                ) : (
+                  <span className="text-slate-400">-</span>
+                ),
+            },
           ]}
         />
       </Card>
@@ -230,7 +253,11 @@ export function WithdrawalsScreen() {
         onClose={() => !busy && setActionModal({ open: false, type: 'accept', row: null })}
         footer={
           <>
-            <Btn variant="ghost" onClick={() => setActionModal({ open: false, type: 'accept', row: null })} disabled={busy}>
+            <Btn
+              variant="ghost"
+              onClick={() => setActionModal({ open: false, type: 'accept', row: null })}
+              disabled={busy}
+            >
               Cancel
             </Btn>
             <Btn
@@ -245,23 +272,28 @@ export function WithdrawalsScreen() {
       >
         <div className="space-y-4">
           {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{err}</p>}
-          
-          <div className="rounded-lg bg-slate-50 p-4 space-y-2 text-sm">
+
+          <div className="space-y-2 rounded-lg bg-slate-50 p-4 text-sm">
             <div className="flex justify-between">
               <span className="text-slate-500">Agent:</span>
               <span className="font-semibold text-slate-700">{actionModal.row?.username}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Requested Amount:</span>
-              <span className="font-semibold text-slate-700">{fmtMoney(actionModal.row?.amount || '0')}</span>
+              <span className="font-semibold text-slate-700">
+                {fmtMoney(actionModal.row?.amount || '0')}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Net Payable:</span>
-              <span className="font-semibold text-green-600">{fmtMoney(actionModal.row?.netAmount || '0')}</span>
+              <span className="font-semibold text-green-600">
+                {fmtMoney(actionModal.row?.netAmount || '0')}
+              </span>
             </div>
             {actionModal.type === 'reject' && (
-              <div className="mt-3 text-red-500 font-medium">
-                Rejecting this request will immediately refund {fmtMoney(actionModal.row?.amount || '0')} back to the agent&apos;s balance.
+              <div className="mt-3 font-medium text-red-500">
+                Rejecting this request will immediately refund{' '}
+                {fmtMoney(actionModal.row?.amount || '0')} back to the agent&apos;s balance.
               </div>
             )}
           </div>
@@ -270,7 +302,11 @@ export function WithdrawalsScreen() {
             <TextInput
               value={remark}
               onChange={(e) => setRemark(e.target.value)}
-              placeholder={actionModal.type === 'reject' ? "Please provide a reason for rejection" : "Optional note"}
+              placeholder={
+                actionModal.type === 'reject'
+                  ? 'Please provide a reason for rejection'
+                  : 'Optional note'
+              }
             />
           </Field>
         </div>

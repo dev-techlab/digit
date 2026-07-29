@@ -103,7 +103,13 @@ export function DashboardScreen() {
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {kpi('Active Members', stats.activeMembers, 'Played in range')}
-            {kpi('Total Members', stats.totalMembers, `+${stats.membersToday} today`, false, 'text-green-500')}
+            {kpi(
+              'Total Members',
+              stats.totalMembers,
+              `+${stats.membersToday} today`,
+              false,
+              'text-green-500'
+            )}
           </div>
 
           <Card>
@@ -114,7 +120,10 @@ export function DashboardScreen() {
               <div className="flex h-56 items-end gap-3 px-2">
                 {stats.daily.map((d) => (
                   <div key={d.day} className="flex flex-1 flex-col items-center gap-1">
-                    <div className="flex w-full items-end justify-center gap-1" style={{ height: 180 }}>
+                    <div
+                      className="flex w-full items-end justify-center gap-1"
+                      style={{ height: 180 }}
+                    >
                       <div
                         className="w-1/3 rounded-t bg-blue-400"
                         title={`In ${fmtMoney(d.totalIn)}`}
@@ -135,7 +144,10 @@ export function DashboardScreen() {
 
           <Card>
             <h3 className="mb-4 text-lg font-semibold text-slate-800">Top Games by Net</h3>
-            <Table headers={['#', 'Game', 'Total In', 'Total Net']} empty={stats.topGames.length === 0}>
+            <Table
+              headers={['#', 'Game', 'Total In', 'Total Net']}
+              empty={stats.topGames.length === 0}
+            >
               {stats.topGames.map((g, i) => (
                 <tr key={g.game}>
                   <td className="px-4 py-3">{i + 1}</td>

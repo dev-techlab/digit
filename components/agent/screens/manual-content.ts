@@ -137,14 +137,8 @@ export const MANUAL_PAGES: ManualPage[] = [
             'Store or main distributor account; the key unit for attribution, posters, game configuration, and reports.',
           ],
           ['Sub Agent', 'Sub Agent who can expand their own distribution network.'],
-          [
-            'Sale Agent',
-            'Agent with an individual Invite Link who promotes directly to players.',
-          ],
-          [
-            'Member',
-            'Player/member registered through an Invite Link, poster QR code, or Kiosk.',
-          ],
+          ['Sale Agent', 'Agent with an individual Invite Link who promotes directly to players.'],
+          ['Member', 'Player/member registered through an Invite Link, poster QR code, or Kiosk.'],
           [
             'Kiosk',
             'Offline device or location point used for promotion, deposits, game entry, and balance records.',
@@ -590,16 +584,10 @@ export const MANUAL_PAGES: ManualPage[] = [
           ['TotalIn Score', 'Online / Kiosk'],
           ['TotalOut Score', 'Online / Kiosk'],
           ['Gross Net Score', '= TotalIn Score - TotalOut Score'],
-          [
-            'Total Bonus Score',
-            '= Register Score + Deposit Bonus Score + Promotion Score',
-          ],
+          ['Total Bonus Score', '= Register Score + Deposit Bonus Score + Promotion Score'],
           ['Game Deposit Fee', 'Game deposit fee'],
           ['Platform Fee', '= Gross Net Score × Score Cost%'],
-          [
-            'TotalNet',
-            '= Gross Net Score - Total Bonus Score - Game Deposit Fee - Platform Fee',
-          ],
+          ['TotalNet', '= Gross Net Score - Total Bonus Score - Game Deposit Fee - Platform Fee'],
           ['Game Bonus', 'Game platform first-deposit bonus score'],
         ]
       ),
@@ -617,10 +605,7 @@ export const MANUAL_PAGES: ManualPage[] = [
           ['Total Bonus Score', 'Total game bonus score'],
           ['Game Deposit Fee', 'Total game deposit fee'],
           ['Platform Fee', '= Gross Net Score × Score Cost%'],
-          [
-            'TotalNet',
-            '= Gross Net Score - Total Bonus Score - Game Deposit Fee - Platform Fee',
-          ],
+          ['TotalNet', '= Gross Net Score - Total Bonus Score - Game Deposit Fee - Platform Fee'],
           ['Game Bonus', 'Game platform first-deposit bonus score'],
         ]
       ),
@@ -982,10 +967,7 @@ export const MANUAL_PAGES: ManualPage[] = [
           ['Convenience Store / Gas Station', 'Place near the cashier, entrance, or Kiosk.'],
           ['Laundromat', 'Place in the waiting area, payment area, or near machines.'],
           ['Restaurant / Bar', 'Place at the bar, on table cards, or at the cashier.'],
-          [
-            'Online Promotion',
-            'Use it for WhatsApp, Facebook, other social channels, or email.',
-          ],
+          ['Online Promotion', 'Use it for WhatsApp, Facebook, other social channels, or email.'],
         ]
       ),
       note(
@@ -1192,7 +1174,11 @@ export const MANUAL_PAGES: ManualPage[] = [
             'Sub Agent List > Report',
             'Evaluate Sub Agent promotion results.',
           ],
-          ['Kiosk reports', 'Kiosk List > Total Report', 'Review device cash and transaction data.'],
+          [
+            'Kiosk reports',
+            'Kiosk List > Total Report',
+            'Review device cash and transaction data.',
+          ],
           ['Game performance', 'Transaction List > Report', 'Analyze earnings and costs by game.'],
           [
             'Promotion results',

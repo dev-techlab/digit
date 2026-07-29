@@ -6,21 +6,21 @@
 
 ## Severity legend
 
-| Severity | Meaning |
-|---|---|
+| Severity    | Meaning                                                                           |
+| ----------- | --------------------------------------------------------------------------------- |
 | 🔴 Critical | Security hole, data loss/corruption, or a core flow is completely broken/unusable |
-| 🟠 High | Breaks a core flow in common cases, or a serious auth/authorization gap |
-| 🟡 Medium | Real bug in an edge case, inconsistent/incorrect behavior |
-| 🟢 Low | Cosmetic, UX polish, dead code |
+| 🟠 High     | Breaks a core flow in common cases, or a serious auth/authorization gap           |
+| 🟡 Medium   | Real bug in an edge case, inconsistent/incorrect behavior                         |
+| 🟢 Low      | Cosmetic, UX polish, dead code                                                    |
 
 ## Summary
 
-| Flow | 🔴 Critical | 🟠 High | 🟡 Medium | 🟢 Low |
-|---|---|---|---|---|
-| User (player) | 2 | 3 | 9 | 3 |
-| Agent panel | 4 | 4 | 5 | 8 |
-| Admin panel | 2 | 4 | 6 | 5 |
-| **Total** | **8** | **11** | **20** | **16** |
+| Flow          | 🔴 Critical | 🟠 High | 🟡 Medium | 🟢 Low |
+| ------------- | ----------- | ------- | --------- | ------ |
+| User (player) | 2           | 3       | 9         | 3      |
+| Agent panel   | 4           | 4       | 5         | 8      |
+| Admin panel   | 2           | 4       | 6         | 5      |
+| **Total**     | **8**       | **11**  | **20**    | **16** |
 
 **55 findings total.** The single highest-value fix in the whole codebase: the player-facing app (the actual product) has zero wiring to its own, fully-built real backend — see User §🔴1 below.
 
@@ -30,53 +30,53 @@
 
 All 8 🔴 Critical, 11 🟠 High, and 20 🟡 Medium findings were fixed and verified (typecheck + lint + full test suite green) on 2026-07-19 (Critical findings additionally got live Playwright re-testing). 🟢 Low findings are unfixed — tracked below as originally reported.
 
-| # | Finding | Fix |
-|---|---|---|
-| User 🔴1 | Member auth flow fully mocked | Login/Register/Reset modals wired to real `/api/auth/*`; `lib/auth-context.tsx` now backed by a real `/api/auth/me` session check + `router.refresh()` so SSR data (wallet, etc.) updates immediately; added `POST /api/auth/reset-password` (didn't exist) to make Forgot Password functional |
-| User 🔴2 | Postal-request / support-ticket forms discarded input | Added `POST /api/postal-requests` and `POST /api/support-tickets`; forms now call them for real |
-| Agent 🔴1 | Stored XSS in Terms editor | Added missing `agent.type === 'store'` guard on the PUT route; added `lib/sanitize-html.ts` allowlist sanitizer, applied server-side on save and client-side on preview render |
-| Agent 🔴2 | `clear_tips` double-credit race | Balance read moved inside the transaction with `SELECT ... FOR UPDATE` |
-| Agent 🔴3 | Withdraw/transfer overdraft race | Same fix — balance check + row lock now inside the same transaction as the debit |
-| Agent 🔴4 | Any store could mutate the global platform catalog | Write endpoints moved to `/api/admin/platforms` (new, permission-gated); `/api/agent/platforms` is now GET-only; added an admin "Platforms" screen so the catalog remains manageable |
-| Admin 🔴1 | Admin login redirect race | Removed the `finally { setLoading(false) }` or `router.refresh()` combo that raced the pending navigation in `AdminLoginView.tsx`; single `router.replace('/admin')` on success, matching the working agent-login pattern |
-| Admin 🔴2 | Provider delete — no blast-radius warning | DELETE is now two-phase: reports the real count of affected player accounts first, requires `?confirm=true` to actually delete; confirm dialog shows the real number |
-| User 🟠3 | Referral signups never attributed | `registerUser` now accepts `inviteCode`, resolves the referrer by it, sets `users.referred_by_user_id`, and inserts a `referral_commissions` row so the referrer's Share & Earn dashboard reflects the signup |
-| User 🟠4 | `bonus.daily-reset` / `referral.settle` empty stubs | Implemented both: daily-reset flips matured `claimed` bonus claims back to `claimable` and clears `next_available_at`; referral.settle matures `pending` commissions to `claimed` 24h after signup |
-| User 🟠5 | Payment result page fabricated status from URL text | `resolveStatus` now queries `orders` (by `orderNo`) then `transactions` (by `id`) for the real status; unmatched references show a new honest "Payment Not Found" state instead of defaulting to success |
-| Agent 🟠5 | Role checks missing on member/promotion/redemption-audit mutations | Added the same `agent.type !== 'store'` guard used elsewhere to `members` PUT, `promotions` POST/PUT/DELETE, and `redemption-audits` PUT |
-| Agent 🟠6 | Approving a redemption never settled it | PUT now runs in a transaction: locks the member row, debits `members.online_sc`, and inserts a `member_transactions` (`redeem`) row, mirroring the wallet withdraw/transfer lock pattern |
-| Agent 🟠7 | Transaction List hard-capped at 20 rows, no pagination UI | `TransactionScreen` now sends `page`/`pageSize` and renders the existing `Pagination` component (same pattern as `MemberScreen`) |
-| Agent 🟠8 | Store Administrator logins were a dead end | `verifyAgentLogin` now also checks `store_administrators`; a successful admin login resolves to their store's agent id (no `agent_sessions` schema change needed) so they get that store's full access |
-| Admin 🟠3 | `admin_audit_logs` never written to | Added `lib/audit-log.ts` (`logAdminAction`); wired into admin login and provider create/update/delete |
-| Admin 🟠4 | "Active" toggle didn't hide a provider from players | `getProviders` (`lib/data.ts`) and the `/prod-api/member/game/available-providers` mirror now filter on `status = 1` |
-| Admin 🟠5 | No rate limiting/lockout on admin login | Added `lib/rate-limit.ts` (in-memory, per email+IP): 5 failed attempts locks out for 15 minutes |
-| Admin 🟠6 | Non-production seeds hit hardcoded admin password silently | `seedAdminPassword()` now always prints a warning when falling back to the dev password, for any `NODE_ENV` other than `production` |
-| User 🟡6 | `providers.sync` clobbered cross-catalog name collisions | Sync now groups API entries by normalized name, detects a name present in both SC and GC, keeps whichever mapping the row already has (sticky — no more flip-flopping every 6h), and reports `crossTypeConflicts` instead of silently dropping one mapping |
-| User 🟡7 | `/orders`, `/redemption-reviews`, `/share-activity` didn't enforce their auth gate | Added `components/shell/RequireAuth.tsx`; all three pages now show a sign-in prompt instead of a silently empty list for anonymous visitors |
-| User 🟡8 | OTP hashed with unsalted SHA-256 | Switched to HMAC-SHA256 keyed with `OTP_HASH_SECRET` (new env var, documented in `.env.example`) |
-| User 🟡9 | `verifyOtp` check-then-update race | Read + attempts-increment + consume now run inside one transaction with `SELECT ... FOR UPDATE` |
-| User 🟡10 | `registerUser` duplicate-username race → raw 500 | Insert is now wrapped in try/catch; a Postgres unique-violation (23505) is converted to the intended `UserConflictError` (409) |
-| User 🟡11 | OTP `destination` accepted any string | Added `isValidOtpDestination` (email or E.164-ish phone format) — `requestOtp` rejects anything else |
-| User 🟡12 | `getOrders()` hardcoded `player_2481` | Now looks up the real username for the current session's user |
-| User 🟡13 | `otp.purge` / `sessions.purge` empty stubs | Implemented both: deletes expired/consumed `otp_codes`, and expired-or-revoked `sessions` + `admin_sessions` |
-| User 🟡14 | `startWorker` job loop had no per-job try/catch | Each job handler call is now wrapped in try/catch that logs `job "<name>" failed` before rethrowing (pg-boss still gets to apply its own retry/failure tracking) |
-| Agent 🟡9 | Withdraw accepted a missing/invalid `method` silently | Added the same `if (!method) return 400` guard deposit already had |
-| Agent 🟡10 | Wallet settings PUT could write `NaN` | Switched to the `Number.isFinite` guard pattern already used by `game-settings` |
-| Agent 🟡11 | Promotion `assignAgentId` not validated to the same store | POST now verifies the assignee belongs to `agent.storeId` before accepting it |
-| Agent 🟡12 | Six screens had no try/catch on API calls | Added try/catch + inline error banners to `KioskScreen`, `PromotionScreen` (create), `CsConfigScreen`, `TermsScreen`, `MemberRewardsScreen`, `MemberScreen` (saveEdit) |
-| Agent 🟡13 | Sale/sub agent passwords could never be reset | `agents` PUT now accepts `password` (6+ chars) and hashes it, same as the `store-admins` route |
-| Admin 🟡7 | Provider POST/PUT mislabeled every DB error as 409 | Added `lib/db-errors.ts#isUniqueViolation`; only a real unique-violation (23505) returns 409 now, anything else is logged and returns 500 |
-| Admin 🟡8 | `ProvidersScreen` initial load had no `.catch` | Now redirects to `/admin/login` on a failed load, matching `AdminShell`'s own `/api/admin/me` handling |
-| Admin 🟡9 | Provider "Active" toggle was optimistic with no rollback | On a failed PUT, the toggle now reverts to its prior state and shows an alert |
-| Admin 🟡10 | Provider delete had no error handling | Already fixed as part of the Admin 🔴2 two-phase-delete rework — `remove()` now has try/catch with a user-facing alert |
-| Admin 🟡11 | `removeRole`/`suspendAdmin`/`reactivateAdmin`/`setPassword` had no authz | Added an optional `actorAdminId` param to each; when provided, a non-super actor now needs `admins.manage` and can't act on an admin at/above their own role level (mirrors `assignRole`'s `guardRoleGrant`) |
-| Admin 🟡12 | "Change Password" linked to the public, unauthenticated Forgot Password stub | Added a real authenticated flow: `POST /api/admin/change-password` (verifies current password, calls `setPassword`) + a `/admin/change-password` screen; sidebar now points there instead |
+| #          | Finding                                                                            | Fix                                                                                                                                                                                                                                                                                            |
+| ---------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| User 🔴1   | Member auth flow fully mocked                                                      | Login/Register/Reset modals wired to real `/api/auth/*`; `lib/auth-context.tsx` now backed by a real `/api/auth/me` session check + `router.refresh()` so SSR data (wallet, etc.) updates immediately; added `POST /api/auth/reset-password` (didn't exist) to make Forgot Password functional |
+| User 🔴2   | Postal-request / support-ticket forms discarded input                              | Added `POST /api/postal-requests` and `POST /api/support-tickets`; forms now call them for real                                                                                                                                                                                                |
+| Agent 🔴1  | Stored XSS in Terms editor                                                         | Added missing `agent.type === 'store'` guard on the PUT route; added `lib/sanitize-html.ts` allowlist sanitizer, applied server-side on save and client-side on preview render                                                                                                                 |
+| Agent 🔴2  | `clear_tips` double-credit race                                                    | Balance read moved inside the transaction with `SELECT ... FOR UPDATE`                                                                                                                                                                                                                         |
+| Agent 🔴3  | Withdraw/transfer overdraft race                                                   | Same fix — balance check + row lock now inside the same transaction as the debit                                                                                                                                                                                                               |
+| Agent 🔴4  | Any store could mutate the global platform catalog                                 | Write endpoints moved to `/api/admin/platforms` (new, permission-gated); `/api/agent/platforms` is now GET-only; added an admin "Platforms" screen so the catalog remains manageable                                                                                                           |
+| Admin 🔴1  | Admin login redirect race                                                          | Removed the `finally { setLoading(false) }` or `router.refresh()` combo that raced the pending navigation in `AdminLoginView.tsx`; single `router.replace('/admin')` on success, matching the working agent-login pattern                                                                      |
+| Admin 🔴2  | Provider delete — no blast-radius warning                                          | DELETE is now two-phase: reports the real count of affected player accounts first, requires `?confirm=true` to actually delete; confirm dialog shows the real number                                                                                                                           |
+| User 🟠3   | Referral signups never attributed                                                  | `registerUser` now accepts `inviteCode`, resolves the referrer by it, sets `users.referred_by_user_id`, and inserts a `referral_commissions` row so the referrer's Share & Earn dashboard reflects the signup                                                                                  |
+| User 🟠4   | `bonus.daily-reset` / `referral.settle` empty stubs                                | Implemented both: daily-reset flips matured `claimed` bonus claims back to `claimable` and clears `next_available_at`; referral.settle matures `pending` commissions to `claimed` 24h after signup                                                                                             |
+| User 🟠5   | Payment result page fabricated status from URL text                                | `resolveStatus` now queries `orders` (by `orderNo`) then `transactions` (by `id`) for the real status; unmatched references show a new honest "Payment Not Found" state instead of defaulting to success                                                                                       |
+| Agent 🟠5  | Role checks missing on member/promotion/redemption-audit mutations                 | Added the same `agent.type !== 'store'` guard used elsewhere to `members` PUT, `promotions` POST/PUT/DELETE, and `redemption-audits` PUT                                                                                                                                                       |
+| Agent 🟠6  | Approving a redemption never settled it                                            | PUT now runs in a transaction: locks the member row, debits `members.online_sc`, and inserts a `member_transactions` (`redeem`) row, mirroring the wallet withdraw/transfer lock pattern                                                                                                       |
+| Agent 🟠7  | Transaction List hard-capped at 20 rows, no pagination UI                          | `TransactionScreen` now sends `page`/`pageSize` and renders the existing `Pagination` component (same pattern as `MemberScreen`)                                                                                                                                                               |
+| Agent 🟠8  | Store Administrator logins were a dead end                                         | `verifyAgentLogin` now also checks `store_administrators`; a successful admin login resolves to their store's agent id (no `agent_sessions` schema change needed) so they get that store's full access                                                                                         |
+| Admin 🟠3  | `admin_audit_logs` never written to                                                | Added `lib/audit-log.ts` (`logAdminAction`); wired into admin login and provider create/update/delete                                                                                                                                                                                          |
+| Admin 🟠4  | "Active" toggle didn't hide a provider from players                                | `getProviders` (`lib/data.ts`) and the `/prod-api/member/game/available-providers` mirror now filter on `status = 1`                                                                                                                                                                           |
+| Admin 🟠5  | No rate limiting/lockout on admin login                                            | Added `lib/rate-limit.ts` (in-memory, per email+IP): 5 failed attempts locks out for 15 minutes                                                                                                                                                                                                |
+| Admin 🟠6  | Non-production seeds hit hardcoded admin password silently                         | `seedAdminPassword()` now always prints a warning when falling back to the dev password, for any `NODE_ENV` other than `production`                                                                                                                                                            |
+| User 🟡6   | `providers.sync` clobbered cross-catalog name collisions                           | Sync now groups API entries by normalized name, detects a name present in both SC and GC, keeps whichever mapping the row already has (sticky — no more flip-flopping every 6h), and reports `crossTypeConflicts` instead of silently dropping one mapping                                     |
+| User 🟡7   | `/orders`, `/redemption-reviews`, `/share-activity` didn't enforce their auth gate | Added `components/shell/RequireAuth.tsx`; all three pages now show a sign-in prompt instead of a silently empty list for anonymous visitors                                                                                                                                                    |
+| User 🟡8   | OTP hashed with unsalted SHA-256                                                   | Switched to HMAC-SHA256 keyed with `OTP_HASH_SECRET` (new env var, documented in `.env.example`)                                                                                                                                                                                               |
+| User 🟡9   | `verifyOtp` check-then-update race                                                 | Read + attempts-increment + consume now run inside one transaction with `SELECT ... FOR UPDATE`                                                                                                                                                                                                |
+| User 🟡10  | `registerUser` duplicate-username race → raw 500                                   | Insert is now wrapped in try/catch; a Postgres unique-violation (23505) is converted to the intended `UserConflictError` (409)                                                                                                                                                                 |
+| User 🟡11  | OTP `destination` accepted any string                                              | Added `isValidOtpDestination` (email or E.164-ish phone format) — `requestOtp` rejects anything else                                                                                                                                                                                           |
+| User 🟡12  | `getOrders()` hardcoded `player_2481`                                              | Now looks up the real username for the current session's user                                                                                                                                                                                                                                  |
+| User 🟡13  | `otp.purge` / `sessions.purge` empty stubs                                         | Implemented both: deletes expired/consumed `otp_codes`, and expired-or-revoked `sessions` + `admin_sessions`                                                                                                                                                                                   |
+| User 🟡14  | `startWorker` job loop had no per-job try/catch                                    | Each job handler call is now wrapped in try/catch that logs `job "<name>" failed` before rethrowing (pg-boss still gets to apply its own retry/failure tracking)                                                                                                                               |
+| Agent 🟡9  | Withdraw accepted a missing/invalid `method` silently                              | Added the same `if (!method) return 400` guard deposit already had                                                                                                                                                                                                                             |
+| Agent 🟡10 | Wallet settings PUT could write `NaN`                                              | Switched to the `Number.isFinite` guard pattern already used by `game-settings`                                                                                                                                                                                                                |
+| Agent 🟡11 | Promotion `assignAgentId` not validated to the same store                          | POST now verifies the assignee belongs to `agent.storeId` before accepting it                                                                                                                                                                                                                  |
+| Agent 🟡12 | Six screens had no try/catch on API calls                                          | Added try/catch + inline error banners to `KioskScreen`, `PromotionScreen` (create), `CsConfigScreen`, `TermsScreen`, `MemberRewardsScreen`, `MemberScreen` (saveEdit)                                                                                                                         |
+| Agent 🟡13 | Sale/sub agent passwords could never be reset                                      | `agents` PUT now accepts `password` (6+ chars) and hashes it, same as the `store-admins` route                                                                                                                                                                                                 |
+| Admin 🟡7  | Provider POST/PUT mislabeled every DB error as 409                                 | Added `lib/db-errors.ts#isUniqueViolation`; only a real unique-violation (23505) returns 409 now, anything else is logged and returns 500                                                                                                                                                      |
+| Admin 🟡8  | `ProvidersScreen` initial load had no `.catch`                                     | Now redirects to `/admin/login` on a failed load, matching `AdminShell`'s own `/api/admin/me` handling                                                                                                                                                                                         |
+| Admin 🟡9  | Provider "Active" toggle was optimistic with no rollback                           | On a failed PUT, the toggle now reverts to its prior state and shows an alert                                                                                                                                                                                                                  |
+| Admin 🟡10 | Provider delete had no error handling                                              | Already fixed as part of the Admin 🔴2 two-phase-delete rework — `remove()` now has try/catch with a user-facing alert                                                                                                                                                                         |
+| Admin 🟡11 | `removeRole`/`suspendAdmin`/`reactivateAdmin`/`setPassword` had no authz           | Added an optional `actorAdminId` param to each; when provided, a non-super actor now needs `admins.manage` and can't act on an admin at/above their own role level (mirrors `assignRole`'s `guardRoleGrant`)                                                                                   |
+| Admin 🟡12 | "Change Password" linked to the public, unauthenticated Forgot Password stub       | Added a real authenticated flow: `POST /api/admin/change-password` (verifies current password, calls `setPassword`) + a `/admin/change-password` screen; sidebar now points there instead                                                                                                      |
 
 ---
 
 ## 1. User (Player) Flow
 
-*(Live-tested: opened Login/Register/Forgot-Password modals on `/game` and confirmed none submit to the backend. Full static audit additionally covered `app/api/auth/**`, `app/api/media/**`, `app/prod-api/**`, `lib/otp.ts`, `lib/user-service.ts`, `lib/jobs/index.ts`, `lib/provider-api.ts`, `scripts/fetch-providers.ts`, `scripts/sync-platforms.ts`.)*
+_(Live-tested: opened Login/Register/Forgot-Password modals on `/game` and confirmed none submit to the backend. Full static audit additionally covered `app/api/auth/**`, `app/api/media/**`, `app/prod-api/**`, `lib/otp.ts`, `lib/user-service.ts`, `lib/jobs/index.ts`, `lib/provider-api.ts`, `scripts/fetch-providers.ts`, `scripts/sync-platforms.ts`.)_
 
 ### 🔴 Critical — ✅ Fixed (see [Fix status](#fix-status))
 
@@ -120,7 +120,7 @@ Opening the player Login modal, the Username/Password fields were pre-filled wit
 
 ## 2. Agent Panel Flow
 
-*(Full static audit — `app/api/agent/**`, `app/agent/**`, `components/agent/**`. Live-tested: login → dashboard works end-to-end, real API calls confirmed via network trace.)*
+_(Full static audit — `app/api/agent/**`, `app/agent/**`, `components/agent/**`. Live-tested: login → dashboard works end-to-end, real API calls confirmed via network trace.)_
 
 ### 🔴 Critical — ✅ Fixed (see [Fix status](#fix-status))
 
@@ -159,7 +159,7 @@ Opening the player Login modal, the Username/Password fields were pre-filled wit
 
 ## 3. Admin Panel Flow
 
-*(Full static audit — `app/api/admin/**`, `app/admin/**`, `components/admin/**`, RBAC layer. Live-tested: login is broken end-to-end — see #1 below, reproduced twice.)*
+_(Full static audit — `app/api/admin/**`, `app/admin/**`, `components/admin/**`, RBAC layer. Live-tested: login is broken end-to-end — see #1 below, reproduced twice.)_
 
 ### 🔴 Critical — ✅ Fixed (see [Fix status](#fix-status))
 

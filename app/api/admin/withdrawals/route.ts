@@ -15,12 +15,18 @@ async function authorize(
 ): Promise<{ adminId: string; error: undefined } | { adminId: undefined; error: NextResponse }> {
   const adminId = await getAdminIdFromRequest(req);
   if (!adminId)
-    return { adminId: undefined, error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+    return {
+      adminId: undefined,
+      error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+    };
   try {
     await requirePermission(adminId, permKey);
   } catch (e) {
     if (e instanceof PermissionError) {
-      return { adminId: undefined, error: NextResponse.json({ error: e.message }, { status: e.status }) };
+      return {
+        adminId: undefined,
+        error: NextResponse.json({ error: e.message }, { status: e.status }),
+      };
     }
     throw e;
   }
@@ -36,16 +42,14 @@ export async function GET(req: Request) {
   const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
   const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('pageSize')) || 20));
   const search = url.searchParams.get('search')?.trim();
-  const statusFilter = url.searchParams.get('status') as 'pending' | 'completed' | 'failed' | 'cancelled' | null;
+  const statusFilter = url.searchParams.get('status') as
+    'pending' | 'completed' | 'failed' | 'cancelled' | null;
 
   const where = and(
     eq(s.agentTransactions.type, 'withdraw'),
     statusFilter ? eq(s.agentTransactions.status, statusFilter) : undefined,
     search
-      ? or(
-          ilike(s.agents.username, `%${search}%`),
-          ilike(s.agentTransactions.id, `%${search}%`)
-        )
+      ? or(ilike(s.agents.username, `%${search}%`), ilike(s.agentTransactions.id, `%${search}%`))
       : undefined
   );
 
@@ -111,7 +115,7 @@ export async function POST(req: Request) {
           )
         )
         .for('update');
-      
+
       if (!txRow) {
         throw new Error('Pending withdrawal request not found');
       }
@@ -148,7 +152,7 @@ export async function POST(req: Request) {
   } catch (err: unknown) {
     if (err instanceof Error) {
       if (err.message === 'Pending withdrawal request not found') {
-         return NextResponse.json({ error: err.message }, { status: 404 });
+        return NextResponse.json({ error: err.message }, { status: 404 });
       }
     }
     console.error('POST /api/admin/withdrawals', err);

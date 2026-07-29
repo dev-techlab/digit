@@ -12,16 +12,7 @@ import {
   HelpCircle,
   AlertCircle,
 } from 'lucide-react';
-import {
-  api,
-  Btn,
-  Card,
-  Field,
-  fmtMoney,
-  fmtDateTime,
-  Modal,
-  TextInput,
-} from '../ui';
+import { api, Btn, Card, Field, fmtMoney, fmtDateTime, Modal, TextInput } from '../ui';
 import { DataTable } from '@/components/ui/DataTable';
 import { cn } from '@/lib/cn';
 
@@ -592,8 +583,20 @@ export function WalletScreen() {
               columns={[
                 { header: 'Start Time', accessorKey: 'day', cell: (r) => `${r.day} 00:00:00` },
                 { header: 'End Time', cell: (r) => `${r.day} 23:59:59` },
-                { header: 'Deposit', accessorKey: 'deposit', cell: (r) => <span className="font-semibold text-green-600">{fmtMoney(r.deposit)}</span> },
-                { header: 'Deposit Fee', accessorKey: 'depositFee', cell: (r) => <span className="font-semibold text-amber-500">{fmtMoney(r.depositFee)}</span> },
+                {
+                  header: 'Deposit',
+                  accessorKey: 'deposit',
+                  cell: (r) => (
+                    <span className="font-semibold text-green-600">{fmtMoney(r.deposit)}</span>
+                  ),
+                },
+                {
+                  header: 'Deposit Fee',
+                  accessorKey: 'depositFee',
+                  cell: (r) => (
+                    <span className="font-semibold text-amber-500">{fmtMoney(r.depositFee)}</span>
+                  ),
+                },
                 { header: 'Deposit Orders', accessorKey: 'depositOrders' },
               ]}
             />
@@ -604,12 +607,39 @@ export function WalletScreen() {
               data={deposits}
               rowKey={(r) => r.id}
               columns={[
-                { header: 'Order No.', accessorKey: 'id', cell: (r) => <span className="font-mono text-xs">{orderNo(r.id)}</span> },
-                { header: 'Deposit Amount', accessorKey: 'amount', cell: (r) => fmtMoney(r.amount) },
-                { header: 'Payment Method', accessorKey: 'method', cell: (r) => r.method ? METHOD_LABEL[r.method] ?? r.method : '-' },
+                {
+                  header: 'Order No.',
+                  accessorKey: 'id',
+                  cell: (r) => <span className="font-mono text-xs">{orderNo(r.id)}</span>,
+                },
+                {
+                  header: 'Deposit Amount',
+                  accessorKey: 'amount',
+                  cell: (r) => fmtMoney(r.amount),
+                },
+                {
+                  header: 'Payment Method',
+                  accessorKey: 'method',
+                  cell: (r) => (r.method ? (METHOD_LABEL[r.method] ?? r.method) : '-'),
+                },
                 { header: 'Status', accessorKey: 'status', cell: (r) => statusChip(r.status) },
                 { header: 'Time', accessorKey: 'createdAt', cell: (r) => fmtDateTime(r.createdAt) },
-                { header: 'Actions', enableSorting: false, enableGlobalFilter: false, cell: (r) => r.status === 'pending' ? <button className="text-red-500 hover:underline" onClick={() => void cancelTx(r.id)}>Cancel</button> : '-' },
+                {
+                  header: 'Actions',
+                  enableSorting: false,
+                  enableGlobalFilter: false,
+                  cell: (r) =>
+                    r.status === 'pending' ? (
+                      <button
+                        className="text-red-500 hover:underline"
+                        onClick={() => void cancelTx(r.id)}
+                      >
+                        Cancel
+                      </button>
+                    ) : (
+                      '-'
+                    ),
+                },
               ]}
             />
           )}
@@ -619,16 +649,77 @@ export function WalletScreen() {
               data={withdrawals}
               rowKey={(r) => r.id}
               columns={[
-                { header: 'Order No', accessorKey: 'id', cell: (r) => <span className="font-mono text-xs">{orderNo(r.id)}</span> },
-                { header: 'Requested Amount', accessorKey: 'amount', cell: (r) => fmtMoney(r.amount) },
-                { header: 'Commission %', accessorKey: 'commissionPer', cell: (r) => r.commissionPer ? `${r.commissionPer}%` : '-' },
-                { header: 'Commission Amount', accessorKey: 'fee', cell: (r) => <span className="text-amber-500 font-medium">{fmtMoney(r.fee)}</span> },
-                { header: 'Net Payable Amount', accessorKey: 'netAmount', cell: (r) => <span className="text-green-600 font-semibold">{r.netAmount != null ? fmtMoney(r.netAmount) : '-'}</span> },
-                { header: 'Balance Before', accessorKey: 'balanceBefore', cell: (r) => r.balanceBefore != null ? fmtMoney(r.balanceBefore) : '-' },
-                { header: 'Balance After', accessorKey: 'balanceAfter', cell: (r) => r.balanceAfter != null ? fmtMoney(r.balanceAfter) : '-' },
-                { header: 'Order Status', accessorKey: 'status', cell: (r) => statusChip(r.status) },
-                { header: 'Reason', accessorKey: 'remark', cell: (r) => <div className="max-w-[150px] truncate" title={r.remark || undefined}>{r.remark || '-'}</div> },
-                { header: 'Actions', enableSorting: false, enableGlobalFilter: false, cell: (r) => r.status === 'pending' ? <button className="text-red-500 hover:underline" onClick={() => void cancelTx(r.id)}>Cancel</button> : '-' },
+                {
+                  header: 'Order No',
+                  accessorKey: 'id',
+                  cell: (r) => <span className="font-mono text-xs">{orderNo(r.id)}</span>,
+                },
+                {
+                  header: 'Requested Amount',
+                  accessorKey: 'amount',
+                  cell: (r) => fmtMoney(r.amount),
+                },
+                {
+                  header: 'Commission %',
+                  accessorKey: 'commissionPer',
+                  cell: (r) => (r.commissionPer ? `${r.commissionPer}%` : '-'),
+                },
+                {
+                  header: 'Commission Amount',
+                  accessorKey: 'fee',
+                  cell: (r) => (
+                    <span className="font-medium text-amber-500">{fmtMoney(r.fee)}</span>
+                  ),
+                },
+                {
+                  header: 'Net Payable Amount',
+                  accessorKey: 'netAmount',
+                  cell: (r) => (
+                    <span className="font-semibold text-green-600">
+                      {r.netAmount != null ? fmtMoney(r.netAmount) : '-'}
+                    </span>
+                  ),
+                },
+                {
+                  header: 'Balance Before',
+                  accessorKey: 'balanceBefore',
+                  cell: (r) => (r.balanceBefore != null ? fmtMoney(r.balanceBefore) : '-'),
+                },
+                {
+                  header: 'Balance After',
+                  accessorKey: 'balanceAfter',
+                  cell: (r) => (r.balanceAfter != null ? fmtMoney(r.balanceAfter) : '-'),
+                },
+                {
+                  header: 'Order Status',
+                  accessorKey: 'status',
+                  cell: (r) => statusChip(r.status),
+                },
+                {
+                  header: 'Reason',
+                  accessorKey: 'remark',
+                  cell: (r) => (
+                    <div className="max-w-[150px] truncate" title={r.remark || undefined}>
+                      {r.remark || '-'}
+                    </div>
+                  ),
+                },
+                {
+                  header: 'Actions',
+                  enableSorting: false,
+                  enableGlobalFilter: false,
+                  cell: (r) =>
+                    r.status === 'pending' ? (
+                      <button
+                        className="text-red-500 hover:underline"
+                        onClick={() => void cancelTx(r.id)}
+                      >
+                        Cancel
+                      </button>
+                    ) : (
+                      '-'
+                    ),
+                },
               ]}
             />
           )}
@@ -638,12 +729,28 @@ export function WalletScreen() {
               data={transfers}
               rowKey={(r) => r.id}
               columns={[
-                { header: 'Transaction ID', accessorKey: 'id', cell: (r) => <span className="font-mono text-xs">{orderNo(r.id)}</span> },
-                { header: 'Type', accessorKey: 'type', cell: () => <span className="capitalize">Transfer</span> },
+                {
+                  header: 'Transaction ID',
+                  accessorKey: 'id',
+                  cell: (r) => <span className="font-mono text-xs">{orderNo(r.id)}</span>,
+                },
+                {
+                  header: 'Type',
+                  accessorKey: 'type',
+                  cell: () => <span className="capitalize">Transfer</span>,
+                },
                 { header: 'Sender', cell: () => data.store.username },
-                { header: 'Receiver', accessorKey: 'counterparty', cell: (r) => r.counterparty ?? '-' },
+                {
+                  header: 'Receiver',
+                  accessorKey: 'counterparty',
+                  cell: (r) => r.counterparty ?? '-',
+                },
                 { header: 'Amount', accessorKey: 'amount', cell: (r) => fmtMoney(r.amount) },
-                { header: 'Remark', accessorKey: 'remark', cell: (r) => <div className="max-w-48 truncate">{r.remark ?? '-'}</div> },
+                {
+                  header: 'Remark',
+                  accessorKey: 'remark',
+                  cell: (r) => <div className="max-w-48 truncate">{r.remark ?? '-'}</div>,
+                },
                 { header: 'Time', accessorKey: 'createdAt', cell: (r) => fmtDateTime(r.createdAt) },
               ]}
             />
@@ -654,12 +761,28 @@ export function WalletScreen() {
               data={transferRequests}
               rowKey={(r) => r.id}
               columns={[
-                { header: 'Transaction ID', accessorKey: 'id', cell: (r) => <span className="font-mono text-xs">{orderNo(r.id)}</span> },
+                {
+                  header: 'Transaction ID',
+                  accessorKey: 'id',
+                  cell: (r) => <span className="font-mono text-xs">{orderNo(r.id)}</span>,
+                },
                 { header: 'From', cell: () => data.store.username },
                 { header: 'To', accessorKey: 'counterparty', cell: (r) => r.counterparty ?? '-' },
                 { header: 'Amount', accessorKey: 'amount', cell: (r) => fmtMoney(r.amount) },
                 { header: 'Status', accessorKey: 'status', cell: (r) => statusChip(r.status) },
-                { header: 'Actions', enableSorting: false, enableGlobalFilter: false, cell: (r) => <button className="text-red-500 hover:underline" onClick={() => void cancelTx(r.id)}>Cancel</button> },
+                {
+                  header: 'Actions',
+                  enableSorting: false,
+                  enableGlobalFilter: false,
+                  cell: (r) => (
+                    <button
+                      className="text-red-500 hover:underline"
+                      onClick={() => void cancelTx(r.id)}
+                    >
+                      Cancel
+                    </button>
+                  ),
+                },
               ]}
             />
           )}
@@ -738,7 +861,11 @@ export function WalletScreen() {
             </div>
           </div>
         ) : (
-          <Field label="New Email" required hint="A verification email will be sent to this address.">
+          <Field
+            label="New Email"
+            required
+            hint="A verification email will be sent to this address."
+          >
             <TextInput
               type="email"
               placeholder="name@example.com"

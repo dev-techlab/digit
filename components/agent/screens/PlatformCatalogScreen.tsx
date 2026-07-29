@@ -82,10 +82,7 @@ export function PlatformCatalogScreen() {
         Game Setting to configure which of these platforms your store has enabled.
       </p>
 
-      <Table
-        headers={['#', 'Platform', 'Code', 'Type']}
-        empty={!loading && platforms.length === 0}
-      >
+      <Table headers={['#', 'Platform', 'Code', 'Type']} empty={!loading && platforms.length === 0}>
         {platforms.map((p, i) => (
           <tr key={p.id} className="hover:bg-slate-50/60">
             <td className="px-4 py-2.5 text-slate-400">{i + 1}</td>

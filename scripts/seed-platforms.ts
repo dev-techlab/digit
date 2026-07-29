@@ -83,7 +83,9 @@ async function main() {
   }
 
   const total = await db.select({ n: s.gamePlatforms.id }).from(s.gamePlatforms);
-  console.log(`✓ seeded from snapshots: ${updated} updated, ${inserted} inserted, ${total.length} total`);
+  console.log(
+    `✓ seeded from snapshots: ${updated} updated, ${inserted} inserted, ${total.length} total`
+  );
   process.exit(0);
 }
 

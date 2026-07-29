@@ -22,12 +22,18 @@ async function authorize(
 ): Promise<{ adminId: string; error: undefined } | { adminId: undefined; error: NextResponse }> {
   const adminId = await getAdminIdFromRequest(req);
   if (!adminId)
-    return { adminId: undefined, error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+    return {
+      adminId: undefined,
+      error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+    };
   try {
     await requirePermission(adminId, permKey);
   } catch (e) {
     if (e instanceof PermissionError) {
-      return { adminId: undefined, error: NextResponse.json({ error: e.message }, { status: e.status }) };
+      return {
+        adminId: undefined,
+        error: NextResponse.json({ error: e.message }, { status: e.status }),
+      };
     }
     throw e;
   }
@@ -106,7 +112,10 @@ export async function POST(req: Request) {
       })
       .returning();
     if (!row) {
-      return NextResponse.json({ error: 'A provider with that id already exists' }, { status: 409 });
+      return NextResponse.json(
+        { error: 'A provider with that id already exists' },
+        { status: 409 }
+      );
     }
     await logAdminAction({
       adminId,
@@ -119,7 +128,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ provider: row }, { status: 201 });
   } catch (err) {
     if (isUniqueViolation(err)) {
-      return NextResponse.json({ error: 'A provider with that id already exists' }, { status: 409 });
+      return NextResponse.json(
+        { error: 'A provider with that id already exists' },
+        { status: 409 }
+      );
     }
     console.error('POST /api/admin/providers', err);
     return NextResponse.json({ error: 'Failed to create provider' }, { status: 500 });
@@ -172,7 +184,10 @@ export async function PUT(req: Request) {
     return NextResponse.json({ provider: row });
   } catch (err) {
     if (isUniqueViolation(err)) {
-      return NextResponse.json({ error: 'Update conflicts with an existing provider' }, { status: 409 });
+      return NextResponse.json(
+        { error: 'Update conflicts with an existing provider' },
+        { status: 409 }
+      );
     }
     console.error('PUT /api/admin/providers', err);
     return NextResponse.json({ error: 'Update failed' }, { status: 500 });

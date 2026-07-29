@@ -54,8 +54,8 @@ export function ChangePasswordScreen() {
           )}
           <p className="flex items-start gap-2 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-500">
             <Info size={16} className="mt-0.5 shrink-0" />
-            For account security, please change your password regularly. Password must be at least
-            6 characters
+            For account security, please change your password regularly. Password must be at least 6
+            characters
           </p>
           <div className="space-y-4">
             <label className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-4">

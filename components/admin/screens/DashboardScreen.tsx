@@ -33,7 +33,9 @@ export function DashboardScreen() {
           </p>
           {!me.isSuperAdmin && (
             <div className="mt-3">
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Permissions</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+                Permissions
+              </p>
               {me.permissions.length > 0 ? (
                 <ul className="mt-2 flex flex-wrap gap-2">
                   {me.permissions.map((p) => (

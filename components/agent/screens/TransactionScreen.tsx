@@ -2,15 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { BarChart3 } from 'lucide-react';
-import {
-  api,
-  Btn,
-  Card,
-  fmtDateTime,
-  fmtMoney,
-  Modal,
-  Select,
-} from '../ui';
+import { api, Btn, Card, fmtDateTime, fmtMoney, Modal, Select } from '../ui';
 import { DataTable } from '@/components/ui/DataTable';
 
 interface TxRow {
@@ -112,13 +104,21 @@ export function TransactionScreen() {
       <div className="flex gap-6 text-base font-semibold">
         <button
           onClick={() => setTab('list')}
-          className={tab === 'list' ? 'border-b-2 border-blue-500 pb-1.5 text-blue-500' : 'pb-1.5 text-slate-700'}
+          className={
+            tab === 'list'
+              ? 'border-b-2 border-blue-500 pb-1.5 text-blue-500'
+              : 'pb-1.5 text-slate-700'
+          }
         >
           Transaction List
         </button>
         <button
           onClick={() => setTab('audit')}
-          className={tab === 'audit' ? 'border-b-2 border-blue-500 pb-1.5 text-blue-500' : 'pb-1.5 text-slate-700'}
+          className={
+            tab === 'audit'
+              ? 'border-b-2 border-blue-500 pb-1.5 text-blue-500'
+              : 'pb-1.5 text-slate-700'
+          }
         >
           Redemption Audit
         </button>
@@ -160,17 +160,21 @@ export function TransactionScreen() {
               extraToolbar={
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-slate-500">Transaction Type:</span>
-                  <Select className="w-36 py-1.5" value={type} onChange={(e) => {
-                    const val = e.target.value;
-                    setType(val);
-                    setPage(1);
-                    api<{ transactions: TxRow[]; summary: Summary }>(
-                      `/api/agent/transactions?search=${encodeURIComponent(search)}&type=${val}&page=1&pageSize=${PAGE_SIZE}`
-                    ).then((d) => {
-                      setRows(d.transactions);
-                      setSummary(d.summary);
-                    });
-                  }}>
+                  <Select
+                    className="w-36 py-1.5"
+                    value={type}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setType(val);
+                      setPage(1);
+                      api<{ transactions: TxRow[]; summary: Summary }>(
+                        `/api/agent/transactions?search=${encodeURIComponent(search)}&type=${val}&page=1&pageSize=${PAGE_SIZE}`
+                      ).then((d) => {
+                        setRows(d.transactions);
+                        setSummary(d.summary);
+                      });
+                    }}
+                  >
                     <option value="">All</option>
                     <option value="recharge">Recharge</option>
                     <option value="redeem">Redeem</option>
@@ -180,14 +184,44 @@ export function TransactionScreen() {
                 </div>
               }
               columns={[
-                { header: 'User Detail', accessorKey: 'username', cell: (r) => <span className="font-medium text-slate-700">{r.username ?? '-'}</span> },
-                { header: 'Create Time', accessorKey: 'createdAt', cell: (r) => fmtDateTime(r.createdAt) },
+                {
+                  header: 'User Detail',
+                  accessorKey: 'username',
+                  cell: (r) => (
+                    <span className="font-medium text-slate-700">{r.username ?? '-'}</span>
+                  ),
+                },
+                {
+                  header: 'Create Time',
+                  accessorKey: 'createdAt',
+                  cell: (r) => fmtDateTime(r.createdAt),
+                },
                 { header: 'Amount', accessorKey: 'amount', cell: (r) => fmtMoney(r.amount) },
-                { header: 'Online SC Changes', accessorKey: 'onlineScChange', cell: (r) => fmtMoney(r.onlineScChange) },
-                { header: 'Store Balance Vary', accessorKey: 'storeBalanceVary', cell: (r) => fmtMoney(r.storeBalanceVary) },
+                {
+                  header: 'Online SC Changes',
+                  accessorKey: 'onlineScChange',
+                  cell: (r) => fmtMoney(r.onlineScChange),
+                },
+                {
+                  header: 'Store Balance Vary',
+                  accessorKey: 'storeBalanceVary',
+                  cell: (r) => fmtMoney(r.storeBalanceVary),
+                },
                 { header: 'Game & Product', accessorKey: 'game', cell: (r) => r.game ?? '-' },
-                { header: 'Type', accessorKey: 'type', cell: (r) => <span className="capitalize">{r.type} · {r.channel}</span> },
-                { header: 'Status', accessorKey: 'status', cell: (r) => <span className="capitalize">{r.status}</span> },
+                {
+                  header: 'Type',
+                  accessorKey: 'type',
+                  cell: (r) => (
+                    <span className="capitalize">
+                      {r.type} · {r.channel}
+                    </span>
+                  ),
+                },
+                {
+                  header: 'Status',
+                  accessorKey: 'status',
+                  cell: (r) => <span className="capitalize">{r.status}</span>,
+                },
               ]}
             />
           </Card>
@@ -218,23 +252,46 @@ export function TransactionScreen() {
               }
               columns={[
                 { header: 'Store Name', accessorKey: 'id', cell: (r) => '—' },
-                { header: 'Submit Time', accessorKey: 'submittedAt', cell: (r) => fmtDateTime(r.submittedAt) },
-                { header: 'Player', accessorKey: 'player', cell: (r) => <span className="font-medium">{r.player ?? '-'}</span> },
-                { header: 'Game Platform', accessorKey: 'platform', cell: (r) => r.platform ?? '-' },
+                {
+                  header: 'Submit Time',
+                  accessorKey: 'submittedAt',
+                  cell: (r) => fmtDateTime(r.submittedAt),
+                },
+                {
+                  header: 'Player',
+                  accessorKey: 'player',
+                  cell: (r) => <span className="font-medium">{r.player ?? '-'}</span>,
+                },
+                {
+                  header: 'Game Platform',
+                  accessorKey: 'platform',
+                  cell: (r) => r.platform ?? '-',
+                },
                 { header: 'Amount', accessorKey: 'amount', cell: (r) => fmtMoney(r.amount) },
                 {
                   header: 'Operations',
                   enableSorting: false,
                   enableGlobalFilter: false,
-                  cell: (r) => r.status === 'pending' ? (
-                    <div className="flex gap-3">
-                      <button className="text-green-600 hover:underline" onClick={() => void review(r.id, 'approved')}>Approve</button>
-                      <button className="text-red-500 hover:underline" onClick={() => void review(r.id, 'rejected')}>Reject</button>
-                    </div>
-                  ) : (
-                    <span className="capitalize text-slate-400">{r.status}</span>
-                  )
-                }
+                  cell: (r) =>
+                    r.status === 'pending' ? (
+                      <div className="flex gap-3">
+                        <button
+                          className="text-green-600 hover:underline"
+                          onClick={() => void review(r.id, 'approved')}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="text-red-500 hover:underline"
+                          onClick={() => void review(r.id, 'rejected')}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="capitalize text-slate-400">{r.status}</span>
+                    ),
+                },
               ]}
             />
           </Card>
@@ -251,14 +308,42 @@ export function TransactionScreen() {
                 rowKey={(r) => r.date}
                 columns={[
                   { header: 'Date', accessorKey: 'date' },
-                  { header: 'Store Balance Vary', accessorKey: 'storeBalanceVary', cell: (r) => fmtMoney(r.storeBalanceVary) },
+                  {
+                    header: 'Store Balance Vary',
+                    accessorKey: 'storeBalanceVary',
+                    cell: (r) => fmtMoney(r.storeBalanceVary),
+                  },
                   { header: 'TotalIn', accessorKey: 'totalIn', cell: (r) => fmtMoney(r.totalIn) },
-                  { header: 'TotalOut', accessorKey: 'totalOut', cell: (r) => fmtMoney(r.totalOut) },
-                  { header: 'Gross Net', accessorKey: 'grossNet', cell: (r) => fmtMoney(Number(r.totalIn) - Number(r.totalOut)) },
+                  {
+                    header: 'TotalOut',
+                    accessorKey: 'totalOut',
+                    cell: (r) => fmtMoney(r.totalOut),
+                  },
+                  {
+                    header: 'Gross Net',
+                    accessorKey: 'grossNet',
+                    cell: (r) => fmtMoney(Number(r.totalIn) - Number(r.totalOut)),
+                  },
                   { header: 'Bonus', accessorKey: 'bonus', cell: (r) => fmtMoney(r.bonus) },
-                  { header: 'Game Deposit Fee', accessorKey: 'gameDepositFee', cell: (r) => fmtMoney(r.gameDepositFee) },
-                  { header: 'Platform Fee', accessorKey: 'platformFee', cell: (r) => fmtMoney(r.platformFee) },
-                  { header: 'TotalNet', accessorKey: 'totalNet', cell: (r) => <span className="font-semibold">{fmtMoney(Number(r.totalIn) - Number(r.totalOut) - Number(r.platformFee))}</span> },
+                  {
+                    header: 'Game Deposit Fee',
+                    accessorKey: 'gameDepositFee',
+                    cell: (r) => fmtMoney(r.gameDepositFee),
+                  },
+                  {
+                    header: 'Platform Fee',
+                    accessorKey: 'platformFee',
+                    cell: (r) => fmtMoney(r.platformFee),
+                  },
+                  {
+                    header: 'TotalNet',
+                    accessorKey: 'totalNet',
+                    cell: (r) => (
+                      <span className="font-semibold">
+                        {fmtMoney(Number(r.totalIn) - Number(r.totalOut) - Number(r.platformFee))}
+                      </span>
+                    ),
+                  },
                 ]}
               />
             </div>
@@ -269,13 +354,33 @@ export function TransactionScreen() {
                 rowKey={(r) => r.game}
                 columns={[
                   { header: 'Game', accessorKey: 'game' },
-                  { header: 'Store Balance Vary', accessorKey: 'storeBalanceVary', cell: (r) => fmtMoney(r.storeBalanceVary) },
+                  {
+                    header: 'Store Balance Vary',
+                    accessorKey: 'storeBalanceVary',
+                    cell: (r) => fmtMoney(r.storeBalanceVary),
+                  },
                   { header: 'TotalIn', accessorKey: 'totalIn', cell: (r) => fmtMoney(r.totalIn) },
-                  { header: 'TotalOut', accessorKey: 'totalOut', cell: (r) => fmtMoney(r.totalOut) },
-                  { header: 'Gross Net', accessorKey: 'grossNet', cell: (r) => fmtMoney(Number(r.totalIn) - Number(r.totalOut)) },
+                  {
+                    header: 'TotalOut',
+                    accessorKey: 'totalOut',
+                    cell: (r) => fmtMoney(r.totalOut),
+                  },
+                  {
+                    header: 'Gross Net',
+                    accessorKey: 'grossNet',
+                    cell: (r) => fmtMoney(Number(r.totalIn) - Number(r.totalOut)),
+                  },
                   { header: 'Bonus', accessorKey: 'bonus', cell: (r) => fmtMoney(r.bonus) },
-                  { header: 'Game Deposit Fee', accessorKey: 'gameDepositFee', cell: (r) => fmtMoney(r.gameDepositFee) },
-                  { header: 'Platform Fee', accessorKey: 'platformFee', cell: (r) => fmtMoney(r.platformFee) },
+                  {
+                    header: 'Game Deposit Fee',
+                    accessorKey: 'gameDepositFee',
+                    cell: (r) => fmtMoney(r.gameDepositFee),
+                  },
+                  {
+                    header: 'Platform Fee',
+                    accessorKey: 'platformFee',
+                    cell: (r) => fmtMoney(r.platformFee),
+                  },
                 ]}
               />
             </div>

@@ -2,15 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Edit, ShieldCheck, ShieldAlert, Trash2, Plus } from 'lucide-react';
-import {
-  api,
-  Btn,
-  Card,
-  Field,
-  fmtDateTime,
-  Modal,
-  TextInput,
-} from '@/components/agent/ui';
+import { api, Btn, Card, Field, fmtDateTime, Modal, TextInput } from '@/components/agent/ui';
 import { DataTable } from '@/components/ui/DataTable';
 import { useAdminPanel } from '@/components/admin/AdminShell';
 
@@ -127,9 +119,11 @@ export function SystemAdminsScreen() {
   if (!me.isSuperAdmin) {
     return (
       <div className="p-8 text-center">
-        <ShieldAlert className="mx-auto h-12 w-12 text-red-400 mb-4" />
+        <ShieldAlert className="mx-auto mb-4 h-12 w-12 text-red-400" />
         <h2 className="text-xl font-bold text-slate-800">Access Denied</h2>
-        <p className="text-slate-500 mt-2">You do not have permission to view or manage System Admins.</p>
+        <p className="mt-2 text-slate-500">
+          You do not have permission to view or manage System Admins.
+        </p>
       </div>
     );
   }
@@ -174,7 +168,7 @@ export function SystemAdminsScreen() {
                     </span>
                   )}
                 </div>
-              )
+              ),
             },
             { header: 'Email', accessorKey: 'email' },
             {
@@ -186,23 +180,31 @@ export function SystemAdminsScreen() {
                     r.status === 'active'
                       ? 'rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600'
                       : r.status === 'invited'
-                      ? 'rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-600'
-                      : 'rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-500'
+                        ? 'rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-600'
+                        : 'rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-500'
                   }
                 >
-                  {r.status === 'active' ? 'Active' : r.status === 'invited' ? 'Invited' : 'Suspended'}
+                  {r.status === 'active'
+                    ? 'Active'
+                    : r.status === 'invited'
+                      ? 'Invited'
+                      : 'Suspended'}
                 </span>
-              )
+              ),
             },
             {
               header: 'Last Login',
               accessorKey: 'lastLoginAt',
-              cell: (r) => <span className="text-sm text-slate-500">{fmtDateTime(r.lastLoginAt)}</span>
+              cell: (r) => (
+                <span className="text-sm text-slate-500">{fmtDateTime(r.lastLoginAt)}</span>
+              ),
             },
             {
               header: 'Created',
               accessorKey: 'createdAt',
-              cell: (r) => <span className="text-sm text-slate-500">{fmtDateTime(r.createdAt)}</span>
+              cell: (r) => (
+                <span className="text-sm text-slate-500">{fmtDateTime(r.createdAt)}</span>
+              ),
             },
             {
               header: 'Operations',
@@ -229,7 +231,11 @@ export function SystemAdminsScreen() {
                       className="px-2 text-xs"
                       disabled={deleteBusy && deleteId === r.id}
                       onClick={() => {
-                        if (window.confirm(`Are you sure you want to permanently delete admin ${r.username}?`)) {
+                        if (
+                          window.confirm(
+                            `Are you sure you want to permanently delete admin ${r.username}?`
+                          )
+                        ) {
                           setDeleteId(r.id);
                           void removeAdmin();
                         }
@@ -239,8 +245,8 @@ export function SystemAdminsScreen() {
                     </Btn>
                   )}
                 </div>
-              )
-            }
+              ),
+            },
           ]}
         />
       </Card>
@@ -304,10 +310,12 @@ export function SystemAdminsScreen() {
         }
       >
         <div className="space-y-4">
-          {editErr && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{editErr}</p>}
+          {editErr && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{editErr}</p>
+          )}
           <div className="mb-4">
             <label className="text-sm font-medium text-slate-700">Username</label>
-            <div className="mt-1 text-slate-900 font-semibold">{editRow?.username}</div>
+            <div className="mt-1 font-semibold text-slate-900">{editRow?.username}</div>
           </div>
           <Field label="Email" required>
             <TextInput

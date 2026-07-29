@@ -2,16 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
-import {
-  api,
-  Btn,
-  Card,
-  Field,
-  fmtDateTime,
-  fmtMoney,
-  Modal,
-  TextInput,
-} from '../ui';
+import { api, Btn, Card, Field, fmtDateTime, fmtMoney, Modal, TextInput } from '../ui';
 import { DataTable } from '@/components/ui/DataTable';
 
 interface MemberRow {
@@ -144,16 +135,36 @@ export function MemberScreen() {
                     </span>
                   )}
                 </>
-              )
+              ),
             },
             { header: 'Phone', accessorKey: 'phone', cell: (r) => r.phone ?? '' },
             { header: 'Sale Agent', accessorKey: 'saleAgent', cell: (r) => r.saleAgent ?? '-' },
-            { header: 'Online SC', accessorKey: 'onlineSc', cell: (r) => <span className="font-semibold text-green-600">{fmtMoney(r.onlineSc)}</span> },
+            {
+              header: 'Online SC',
+              accessorKey: 'onlineSc',
+              cell: (r) => (
+                <span className="font-semibold text-green-600">{fmtMoney(r.onlineSc)}</span>
+              ),
+            },
             { header: 'Deposit', accessorKey: 'deposit', cell: (r) => fmtMoney(r.deposit) },
             { header: 'Withdraw', accessorKey: 'withdraw', cell: (r) => fmtMoney(r.withdraw) },
-            { header: 'TotalNet', accessorKey: 'totalNet', cell: (r) => <span className="font-semibold text-green-600">{fmtMoney(r.totalNet)}</span> },
-            { header: 'TotalIn Score', accessorKey: 'totalIn', cell: (r) => Number(r.totalIn).toFixed(2) },
-            { header: 'TotalOut Score', accessorKey: 'totalOut', cell: (r) => Number(r.totalOut).toFixed(2) },
+            {
+              header: 'TotalNet',
+              accessorKey: 'totalNet',
+              cell: (r) => (
+                <span className="font-semibold text-green-600">{fmtMoney(r.totalNet)}</span>
+              ),
+            },
+            {
+              header: 'TotalIn Score',
+              accessorKey: 'totalIn',
+              cell: (r) => Number(r.totalIn).toFixed(2),
+            },
+            {
+              header: 'TotalOut Score',
+              accessorKey: 'totalOut',
+              cell: (r) => Number(r.totalOut).toFixed(2),
+            },
             {
               header: 'Operations',
               enableSorting: false,
@@ -177,8 +188,8 @@ export function MemberScreen() {
                     More ▾
                   </button>
                 </div>
-              )
-            }
+              ),
+            },
           ]}
         />
       </Card>
@@ -262,7 +273,11 @@ export function MemberScreen() {
                 rowKey={(r) => r.platform}
                 columns={[
                   { header: 'Platform', accessorKey: 'platform' },
-                  { header: 'Game Username', accessorKey: 'gameUsername', cell: (r) => r.gameUsername ?? '-' },
+                  {
+                    header: 'Game Username',
+                    accessorKey: 'gameUsername',
+                    cell: (r) => r.gameUsername ?? '-',
+                  },
                 ]}
               />
             </div>
@@ -272,7 +287,11 @@ export function MemberScreen() {
                 data={detail.logins}
                 rowKey={(r) => r.createdAt}
                 columns={[
-                  { header: 'Time', accessorKey: 'createdAt', cell: (r) => fmtDateTime(r.createdAt) },
+                  {
+                    header: 'Time',
+                    accessorKey: 'createdAt',
+                    cell: (r) => fmtDateTime(r.createdAt),
+                  },
                   { header: 'IP', accessorKey: 'ipAddress', cell: (r) => r.ipAddress ?? '-' },
                   { header: 'Device', accessorKey: 'device', cell: (r) => r.device ?? '-' },
                 ]}

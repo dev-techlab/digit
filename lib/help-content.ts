@@ -131,8 +131,7 @@ const BTC_ADDRESS_CASHAPP: HelpStep[] = [
   },
   {
     title: 'Copy your Bitcoin Network address',
-    description:
-      `Tap the copy icon next to the Bitcoin Network address and paste it into ${APP_NAME}.`,
+    description: `Tap the copy icon next to the Bitcoin Network address and paste it into ${APP_NAME}.`,
   },
 ];
 

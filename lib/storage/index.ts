@@ -33,7 +33,9 @@ export async function readUrl(key: string, opts: { private?: boolean } = {}): Pr
 /** Presigned PUT for direct-to-R2 browser uploads (R2 only). */
 export async function presignPut(key: string, contentType: string): Promise<string> {
   if (driver() !== 'r2') {
-    throw new Error('Presigned uploads require R2 — the local driver uploads through POST /api/media');
+    throw new Error(
+      'Presigned uploads require R2 — the local driver uploads through POST /api/media'
+    );
   }
   return r2.presignUpload(key, contentType);
 }

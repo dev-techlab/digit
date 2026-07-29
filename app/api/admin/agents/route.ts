@@ -19,12 +19,18 @@ async function authorize(
 ): Promise<{ adminId: string; error: undefined } | { adminId: undefined; error: NextResponse }> {
   const adminId = await getAdminIdFromRequest(req);
   if (!adminId)
-    return { adminId: undefined, error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+    return {
+      adminId: undefined,
+      error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+    };
   try {
     await requirePermission(adminId, permKey);
   } catch (e) {
     if (e instanceof PermissionError) {
-      return { adminId: undefined, error: NextResponse.json({ error: e.message }, { status: e.status }) };
+      return {
+        adminId: undefined,
+        error: NextResponse.json({ error: e.message }, { status: e.status }),
+      };
     }
     throw e;
   }
@@ -79,7 +85,10 @@ export async function GET(req: Request) {
       .orderBy(desc(s.agents.createdAt))
       .limit(pageSize)
       .offset((page - 1) * pageSize),
-    db.select({ count: sql<number>`count(*)::int` }).from(s.agents).where(where),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(s.agents)
+      .where(where),
   ]);
 
   return NextResponse.json({ agents: rows, total: count });
@@ -118,25 +127,24 @@ export async function POST(req: Request) {
         passwordHash: await bcrypt.hash(password, 10),
         nickname: nickname || username,
         email: email || null,
-        commissionPer: Number.isFinite(Number(body.commissionPer)) ? String(body.commissionPer) : '0',
+        commissionPer: Number.isFinite(Number(body.commissionPer))
+          ? String(body.commissionPer)
+          : '0',
         inviteCode: `MC${randomBytes(8).toString('hex').toUpperCase()}`,
         remark,
       })
       .returning();
     // A store's storeId is itself — the root of its own agent hierarchy.
     await db.update(s.agents).set({ storeId: created.id }).where(eq(s.agents.id, created.id));
-    await db
-      .insert(s.storeSettings)
-      .values({ storeId: created.id })
-      .onConflictDoNothing();
+    await db.insert(s.storeSettings).values({ storeId: created.id }).onConflictDoNothing();
 
     const platformIds = Array.isArray(body.platformIds)
       ? body.platformIds.filter((id: unknown): id is string => typeof id === 'string')
       : [];
     if (platformIds.length > 0) {
-      await db.insert(s.agentPlatformMappings).values(
-        platformIds.map((platformId: string) => ({ agentId: created.id, platformId }))
-      );
+      await db
+        .insert(s.agentPlatformMappings)
+        .values(platformIds.map((platformId: string) => ({ agentId: created.id, platformId })));
     }
 
     await logAdminAction({
@@ -179,7 +187,7 @@ export async function PUT(req: Request) {
   if (typeof body.nickname === 'string') set.nickname = body.nickname.trim() || null;
   if (typeof body.email === 'string') set.email = body.email.trim() || null;
   if (typeof body.remark === 'string') set.remark = body.remark.slice(0, 300) || null;
-  
+
   if (Object.keys(set).length === 0) {
     return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
   }
@@ -189,7 +197,7 @@ export async function PUT(req: Request) {
     .set(set)
     .where(and(eq(s.agents.id, id), eq(s.agents.type, 'store')))
     .returning({ id: s.agents.id });
-    
+
   if (!row) return NextResponse.json({ error: 'not found' }, { status: 404 });
 
   if (set.status) {

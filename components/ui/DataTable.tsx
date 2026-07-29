@@ -103,11 +103,16 @@ export function DataTable<T>({
   }, [filteredData, sorting, manualPagination]);
 
   // 3. Paginate
-  const activeLimit = limit === 'All' ? Math.max(1, manualPagination ? (totalRows ?? data.length) : sortedData.length) : limit;
+  const activeLimit =
+    limit === 'All'
+      ? Math.max(1, manualPagination ? (totalRows ?? data.length) : sortedData.length)
+      : limit;
   const totalItems = manualPagination ? (totalRows ?? data.length) : sortedData.length;
   const pages = Math.max(1, Math.ceil(totalItems / activeLimit));
   const currentPageVal = Math.min(page, pages);
-  const paginatedData = manualPagination ? data : sortedData.slice((currentPageVal - 1) * activeLimit, currentPageVal * activeLimit);
+  const paginatedData = manualPagination
+    ? data
+    : sortedData.slice((currentPageVal - 1) * activeLimit, currentPageVal * activeLimit);
 
   const handleSort = (colId: string) => {
     if (manualPagination) return; // Disable client sort if manual
@@ -170,15 +175,24 @@ export function DataTable<T>({
                 return (
                   <th
                     key={i}
-                    className={cn('whitespace-nowrap px-4 py-3 font-semibold', canSort && 'cursor-pointer select-none hover:bg-slate-100')}
+                    className={cn(
+                      'whitespace-nowrap px-4 py-3 font-semibold',
+                      canSort && 'cursor-pointer select-none hover:bg-slate-100'
+                    )}
                     onClick={() => canSort && handleSort(col.accessorKey as string)}
                   >
                     <div className="flex items-center gap-1.5">
                       {col.header}
                       {canSort && (
                         <div className="flex flex-col text-slate-300">
-                          <ChevronUp size={12} className={cn('-mb-1', isSorted && !sorting?.desc && 'text-blue-500')} />
-                          <ChevronDown size={12} className={cn(isSorted && sorting?.desc && 'text-blue-500')} />
+                          <ChevronUp
+                            size={12}
+                            className={cn('-mb-1', isSorted && !sorting?.desc && 'text-blue-500')}
+                          />
+                          <ChevronDown
+                            size={12}
+                            className={cn(isSorted && sorting?.desc && 'text-blue-500')}
+                          />
                         </div>
                       )}
                     </div>
@@ -202,7 +216,11 @@ export function DataTable<T>({
                 <tr key={rowKey(row)} className="hover:bg-slate-50/60">
                   {columns.map((col, colIndex) => (
                     <td key={colIndex} className={cn('px-4 py-2.5', col.className)}>
-                      {col.cell ? col.cell(row, rowIndex) : col.accessorKey ? String(row[col.accessorKey] ?? '') : null}
+                      {col.cell
+                        ? col.cell(row, rowIndex)
+                        : col.accessorKey
+                          ? String(row[col.accessorKey] ?? '')
+                          : null}
                     </td>
                   ))}
                 </tr>

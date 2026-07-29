@@ -37,8 +37,14 @@ interface PlatformOption {
   availableToTime?: string;
 }
 
-
-const emptyForm = () => ({ username: '', password: '', nickname: '', email: '', commissionPer: '0.00', remark: '' });
+const emptyForm = () => ({
+  username: '',
+  password: '',
+  nickname: '',
+  email: '',
+  commissionPer: '0.00',
+  remark: '',
+});
 
 /** Top-level store/agent accounts — the B2B side that resells game credits to members. */
 export function AgentsScreen() {
@@ -57,7 +63,12 @@ export function AgentsScreen() {
 
   const [editOpen, setEditOpen] = useState(false);
   const [editRow, setEditRow] = useState<AgentRow | null>(null);
-  const [editForm, setEditForm] = useState({ nickname: '', email: '', commissionPer: '0', remark: '' });
+  const [editForm, setEditForm] = useState({
+    nickname: '',
+    email: '',
+    commissionPer: '0',
+    remark: '',
+  });
   const [editBusy, setEditBusy] = useState(false);
   const [editErr, setEditErr] = useState<string | null>(null);
   const [platforms, setPlatforms] = useState<PlatformOption[]>([]);
@@ -93,11 +104,7 @@ export function AgentsScreen() {
         }>;
       }>(`/api/admin/agent-platforms?agentId=${encodeURIComponent(agentId)}`);
       setPlatforms(data.platforms);
-      setSelectedPlatforms(
-        data.platforms
-          .filter((p) => p.assigned)
-          .map((p) => p.id)
-      );
+      setSelectedPlatforms(data.platforms.filter((p) => p.assigned).map((p) => p.id));
       return;
     }
 
@@ -120,15 +127,21 @@ export function AgentsScreen() {
     }
     setSaving(true);
     try {
-      const agentData = await api<{ agent: { id: string; username: string; password: string } }>('/api/admin/agents', {
-        method: 'POST',
-        body: JSON.stringify({ ...form }),
-      });
+      const agentData = await api<{ agent: { id: string; username: string; password: string } }>(
+        '/api/admin/agents',
+        {
+          method: 'POST',
+          body: JSON.stringify({ ...form }),
+        }
+      );
 
       if (selectedPlatforms.length > 0) {
         await api('/api/admin/agent-platforms', {
           method: 'PUT',
-          body: JSON.stringify({ agentId: agentData.agent.id, assignments: selectedPlatforms.map(id => ({ platformId: id })) }),
+          body: JSON.stringify({
+            agentId: agentData.agent.id,
+            assignments: selectedPlatforms.map((id) => ({ platformId: id })),
+          }),
         });
       }
 
@@ -162,7 +175,10 @@ export function AgentsScreen() {
       });
       await api('/api/admin/agent-platforms', {
         method: 'PUT',
-        body: JSON.stringify({ agentId: editRow.id, assignments: selectedPlatforms.map(id => ({ platformId: id })) }),
+        body: JSON.stringify({
+          agentId: editRow.id,
+          assignments: selectedPlatforms.map((id) => ({ platformId: id })),
+        }),
       });
       void load(page, search);
       setEditOpen(false);
@@ -178,7 +194,10 @@ export function AgentsScreen() {
     setBusyId(row.id);
     setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, status: next } : r)));
     try {
-      await api('/api/admin/agents', { method: 'PUT', body: JSON.stringify({ id: row.id, status: next }) });
+      await api('/api/admin/agents', {
+        method: 'PUT',
+        body: JSON.stringify({ id: row.id, status: next }),
+      });
     } catch (e) {
       setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, status: row.status } : r)));
       window.alert(e instanceof Error ? e.message : 'Failed to update status.');
@@ -188,7 +207,9 @@ export function AgentsScreen() {
   };
 
   const renderGameSelector = (label = 'Platforms') => {
-    const filtered = platforms.filter((p) => p.name.toLowerCase().includes(gameSearch.toLowerCase()));
+    const filtered = platforms.filter((p) =>
+      p.name.toLowerCase().includes(gameSearch.toLowerCase())
+    );
 
     return (
       <Field label={label}>
@@ -276,45 +297,50 @@ export function AgentsScreen() {
               header: 'Username',
               accessorKey: 'username',
               cell: (r) => (
-                <Link href={`/admin/agents/${r.id}`} className="font-medium text-blue-600 hover:underline">
+                <Link
+                  href={`/admin/agents/${r.id}`}
+                  className="font-medium text-blue-600 hover:underline"
+                >
                   {r.username}
                 </Link>
-              )
+              ),
             },
             {
               header: 'Nickname',
               accessorKey: 'nickname',
-              cell: (r) => r.nickname ?? '-'
+              cell: (r) => r.nickname ?? '-',
             },
             {
               header: 'Email',
               accessorKey: 'email',
-              cell: (r) => r.email ?? '-'
+              cell: (r) => r.email ?? '-',
             },
             {
               header: 'Withdraw Comm. %',
               accessorKey: 'commissionPer',
-              cell: (r) => r.commissionPer ?? '-'
+              cell: (r) => r.commissionPer ?? '-',
             },
             {
               header: 'Online Balance',
               accessorKey: 'onlineBalance',
-              cell: (r) => <span className="font-semibold text-green-600">{fmtMoney(r.onlineBalance)}</span>
+              cell: (r) => (
+                <span className="font-semibold text-green-600">{fmtMoney(r.onlineBalance)}</span>
+              ),
             },
             {
               header: 'Invite Code',
               accessorKey: 'inviteCode',
-              cell: (r) => <span className="font-mono text-xs text-slate-500">{r.inviteCode}</span>
+              cell: (r) => <span className="font-mono text-xs text-slate-500">{r.inviteCode}</span>,
             },
             {
               header: 'Last Login',
               accessorKey: 'lastLoginAt',
-              cell: (r) => fmtDateTime(r.lastLoginAt)
+              cell: (r) => fmtDateTime(r.lastLoginAt),
             },
             {
               header: 'Created',
               accessorKey: 'createdAt',
-              cell: (r) => fmtDateTime(r.createdAt)
+              cell: (r) => fmtDateTime(r.createdAt),
             },
             {
               header: 'Status',
@@ -329,7 +355,7 @@ export function AgentsScreen() {
                 >
                   {r.status === 'active' ? 'Active' : 'Disabled'}
                 </span>
-              )
+              ),
             },
             {
               header: 'Operations',
@@ -365,8 +391,8 @@ export function AgentsScreen() {
                     {r.status === 'active' ? 'Block Access' : 'Restore Access'}
                   </Btn>
                 </div>
-              )
-            }
+              ),
+            },
           ]}
         />
       </Card>
@@ -410,7 +436,10 @@ export function AgentsScreen() {
               />
             </Field>
             <Field label="Email">
-              <TextInput value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              <TextInput
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+              />
             </Field>
             <Field label="Withdraw Comm." hint="%">
               <TextInput
@@ -466,14 +495,25 @@ export function AgentsScreen() {
         )}
       </Modal>
 
-      <Modal title="Edit Agent" open={editOpen} onClose={() => setEditOpen(false)} footer={
-        <>
-          <Btn variant="ghost" onClick={() => setEditOpen(false)}>Cancel</Btn>
-          <Btn onClick={saveEdit} disabled={editBusy}>{editBusy ? 'Saving…' : 'Save'}</Btn>
-        </>
-      }>
+      <Modal
+        title="Edit Agent"
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        footer={
+          <>
+            <Btn variant="ghost" onClick={() => setEditOpen(false)}>
+              Cancel
+            </Btn>
+            <Btn onClick={saveEdit} disabled={editBusy}>
+              {editBusy ? 'Saving…' : 'Save'}
+            </Btn>
+          </>
+        }
+      >
         <div className="space-y-4">
-          {editErr && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{editErr}</p>}
+          {editErr && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{editErr}</p>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <Field label="Nickname">
               <TextInput

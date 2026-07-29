@@ -10,7 +10,7 @@ in-memory `AuthProvider` maps onto exactly one table below.
 - **Conventions:** `snake_case` tables & columns, plural table names, `id` PK
   (`uuid` default `gen_random_uuid()` unless noted), `numeric(18,2)` for money /
   coin amounts (stored as strings today — keep 2-decimal precision), UTC
-  `timestamptz` for all times, soft config marked *seed/reference data*.
+  `timestamptz` for all times, soft config marked _seed/reference data_.
 - **Currencies:** `GC` = Gold Coins (play-only, non-redeemable), `SC` =
   Sweepstakes Coins (redeemable).
 
@@ -382,188 +382,200 @@ CREATE TYPE invitation_status   AS ENUM ('pending','accepted','revoked','expired
 Legend for **Source**: where the data lives today, so the migration/seed step is unambiguous.
 
 ### 3.1 `users`
+
 Replaces the in-memory `MockUser` in `lib/auth-context.tsx` plus the auth modals.
 
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `username` | text | UNIQUE, NOT NULL | login handle, e.g. `player_2481` |
-| `nickname` | text | NOT NULL | display name |
-| `password_hash` | text | NOT NULL | bcrypt/argon2; never returned to client |
-| `phone` | text | NULL | E.164 |
-| `phone_bound` | boolean | NOT NULL DEFAULT false | drives `BindPhoneModal`/`KycBanner` |
-| `email` | text | NULL | |
-| `avatar_url` | text | NULL | uploaded avatar |
-| `avatar_emoji` | text | NOT NULL DEFAULT '🎰' | fallback avatar |
-| `kyc_status` | kyc_status | NOT NULL DEFAULT 'unverified' | |
-| `pwa_installed` | boolean | NOT NULL DEFAULT false | |
-| `invite_code` | text | UNIQUE, NOT NULL | this user's own referral code (`referral.json.inviteCode`) |
-| `referred_by_user_id` | uuid | FK → users.id NULL | who invited them |
-| `created_at` | timestamptz | NOT NULL DEFAULT now() | |
-| `updated_at` | timestamptz | NOT NULL DEFAULT now() | |
+| Column                | Type        | Constraints                   | Notes                                                      |
+| --------------------- | ----------- | ----------------------------- | ---------------------------------------------------------- |
+| `id`                  | uuid        | PK                            |                                                            |
+| `username`            | text        | UNIQUE, NOT NULL              | login handle, e.g. `player_2481`                           |
+| `nickname`            | text        | NOT NULL                      | display name                                               |
+| `password_hash`       | text        | NOT NULL                      | bcrypt/argon2; never returned to client                    |
+| `phone`               | text        | NULL                          | E.164                                                      |
+| `phone_bound`         | boolean     | NOT NULL DEFAULT false        | drives `BindPhoneModal`/`KycBanner`                        |
+| `email`               | text        | NULL                          |                                                            |
+| `avatar_url`          | text        | NULL                          | uploaded avatar                                            |
+| `avatar_emoji`        | text        | NOT NULL DEFAULT '🎰'         | fallback avatar                                            |
+| `kyc_status`          | kyc_status  | NOT NULL DEFAULT 'unverified' |                                                            |
+| `pwa_installed`       | boolean     | NOT NULL DEFAULT false        |                                                            |
+| `invite_code`         | text        | UNIQUE, NOT NULL              | this user's own referral code (`referral.json.inviteCode`) |
+| `referred_by_user_id` | uuid        | FK → users.id NULL            | who invited them                                           |
+| `created_at`          | timestamptz | NOT NULL DEFAULT now()        |                                                            |
+| `updated_at`          | timestamptz | NOT NULL DEFAULT now()        |                                                            |
 
 **Source:** `lib/auth-context.tsx` (`DEMO_USER`), `data/mock/referral.json` (invite code).
-`inviteLink` is *derived*: `${NEXT_PUBLIC_SITE_URL}/?inviteCode=${invite_code}`.
+`inviteLink` is _derived_: `${NEXT_PUBLIC_SITE_URL}/?inviteCode=${invite_code}`.
 
 ### 3.2 `wallets` — 1:1 with users
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `user_id` | uuid | FK → users.id, UNIQUE, NOT NULL | |
-| `gold_coin` | numeric(18,2) | NOT NULL DEFAULT 0 | GC balance |
-| `online_sc` | numeric(18,2) | NOT NULL DEFAULT 0 | |
-| `store_sc` | numeric(18,2) | NOT NULL DEFAULT 0 | |
-| `kiosk_sc` | numeric(18,2) | NOT NULL DEFAULT 0 | |
-| `unwagered` | numeric(18,2) | NOT NULL DEFAULT 0 | SC still under wagering requirement |
-| `free_bonus` | numeric(18,2) | NOT NULL DEFAULT 0 | |
-| `updated_at` | timestamptz | NOT NULL DEFAULT now() | |
+
+| Column       | Type          | Constraints                     | Notes                               |
+| ------------ | ------------- | ------------------------------- | ----------------------------------- |
+| `id`         | uuid          | PK                              |                                     |
+| `user_id`    | uuid          | FK → users.id, UNIQUE, NOT NULL |                                     |
+| `gold_coin`  | numeric(18,2) | NOT NULL DEFAULT 0              | GC balance                          |
+| `online_sc`  | numeric(18,2) | NOT NULL DEFAULT 0              |                                     |
+| `store_sc`   | numeric(18,2) | NOT NULL DEFAULT 0              |                                     |
+| `kiosk_sc`   | numeric(18,2) | NOT NULL DEFAULT 0              |                                     |
+| `unwagered`  | numeric(18,2) | NOT NULL DEFAULT 0              | SC still under wagering requirement |
+| `free_bonus` | numeric(18,2) | NOT NULL DEFAULT 0              |                                     |
+| `updated_at` | timestamptz   | NOT NULL DEFAULT now()          |                                     |
 
 **Derived, do NOT store** (compute in the API/selector — matches `WalletBalance`):
+
 - `totalBalance = online_sc + store_sc + kiosk_sc`
 - `withdrawable = totalBalance − unwagered`
 
 **Source:** `data/mock/wallet.json`.
 
-### 3.3 `game_providers` — *reference data (live API cache)*
+### 3.3 `game_providers` — _reference data (live API cache)_
+
 Direct row-for-row mapping of the `GameProvider` interface. Seeded from the live
 public API at the admin-managed `provider.api_base_url` setting (see
 `lib/settings.ts#getProviderApiBaseUrl`).
 
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | integer | PK | provider id from upstream API (not uuid) |
-| `name` | text | NOT NULL | |
-| `provider_code` | text | NOT NULL | |
-| `launch_url_template` | text | NOT NULL | |
-| `icon_url` | text | NOT NULL | CDN icon |
-| `status` | smallint | NOT NULL | 1 = active |
-| `sort` | smallint | NOT NULL DEFAULT 0 | grid order |
-| `create_type` | smallint | NOT NULL | |
-| `operate` | smallint | NOT NULL | |
-| `need_init_balance` | smallint | NOT NULL | |
-| `can_manual_input` | smallint | NOT NULL | |
-| `provider_type` | provider_type | NOT NULL | SC / GC — splits the two grids |
-| `iframe_supported` | boolean | NOT NULL | |
-| `is_machine_supported` | smallint | NOT NULL | |
-| `redeem_field` | smallint | NOT NULL | |
-| `invalid_password_state` | smallint | NOT NULL | |
-| `can_change_password` | smallint | NOT NULL | |
-| `synced_at` | timestamptz | NOT NULL DEFAULT now() | last refresh from upstream |
+| Column                   | Type          | Constraints            | Notes                                    |
+| ------------------------ | ------------- | ---------------------- | ---------------------------------------- |
+| `id`                     | integer       | PK                     | provider id from upstream API (not uuid) |
+| `name`                   | text          | NOT NULL               |                                          |
+| `provider_code`          | text          | NOT NULL               |                                          |
+| `launch_url_template`    | text          | NOT NULL               |                                          |
+| `icon_url`               | text          | NOT NULL               | CDN icon                                 |
+| `status`                 | smallint      | NOT NULL               | 1 = active                               |
+| `sort`                   | smallint      | NOT NULL DEFAULT 0     | grid order                               |
+| `create_type`            | smallint      | NOT NULL               |                                          |
+| `operate`                | smallint      | NOT NULL               |                                          |
+| `need_init_balance`      | smallint      | NOT NULL               |                                          |
+| `can_manual_input`       | smallint      | NOT NULL               |                                          |
+| `provider_type`          | provider_type | NOT NULL               | SC / GC — splits the two grids           |
+| `iframe_supported`       | boolean       | NOT NULL               |                                          |
+| `is_machine_supported`   | smallint      | NOT NULL               |                                          |
+| `redeem_field`           | smallint      | NOT NULL               |                                          |
+| `invalid_password_state` | smallint      | NOT NULL               |                                          |
+| `can_change_password`    | smallint      | NOT NULL               |                                          |
+| `synced_at`              | timestamptz   | NOT NULL DEFAULT now() | last refresh from upstream               |
 
 **Source:** `data/providers.sc.json` (48 rows), `data/providers.gc.json` (2 rows).
 
 ### 3.4 `provider_deposit_tiers`
+
 Normalizes the `depositTiers: DepositTier[] | null` array.
 
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `provider_id` | integer | FK → game_providers.id, NOT NULL | |
-| `amount` | numeric(18,2) | NOT NULL | |
-| `bonus_amount` | numeric(18,2) | NOT NULL DEFAULT 0 | |
-| `sort` | smallint | NOT NULL DEFAULT 0 | |
+| Column         | Type          | Constraints                      | Notes |
+| -------------- | ------------- | -------------------------------- | ----- |
+| `id`           | uuid          | PK                               |       |
+| `provider_id`  | integer       | FK → game_providers.id, NOT NULL |       |
+| `amount`       | numeric(18,2) | NOT NULL                         |       |
+| `bonus_amount` | numeric(18,2) | NOT NULL DEFAULT 0               |       |
+| `sort`         | smallint      | NOT NULL DEFAULT 0               |       |
 
 A provider with `null` tiers simply has zero rows here.
 
 ### 3.5 `user_provider_accounts`
+
 The per-user game login/balance each provider maintains (implied by
 `can_change_password`, `need_init_balance`, `redeem_field`, `invalid_password_state`).
 
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `user_id` | uuid | FK → users.id, NOT NULL | |
-| `provider_id` | integer | FK → game_providers.id, NOT NULL | |
-| `game_username` | text | NOT NULL | |
-| `game_password_enc` | text | NOT NULL | encrypted at rest |
-| `balance` | numeric(18,2) | NOT NULL DEFAULT 0 | in-game balance |
-| `initialized` | boolean | NOT NULL DEFAULT false | `need_init_balance` handshake done |
-| `created_at` | timestamptz | NOT NULL DEFAULT now() | |
-| `updated_at` | timestamptz | NOT NULL DEFAULT now() | |
+| Column              | Type          | Constraints                      | Notes                              |
+| ------------------- | ------------- | -------------------------------- | ---------------------------------- |
+| `id`                | uuid          | PK                               |                                    |
+| `user_id`           | uuid          | FK → users.id, NOT NULL          |                                    |
+| `provider_id`       | integer       | FK → game_providers.id, NOT NULL |                                    |
+| `game_username`     | text          | NOT NULL                         |                                    |
+| `game_password_enc` | text          | NOT NULL                         | encrypted at rest                  |
+| `balance`           | numeric(18,2) | NOT NULL DEFAULT 0               | in-game balance                    |
+| `initialized`       | boolean       | NOT NULL DEFAULT false           | `need_init_balance` handshake done |
+| `created_at`        | timestamptz   | NOT NULL DEFAULT now()           |                                    |
+| `updated_at`        | timestamptz   | NOT NULL DEFAULT now()           |                                    |
 
 **UNIQUE** (`user_id`, `provider_id`).
 
 ### 3.6 `orders` — deposit / recharge orders (`OrderRecord`)
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `order_no` | text | UNIQUE, NOT NULL | e.g. `DL202607010001` |
-| `user_id` | uuid | FK → users.id, NOT NULL | replaces `username` string |
-| `amount` | numeric(18,2) | NOT NULL | |
-| `pay_amount` | numeric(18,2) | NOT NULL | |
-| `actual_deposit_amount` | numeric(18,2) | NOT NULL DEFAULT 0 | |
-| `payment_method` | text | NOT NULL | human label, e.g. "Bitcoin Lightning Network" |
-| `fee` | numeric(18,2) | NOT NULL DEFAULT 0 | |
-| `fee_mode` | fee_mode | NOT NULL | |
-| `fee_waived` | boolean | NOT NULL DEFAULT false | |
-| `sc_bonus` | numeric(18,2) | NOT NULL DEFAULT 0 | |
-| `status` | order_status | NOT NULL | |
-| `created_at` | timestamptz | NOT NULL | maps `createTime` |
+
+| Column                  | Type          | Constraints             | Notes                                         |
+| ----------------------- | ------------- | ----------------------- | --------------------------------------------- |
+| `id`                    | uuid          | PK                      |                                               |
+| `order_no`              | text          | UNIQUE, NOT NULL        | e.g. `DL202607010001`                         |
+| `user_id`               | uuid          | FK → users.id, NOT NULL | replaces `username` string                    |
+| `amount`                | numeric(18,2) | NOT NULL                |                                               |
+| `pay_amount`            | numeric(18,2) | NOT NULL                |                                               |
+| `actual_deposit_amount` | numeric(18,2) | NOT NULL DEFAULT 0      |                                               |
+| `payment_method`        | text          | NOT NULL                | human label, e.g. "Bitcoin Lightning Network" |
+| `fee`                   | numeric(18,2) | NOT NULL DEFAULT 0      |                                               |
+| `fee_mode`              | fee_mode      | NOT NULL                |                                               |
+| `fee_waived`            | boolean       | NOT NULL DEFAULT false  |                                               |
+| `sc_bonus`              | numeric(18,2) | NOT NULL DEFAULT 0      |                                               |
+| `status`                | order_status  | NOT NULL                |                                               |
+| `created_at`            | timestamptz   | NOT NULL                | maps `createTime`                             |
 
 **Source:** `data/mock/orders.json`.
 
 ### 3.7 `transactions` — wallet ledger (`Transaction`)
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | text | PK | upstream id, e.g. `TX20260627001` |
-| `user_id` | uuid | FK → users.id, NOT NULL | |
-| `address` | text | NOT NULL | wallet address / handle (UI masks middle) |
-| `method_label` | text | NOT NULL | "Cash App", "Bitcoin Network"… |
-| `method` | payment_method | NOT NULL | |
-| `status` | tx_status | NOT NULL | |
-| `amount` | numeric(18,2) | NOT NULL | positive; sign derived from `type` |
-| `type` | tx_type | NOT NULL | |
-| `created_at` | timestamptz | NOT NULL | |
+
+| Column         | Type           | Constraints             | Notes                                     |
+| -------------- | -------------- | ----------------------- | ----------------------------------------- |
+| `id`           | text           | PK                      | upstream id, e.g. `TX20260627001`         |
+| `user_id`      | uuid           | FK → users.id, NOT NULL |                                           |
+| `address`      | text           | NOT NULL                | wallet address / handle (UI masks middle) |
+| `method_label` | text           | NOT NULL                | "Cash App", "Bitcoin Network"…            |
+| `method`       | payment_method | NOT NULL                |                                           |
+| `status`       | tx_status      | NOT NULL                |                                           |
+| `amount`       | numeric(18,2)  | NOT NULL                | positive; sign derived from `type`        |
+| `type`         | tx_type        | NOT NULL                |                                           |
+| `created_at`   | timestamptz    | NOT NULL                |                                           |
 
 **Source:** `data/mock/transactions.json`.
 
-### 3.8 `bonuses` — *reference data* (`BonusReward` definition)
+### 3.8 `bonuses` — _reference data_ (`BonusReward` definition)
+
 Per-user claim state lives in `user_bonus_claims`; this holds the static definition.
 
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | text | PK | slug, e.g. `daily-checkin` |
-| `title` | text | NOT NULL | |
-| `description` | text | NOT NULL | |
-| `tags` | text[] | NOT NULL DEFAULT '{}' | e.g. `{LONG-TERM,REFERRAL}` |
-| `active` | boolean | NOT NULL DEFAULT true | |
-| `banner_type` | banner_type | NOT NULL | |
-| `banner_gradient` | text | NULL | Tailwind gradient classes (gradient banners) |
-| `banner_badge_icon` | banner_badge_icon | NULL | |
-| `banner_badge_text` | text | NULL | e.g. `+10K`, `+15%` |
-| `schedule_icon` | schedule_icon | NOT NULL | |
-| `schedule_text` | text | NOT NULL DEFAULT '' | e.g. "Every Day", "One-Time" |
-| `schedule_countdown_seconds` | integer | NULL | daily countdown seed |
-| `sort` | smallint | NOT NULL DEFAULT 0 | |
+| Column                       | Type              | Constraints           | Notes                                        |
+| ---------------------------- | ----------------- | --------------------- | -------------------------------------------- |
+| `id`                         | text              | PK                    | slug, e.g. `daily-checkin`                   |
+| `title`                      | text              | NOT NULL              |                                              |
+| `description`                | text              | NOT NULL              |                                              |
+| `tags`                       | text[]            | NOT NULL DEFAULT '{}' | e.g. `{LONG-TERM,REFERRAL}`                  |
+| `active`                     | boolean           | NOT NULL DEFAULT true |                                              |
+| `banner_type`                | banner_type       | NOT NULL              |                                              |
+| `banner_gradient`            | text              | NULL                  | Tailwind gradient classes (gradient banners) |
+| `banner_badge_icon`          | banner_badge_icon | NULL                  |                                              |
+| `banner_badge_text`          | text              | NULL                  | e.g. `+10K`, `+15%`                          |
+| `schedule_icon`              | schedule_icon     | NOT NULL              |                                              |
+| `schedule_text`              | text              | NOT NULL DEFAULT ''   | e.g. "Every Day", "One-Time"                 |
+| `schedule_countdown_seconds` | integer           | NULL                  | daily countdown seed                         |
+| `sort`                       | smallint          | NOT NULL DEFAULT 0    |                                              |
 
 **Source:** `data/mock/bonus.json`.
 
 ### 3.9 `user_bonus_claims`
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `user_id` | uuid | FK → users.id, NOT NULL | |
-| `bonus_id` | text | FK → bonuses.id, NOT NULL | |
-| `status` | bonus_status | NOT NULL DEFAULT 'none' | per-user state for `BonusReward.status` |
-| `claimed_at` | timestamptz | NULL | |
-| `next_available_at` | timestamptz | NULL | drives live countdown for daily bonuses |
+
+| Column              | Type         | Constraints               | Notes                                   |
+| ------------------- | ------------ | ------------------------- | --------------------------------------- |
+| `id`                | uuid         | PK                        |                                         |
+| `user_id`           | uuid         | FK → users.id, NOT NULL   |                                         |
+| `bonus_id`          | text         | FK → bonuses.id, NOT NULL |                                         |
+| `status`            | bonus_status | NOT NULL DEFAULT 'none'   | per-user state for `BonusReward.status` |
+| `claimed_at`        | timestamptz  | NULL                      |                                         |
+| `next_available_at` | timestamptz  | NULL                      | drives live countdown for daily bonuses |
 
 **UNIQUE** (`user_id`, `bonus_id`). If no row exists → status `none`.
 
 ### 3.10 `referral_commissions`
+
 The `ReferralSummary.invitees[]` list. Summary scalars are **aggregated**, not stored.
 
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `referrer_user_id` | uuid | FK → users.id, NOT NULL | the inviter |
-| `invitee_user_id` | uuid | FK → users.id NULL | set once invitee registers |
-| `invitee_display` | text | NOT NULL | masked handle, e.g. `rC***91` |
-| `reward` | numeric(18,2) | NOT NULL DEFAULT 0 | |
-| `status` | referral_status | NOT NULL DEFAULT 'pending' | |
-| `joined_at` | timestamptz | NOT NULL | |
+| Column             | Type            | Constraints                | Notes                         |
+| ------------------ | --------------- | -------------------------- | ----------------------------- |
+| `id`               | uuid            | PK                         |                               |
+| `referrer_user_id` | uuid            | FK → users.id, NOT NULL    | the inviter                   |
+| `invitee_user_id`  | uuid            | FK → users.id NULL         | set once invitee registers    |
+| `invitee_display`  | text            | NOT NULL                   | masked handle, e.g. `rC***91` |
+| `reward`           | numeric(18,2)   | NOT NULL DEFAULT 0         |                               |
+| `status`           | referral_status | NOT NULL DEFAULT 'pending' |                               |
+| `joined_at`        | timestamptz     | NOT NULL                   |                               |
 
 **Derived `ReferralSummary`** for a user:
+
 - `totalInvited = count(*)`
 - `totalCommission = sum(reward) where status='claimed'`
 - `pendingCommission = sum(reward) where status='pending'`
@@ -572,313 +584,333 @@ The `ReferralSummary.invitees[]` list. Summary scalars are **aggregated**, not s
 **Source:** `data/mock/referral.json`.
 
 ### 3.11 `redemption_reviews` (`RedemptionReview`)
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `order_no` | text | NOT NULL | e.g. `RDM202607010003` |
-| `user_id` | uuid | FK → users.id, NOT NULL | |
-| `provider_id` | integer | FK → game_providers.id NULL | resolves the `provider` name string |
-| `provider_name` | text | NOT NULL | denormalized label (some providers may be delisted) |
-| `amount` | numeric(18,2) | NOT NULL | |
-| `status` | review_status | NOT NULL DEFAULT 'reviewing' | |
-| `visible` | boolean | NOT NULL DEFAULT true | user can hide a row |
-| `submitted_at` | timestamptz | NOT NULL | |
+
+| Column          | Type          | Constraints                  | Notes                                               |
+| --------------- | ------------- | ---------------------------- | --------------------------------------------------- |
+| `id`            | uuid          | PK                           |                                                     |
+| `order_no`      | text          | NOT NULL                     | e.g. `RDM202607010003`                              |
+| `user_id`       | uuid          | FK → users.id, NOT NULL      |                                                     |
+| `provider_id`   | integer       | FK → game_providers.id NULL  | resolves the `provider` name string                 |
+| `provider_name` | text          | NOT NULL                     | denormalized label (some providers may be delisted) |
+| `amount`        | numeric(18,2) | NOT NULL                     |                                                     |
+| `status`        | review_status | NOT NULL DEFAULT 'reviewing' |                                                     |
+| `visible`       | boolean       | NOT NULL DEFAULT true        | user can hide a row                                 |
+| `submitted_at`  | timestamptz   | NOT NULL                     |                                                     |
 
 **Source:** `data/mock/redemption-reviews.json`.
 
-### 3.12 `profile_tasks` — *reference data* (`PROFILE_TASKS`)
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `key` | text | PK | `phone` \| `kyc` \| `pwa` |
-| `title` | text | NOT NULL | |
-| `description` | text | NOT NULL | |
-| `reward_gc` | integer | NOT NULL | |
-| `reward_sc` | integer | NOT NULL | |
-| `sort` | smallint | NOT NULL DEFAULT 0 | sequential unlock order |
+### 3.12 `profile_tasks` — _reference data_ (`PROFILE_TASKS`)
 
-**Source:** `lib/profile-tasks.ts`. Task *completion* is derived from `users`
+| Column        | Type     | Constraints        | Notes                     |
+| ------------- | -------- | ------------------ | ------------------------- |
+| `key`         | text     | PK                 | `phone` \| `kyc` \| `pwa` |
+| `title`       | text     | NOT NULL           |                           |
+| `description` | text     | NOT NULL           |                           |
+| `reward_gc`   | integer  | NOT NULL           |                           |
+| `reward_sc`   | integer  | NOT NULL           |                           |
+| `sort`        | smallint | NOT NULL DEFAULT 0 | sequential unlock order   |
+
+**Source:** `lib/profile-tasks.ts`. Task _completion_ is derived from `users`
 (`phone_bound`, `kyc_status`, `pwa_installed`); the table below records reward payout.
 
 ### 3.13 `user_profile_task_claims`
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `user_id` | uuid | FK → users.id, NOT NULL | |
-| `task_key` | text | FK → profile_tasks.key, NOT NULL | |
-| `completed_at` | timestamptz | NULL | |
-| `reward_claimed` | boolean | NOT NULL DEFAULT false | |
+
+| Column           | Type        | Constraints                      | Notes |
+| ---------------- | ----------- | -------------------------------- | ----- |
+| `id`             | uuid        | PK                               |       |
+| `user_id`        | uuid        | FK → users.id, NOT NULL          |       |
+| `task_key`       | text        | FK → profile_tasks.key, NOT NULL |       |
+| `completed_at`   | timestamptz | NULL                             |       |
+| `reward_claimed` | boolean     | NOT NULL DEFAULT false           |       |
 
 **UNIQUE** (`user_id`, `task_key`).
 
 ### 3.14 `sessions` — auth
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `user_id` | uuid | FK → users.id, NOT NULL | |
-| `token` | text | UNIQUE, NOT NULL | opaque/JWT id |
-| `user_agent` | text | NULL | |
-| `expires_at` | timestamptz | NOT NULL | |
-| `created_at` | timestamptz | NOT NULL DEFAULT now() | |
+
+| Column       | Type        | Constraints             | Notes         |
+| ------------ | ----------- | ----------------------- | ------------- |
+| `id`         | uuid        | PK                      |               |
+| `user_id`    | uuid        | FK → users.id, NOT NULL |               |
+| `token`      | text        | UNIQUE, NOT NULL        | opaque/JWT id |
+| `user_agent` | text        | NULL                    |               |
+| `expires_at` | timestamptz | NOT NULL                |               |
+| `created_at` | timestamptz | NOT NULL DEFAULT now()  |               |
 
 ### 3.15 `otp_codes` — phone/email verification
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `user_id` | uuid | FK → users.id NULL | null for pre-registration OTP |
-| `destination` | text | NOT NULL | phone or email |
-| `code` | text | NOT NULL | hashed |
-| `purpose` | otp_purpose | NOT NULL | |
-| `expires_at` | timestamptz | NOT NULL | |
-| `consumed` | boolean | NOT NULL DEFAULT false | |
-| `created_at` | timestamptz | NOT NULL DEFAULT now() | |
+
+| Column        | Type        | Constraints            | Notes                         |
+| ------------- | ----------- | ---------------------- | ----------------------------- |
+| `id`          | uuid        | PK                     |                               |
+| `user_id`     | uuid        | FK → users.id NULL     | null for pre-registration OTP |
+| `destination` | text        | NOT NULL               | phone or email                |
+| `code`        | text        | NOT NULL               | hashed                        |
+| `purpose`     | otp_purpose | NOT NULL               |                               |
+| `expires_at`  | timestamptz | NOT NULL               |                               |
+| `consumed`    | boolean     | NOT NULL DEFAULT false |                               |
+| `created_at`  | timestamptz | NOT NULL DEFAULT now() |                               |
 
 ### 3.16 `postal_requests`
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `user_id` | uuid | FK → users.id NULL | |
-| `code` | text | NOT NULL | postal request code entered |
-| `status` | postal_status | NOT NULL DEFAULT 'pending' | |
-| `created_at` | timestamptz | NOT NULL DEFAULT now() | |
+
+| Column       | Type          | Constraints                | Notes                       |
+| ------------ | ------------- | -------------------------- | --------------------------- |
+| `id`         | uuid          | PK                         |                             |
+| `user_id`    | uuid          | FK → users.id NULL         |                             |
+| `code`       | text          | NOT NULL                   | postal request code entered |
+| `status`     | postal_status | NOT NULL DEFAULT 'pending' |                             |
+| `created_at` | timestamptz   | NOT NULL DEFAULT now()     |                             |
 
 **Source:** `components/orders/PostalRequestForm.tsx`.
 
 ### 3.17 `support_tickets`
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `user_id` | uuid | FK → users.id NULL | |
-| `email` | text | NULL | contact email |
-| `message` | text | NOT NULL | |
-| `status` | ticket_status | NOT NULL DEFAULT 'open' | |
-| `created_at` | timestamptz | NOT NULL DEFAULT now() | |
+
+| Column       | Type          | Constraints             | Notes         |
+| ------------ | ------------- | ----------------------- | ------------- |
+| `id`         | uuid          | PK                      |               |
+| `user_id`    | uuid          | FK → users.id NULL      |               |
+| `email`      | text          | NULL                    | contact email |
+| `message`    | text          | NOT NULL                |               |
+| `status`     | ticket_status | NOT NULL DEFAULT 'open' |               |
+| `created_at` | timestamptz   | NOT NULL DEFAULT now()  |               |
 
 **Source:** `components/legal/HelpCenterForm.tsx`.
 
-### 3.18 `content_pages` — *reference data* (legal + guides)
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `slug` | text | PK | `terms`, `privacy`, `sweeps-rules`, `responsible-gaming`, `deposit-guide` |
-| `title` | text | NOT NULL | |
-| `body` | text | NOT NULL | markdown/HTML |
-| `updated_at` | timestamptz | NOT NULL DEFAULT now() | |
+### 3.18 `content_pages` — _reference data_ (legal + guides)
+
+| Column       | Type        | Constraints            | Notes                                                                     |
+| ------------ | ----------- | ---------------------- | ------------------------------------------------------------------------- |
+| `slug`       | text        | PK                     | `terms`, `privacy`, `sweeps-rules`, `responsible-gaming`, `deposit-guide` |
+| `title`      | text        | NOT NULL               |                                                                           |
+| `body`       | text        | NOT NULL               | markdown/HTML                                                             |
+| `updated_at` | timestamptz | NOT NULL DEFAULT now() |                                                                           |
 
 **Source:** `app/(shell)/(legal)/*`, `app/(shell)/deposit-guide`.
 
-### 3.19 `banners` — *reference data* (game-page carousel)
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `image_url` | text | NOT NULL | |
-| `link_url` | text | NULL | |
-| `active` | boolean | NOT NULL DEFAULT true | |
-| `sort` | smallint | NOT NULL DEFAULT 0 | |
+### 3.19 `banners` — _reference data_ (game-page carousel)
+
+| Column      | Type     | Constraints           | Notes |
+| ----------- | -------- | --------------------- | ----- |
+| `id`        | uuid     | PK                    |       |
+| `image_url` | text     | NOT NULL              |       |
+| `link_url`  | text     | NULL                  |       |
+| `active`    | boolean  | NOT NULL DEFAULT true |       |
+| `sort`      | smallint | NOT NULL DEFAULT 0    |       |
 
 **Source:** `components/game/BannerCarousel.tsx`.
 
-### 3.20 Help content — *reference data* (`HELP_CONTENT`)
+### 3.20 Help content — _reference data_ (`HELP_CONTENT`)
+
 Three tables mirror the nested `Record<HelpTab, HelpSection[]>` structure.
 
 **`help_sections`**
 
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | uuid | PK |
-| `tab` | help_tab | NOT NULL |
-| `key` | text | NOT NULL |
-| `label` | text | NOT NULL |
-| `icon` | help_section_icon | NOT NULL |
-| `sort` | smallint | NOT NULL DEFAULT 0 |
+| Column  | Type              | Constraints        |
+| ------- | ----------------- | ------------------ |
+| `id`    | uuid              | PK                 |
+| `tab`   | help_tab          | NOT NULL           |
+| `key`   | text              | NOT NULL           |
+| `label` | text              | NOT NULL           |
+| `icon`  | help_section_icon | NOT NULL           |
+| `sort`  | smallint          | NOT NULL DEFAULT 0 |
 
 **`help_items`**
 
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | uuid | PK |
-| `section_id` | uuid | FK → help_sections.id, NOT NULL |
-| `title` | text | NOT NULL |
-| `icon` | help_item_icon | NULL |
-| `body` | text | NULL |
-| `sort` | smallint | NOT NULL DEFAULT 0 |
+| Column       | Type           | Constraints                     |
+| ------------ | -------------- | ------------------------------- |
+| `id`         | uuid           | PK                              |
+| `section_id` | uuid           | FK → help_sections.id, NOT NULL |
+| `title`      | text           | NOT NULL                        |
+| `icon`       | help_item_icon | NULL                            |
+| `body`       | text           | NULL                            |
+| `sort`       | smallint       | NOT NULL DEFAULT 0              |
 
 **`help_steps`**
 
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | uuid | PK |
-| `item_id` | uuid | FK → help_items.id, NOT NULL |
-| `title` | text | NOT NULL |
-| `description` | text | NOT NULL |
-| `sort` | smallint | NOT NULL DEFAULT 0 |
+| Column        | Type     | Constraints                  |
+| ------------- | -------- | ---------------------------- |
+| `id`          | uuid     | PK                           |
+| `item_id`     | uuid     | FK → help_items.id, NOT NULL |
+| `title`       | text     | NOT NULL                     |
+| `description` | text     | NOT NULL                     |
+| `sort`        | smallint | NOT NULL DEFAULT 0           |
 
 **Source:** `lib/help-content.ts`.
 
-### 3.21 `site_settings` — *global config (key/value, fully dynamic)*
+### 3.21 `site_settings` — _global config (key/value, fully dynamic)_
+
 A flexible, admin-editable store for every global value the UI currently
 hardcodes (site name, logo, support email, currency labels, feature toggles…).
 Rendered dynamically — no redeploy needed to change a value. Grouped so an admin
 panel can render sections, and typed so the client parses `value` correctly.
 
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `key` | text | PK | dotted key, e.g. `site.name`, `support.email` |
-| `value` | text | NOT NULL | raw value; parse per `type` |
-| `type` | setting_type | NOT NULL DEFAULT 'string' | how the client interprets `value` |
-| `group` | text | NOT NULL DEFAULT 'general' | `general` \| `contact` \| `branding` \| `feature` \| `legal` |
-| `label` | text | NULL | human label for an admin UI |
-| `is_public` | boolean | NOT NULL DEFAULT true | `false` = server-only (never sent to browser) |
-| `updated_at` | timestamptz | NOT NULL DEFAULT now() | |
+| Column       | Type         | Constraints                | Notes                                                        |
+| ------------ | ------------ | -------------------------- | ------------------------------------------------------------ |
+| `key`        | text         | PK                         | dotted key, e.g. `site.name`, `support.email`                |
+| `value`      | text         | NOT NULL                   | raw value; parse per `type`                                  |
+| `type`       | setting_type | NOT NULL DEFAULT 'string'  | how the client interprets `value`                            |
+| `group`      | text         | NOT NULL DEFAULT 'general' | `general` \| `contact` \| `branding` \| `feature` \| `legal` |
+| `label`      | text         | NULL                       | human label for an admin UI                                  |
+| `is_public`  | boolean      | NOT NULL DEFAULT true      | `false` = server-only (never sent to browser)                |
+| `updated_at` | timestamptz  | NOT NULL DEFAULT now()     |                                                              |
 
 **Seed rows** (replacing hardcoded values found in the app):
 
-| key | value | type | group |
-|---|---|---|---|
-| `site.name` | `Octan Link` | string | branding |
-| `site.logo_url` | `https://octanlink.com/img/icons/icon-192x192.png` | image | branding |
-| `site.url` | `https://octanlink.com` | url | general |
-| `support.email` | `support@octanlink.com` | email | contact |
-| `support.livechat_enabled` | `true` | boolean | feature |
-| `currency.gc_label` | `Gold Coins` | string | branding |
-| `currency.sc_label` | `Sweepstakes Coins` | string | branding |
-| `referral.reward_sc` | `5.00` | number | feature |
+| key                        | value                                              | type    | group    |
+| -------------------------- | -------------------------------------------------- | ------- | -------- |
+| `site.name`                | `Octan Link`                                       | string  | branding |
+| `site.logo_url`            | `https://octanlink.com/img/icons/icon-192x192.png` | image   | branding |
+| `site.url`                 | `https://octanlink.com`                            | url     | general  |
+| `support.email`            | `support@octanlink.com`                            | email   | contact  |
+| `support.livechat_enabled` | `true`                                             | boolean | feature  |
+| `currency.gc_label`        | `Gold Coins`                                       | string  | branding |
+| `currency.sc_label`        | `Sweepstakes Coins`                                | string  | branding |
+| `referral.reward_sc`       | `5.00`                                             | number  | feature  |
 
 > Read pattern: `getSettings()` returns a `Record<key, parsedValue>` (only
 > `is_public = true` for the browser); components read `settings['support.email']`
 > instead of a literal. This is the "other proper dynamic" config surface.
 
 ### 3.22 `social_links` — social media URLs (dynamic footer/contact)
+
 One row per social channel so links can be added, reordered, toggled, or
 relabeled from an admin panel — the footer & Contact Us render this list
 dynamically instead of hardcoding icons/URLs.
 
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `platform` | social_platform | NOT NULL | drives the icon (`facebook`, `telegram`, …) |
-| `label` | text | NOT NULL | display/aria label, e.g. "Telegram" |
-| `url` | text | NOT NULL | full href (or `mailto:` / chat link) |
-| `icon` | text | NULL | optional icon override; else derived from `platform` |
-| `active` | boolean | NOT NULL DEFAULT true | hide without deleting |
-| `sort` | smallint | NOT NULL DEFAULT 0 | display order |
-| `updated_at` | timestamptz | NOT NULL DEFAULT now() | |
+| Column       | Type            | Constraints            | Notes                                                |
+| ------------ | --------------- | ---------------------- | ---------------------------------------------------- |
+| `id`         | uuid            | PK                     |                                                      |
+| `platform`   | social_platform | NOT NULL               | drives the icon (`facebook`, `telegram`, …)          |
+| `label`      | text            | NOT NULL               | display/aria label, e.g. "Telegram"                  |
+| `url`        | text            | NOT NULL               | full href (or `mailto:` / chat link)                 |
+| `icon`       | text            | NULL                   | optional icon override; else derived from `platform` |
+| `active`     | boolean         | NOT NULL DEFAULT true  | hide without deleting                                |
+| `sort`       | smallint        | NOT NULL DEFAULT 0     | display order                                        |
+| `updated_at` | timestamptz     | NOT NULL DEFAULT now() |                                                      |
 
 **UNIQUE** (`platform`) — one link per platform (drop if you want multiples).
 
 **Seed rows** (placeholders — swap for the real handles):
 
-| platform | label | url | sort |
-|---|---|---|---|
-| `telegram` | Telegram | `https://t.me/octanlink` | 0 |
-| `facebook` | Facebook | `https://facebook.com/octanlink` | 1 |
-| `instagram` | Instagram | `https://instagram.com/octanlink` | 2 |
-| `twitter` | X (Twitter) | `https://x.com/octanlink` | 3 |
-| `youtube` | YouTube | `https://youtube.com/@octanlink` | 4 |
-| `tiktok` | TikTok | `https://tiktok.com/@octanlink` | 5 |
-| `whatsapp` | WhatsApp | `https://wa.me/10000000000` | 6 |
-| `email` | Email | `mailto:support@octanlink.com` | 7 |
+| platform    | label       | url                               | sort |
+| ----------- | ----------- | --------------------------------- | ---- |
+| `telegram`  | Telegram    | `https://t.me/octanlink`          | 0    |
+| `facebook`  | Facebook    | `https://facebook.com/octanlink`  | 1    |
+| `instagram` | Instagram   | `https://instagram.com/octanlink` | 2    |
+| `twitter`   | X (Twitter) | `https://x.com/octanlink`         | 3    |
+| `youtube`   | YouTube     | `https://youtube.com/@octanlink`  | 4    |
+| `tiktok`    | TikTok      | `https://tiktok.com/@octanlink`   | 5    |
+| `whatsapp`  | WhatsApp    | `https://wa.me/10000000000`       | 6    |
+| `email`     | Email       | `mailto:support@octanlink.com`    | 7    |
 
 **Rendered by:** `components/shell/Footer.tsx`,
 `app/(shell)/(legal)/contact-us/page.tsx` (via a `getSocialLinks()` server read).
 
 ### 3.23 `admins` — back-office staff accounts
+
 Separate from player `users` — platform operators who log into the admin panel.
 Never mixed with the player table (different auth surface, different session cookie).
 
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `username` | text | UNIQUE, NOT NULL | |
-| `email` | text | UNIQUE, NOT NULL | |
-| `password_hash` | text | NOT NULL | |
-| `status` | admin_status | NOT NULL DEFAULT 'active' | |
-| `last_login_at` | timestamptz | NULL | |
-| `created_by_admin_id` | uuid | FK → admins.id NULL | who invited them |
-| `created_at` | timestamptz | NOT NULL DEFAULT now() | |
+| Column                | Type         | Constraints               | Notes            |
+| --------------------- | ------------ | ------------------------- | ---------------- |
+| `id`                  | uuid         | PK                        |                  |
+| `username`            | text         | UNIQUE, NOT NULL          |                  |
+| `email`               | text         | UNIQUE, NOT NULL          |                  |
+| `password_hash`       | text         | NOT NULL                  |                  |
+| `status`              | admin_status | NOT NULL DEFAULT 'active' |                  |
+| `last_login_at`       | timestamptz  | NULL                      |                  |
+| `created_by_admin_id` | uuid         | FK → admins.id NULL       | who invited them |
+| `created_at`          | timestamptz  | NOT NULL DEFAULT now()    |                  |
 
 > **Super admin is not a column/flag** — it is whoever holds the `super_admin`
 > **role** (via `admin_roles`). Assign/remove that role to grant/revoke full
 > access (dynamic; see §7 and `lib/admin-service.ts`). Admins are managed as data
 > (`pnpm admin:create` / the admin panel), never bootstrapped from env vars.
 
-### 3.24 `roles` — *dynamic* (super admin creates/edits)
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `name` | text | UNIQUE, NOT NULL | e.g. `Admin`, `Finance`, `Support` |
-| `slug` | text | UNIQUE, NOT NULL | machine key, e.g. `admin` |
-| `description` | text | NULL | |
-| `level` | smallint | NOT NULL DEFAULT 0 | hierarchy rank; higher = more privileged. `super_admin`=100. An admin may only assign/edit roles with a `level` **below** their own highest — prevents privilege escalation |
-| `is_system` | boolean | NOT NULL DEFAULT false | `true` = protected (`super_admin`), not deletable/renamable |
-| `created_at` | timestamptz | NOT NULL DEFAULT now() | |
-| `updated_at` | timestamptz | NOT NULL DEFAULT now() | |
+### 3.24 `roles` — _dynamic_ (super admin creates/edits)
 
-### 3.25 `permissions` — *dynamic* (create new capabilities without a deploy)
+| Column        | Type        | Constraints            | Notes                                                                                                                                                                       |
+| ------------- | ----------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`          | uuid        | PK                     |                                                                                                                                                                             |
+| `name`        | text        | UNIQUE, NOT NULL       | e.g. `Admin`, `Finance`, `Support`                                                                                                                                          |
+| `slug`        | text        | UNIQUE, NOT NULL       | machine key, e.g. `admin`                                                                                                                                                   |
+| `description` | text        | NULL                   |                                                                                                                                                                             |
+| `level`       | smallint    | NOT NULL DEFAULT 0     | hierarchy rank; higher = more privileged. `super_admin`=100. An admin may only assign/edit roles with a `level` **below** their own highest — prevents privilege escalation |
+| `is_system`   | boolean     | NOT NULL DEFAULT false | `true` = protected (`super_admin`), not deletable/renamable                                                                                                                 |
+| `created_at`  | timestamptz | NOT NULL DEFAULT now() |                                                                                                                                                                             |
+| `updated_at`  | timestamptz | NOT NULL DEFAULT now() |                                                                                                                                                                             |
+
+### 3.25 `permissions` — _dynamic_ (create new capabilities without a deploy)
+
 One row per capability. New feature → insert a permission row; no code change to
 the check itself (checks read this table). Grouped so the role-editor UI can render
 permissions as collapsible resource sections.
 
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `key` | text | UNIQUE, NOT NULL | `resource.action`, e.g. `orders.read`, `settings.manage` |
-| `resource` | text | NOT NULL | `orders`, `users`, `settings`, `providers`, `bonuses`… |
-| `action` | text | NOT NULL | `read` \| `write` \| `delete` \| `manage` \| `upload` |
-| `group` | text | NOT NULL DEFAULT 'general' | UI section, e.g. `Finance`, `Content`, `Access` |
-| `description` | text | NULL | |
-| `is_system` | boolean | NOT NULL DEFAULT true | seeded permissions can't be deleted (only custom ones) |
-| `created_at` | timestamptz | NOT NULL DEFAULT now() | |
+| Column        | Type        | Constraints                | Notes                                                    |
+| ------------- | ----------- | -------------------------- | -------------------------------------------------------- |
+| `id`          | uuid        | PK                         |                                                          |
+| `key`         | text        | UNIQUE, NOT NULL           | `resource.action`, e.g. `orders.read`, `settings.manage` |
+| `resource`    | text        | NOT NULL                   | `orders`, `users`, `settings`, `providers`, `bonuses`…   |
+| `action`      | text        | NOT NULL                   | `read` \| `write` \| `delete` \| `manage` \| `upload`    |
+| `group`       | text        | NOT NULL DEFAULT 'general' | UI section, e.g. `Finance`, `Content`, `Access`          |
+| `description` | text        | NULL                       |                                                          |
+| `is_system`   | boolean     | NOT NULL DEFAULT true      | seeded permissions can't be deleted (only custom ones)   |
+| `created_at`  | timestamptz | NOT NULL DEFAULT now()     |                                                          |
 
 ### 3.26 `role_permissions` — M:N roles ↔ permissions
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `role_id` | uuid | FK → roles.id ON DELETE CASCADE, NOT NULL | |
-| `permission_id` | uuid | FK → permissions.id ON DELETE CASCADE, NOT NULL | |
-| `granted_by_admin_id` | uuid | FK → admins.id NULL | audit: who added it |
-| `granted_at` | timestamptz | NOT NULL DEFAULT now() | |
+
+| Column                | Type        | Constraints                                     | Notes               |
+| --------------------- | ----------- | ----------------------------------------------- | ------------------- |
+| `role_id`             | uuid        | FK → roles.id ON DELETE CASCADE, NOT NULL       |                     |
+| `permission_id`       | uuid        | FK → permissions.id ON DELETE CASCADE, NOT NULL |                     |
+| `granted_by_admin_id` | uuid        | FK → admins.id NULL                             | audit: who added it |
+| `granted_at`          | timestamptz | NOT NULL DEFAULT now()                          |                     |
 
 **PRIMARY KEY** (`role_id`, `permission_id`).
 
 ### 3.27 `admin_roles` — M:N admins ↔ roles
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `admin_id` | uuid | FK → admins.id ON DELETE CASCADE, NOT NULL | |
-| `role_id` | uuid | FK → roles.id ON DELETE CASCADE, NOT NULL | |
-| `assigned_by_admin_id` | uuid | FK → admins.id NULL | audit: who assigned it |
-| `assigned_at` | timestamptz | NOT NULL DEFAULT now() | |
+
+| Column                 | Type        | Constraints                                | Notes                  |
+| ---------------------- | ----------- | ------------------------------------------ | ---------------------- |
+| `admin_id`             | uuid        | FK → admins.id ON DELETE CASCADE, NOT NULL |                        |
+| `role_id`              | uuid        | FK → roles.id ON DELETE CASCADE, NOT NULL  |                        |
+| `assigned_by_admin_id` | uuid        | FK → admins.id NULL                        | audit: who assigned it |
+| `assigned_at`          | timestamptz | NOT NULL DEFAULT now()                     |                        |
 
 **PRIMARY KEY** (`admin_id`, `role_id`). See §7 for the full effective-permission
 resolution (roles ∪ direct allows − direct denies, or `*` for super admin).
 
 ### 3.27a `admin_permissions` — direct per-admin overrides (allow **or** deny)
+
 For the "grant one extra capability to one person" / "revoke one capability from
 one person" case without inventing a bespoke role. Deny always wins.
 
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `admin_id` | uuid | FK → admins.id ON DELETE CASCADE, NOT NULL | |
-| `permission_id` | uuid | FK → permissions.id ON DELETE CASCADE, NOT NULL | |
-| `effect` | permission_effect | NOT NULL DEFAULT 'allow' | `allow` adds, `deny` subtracts |
-| `granted_by_admin_id` | uuid | FK → admins.id NULL | |
-| `created_at` | timestamptz | NOT NULL DEFAULT now() | |
+| Column                | Type              | Constraints                                     | Notes                          |
+| --------------------- | ----------------- | ----------------------------------------------- | ------------------------------ |
+| `admin_id`            | uuid              | FK → admins.id ON DELETE CASCADE, NOT NULL      |                                |
+| `permission_id`       | uuid              | FK → permissions.id ON DELETE CASCADE, NOT NULL |                                |
+| `effect`              | permission_effect | NOT NULL DEFAULT 'allow'                        | `allow` adds, `deny` subtracts |
+| `granted_by_admin_id` | uuid              | FK → admins.id NULL                             |                                |
+| `created_at`          | timestamptz       | NOT NULL DEFAULT now()                          |                                |
 
 **PRIMARY KEY** (`admin_id`, `permission_id`).
 
 ### 3.28 `admin_audit_logs` — who changed what
+
 Any dynamic change (settings edit, role/permission change, order status override)
 is recorded so super admins can audit the back office.
 
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `admin_id` | uuid | FK → admins.id NULL | actor |
-| `action` | text | NOT NULL | e.g. `settings.update`, `role.create` |
-| `entity_type` | text | NULL | table/resource affected |
-| `entity_id` | text | NULL | row key affected |
-| `changes` | jsonb | NULL | before/after diff |
-| `ip_address` | inet | NULL | |
-| `created_at` | timestamptz | NOT NULL DEFAULT now() | |
+| Column        | Type        | Constraints            | Notes                                 |
+| ------------- | ----------- | ---------------------- | ------------------------------------- |
+| `id`          | uuid        | PK                     |                                       |
+| `admin_id`    | uuid        | FK → admins.id NULL    | actor                                 |
+| `action`      | text        | NOT NULL               | e.g. `settings.update`, `role.create` |
+| `entity_type` | text        | NULL                   | table/resource affected               |
+| `entity_id`   | text        | NULL                   | row key affected                      |
+| `changes`     | jsonb       | NULL                   | before/after diff                     |
+| `ip_address`  | inet        | NULL                   |                                       |
+| `created_at`  | timestamptz | NOT NULL DEFAULT now() |                                       |
 
 ### 3.29 `media_assets` — Cloudflare R2 object registry
+
 **Every image** in the app (avatars, provider icons, banners, logo, social icons,
 KYC docs, content images) is stored in **R2** and tracked here. Columns that used
 to hold a hotlinked CDN URL (`users.avatar_url`, `game_providers.icon_url`,
@@ -886,55 +918,57 @@ to hold a hotlinked CDN URL (`users.avatar_url`, `game_providers.icon_url`,
 `r2_key` that resolves to a row here; the public URL is derived from the R2/CDN
 base + key.
 
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `r2_key` | text | UNIQUE, NOT NULL | object key in the bucket, e.g. `avatars/{uuid}.webp` |
-| `bucket` | text | NOT NULL DEFAULT 'octanlink-media' | R2 bucket name |
-| `kind` | media_kind | NOT NULL | logical use → upload folder & size policy |
-| `content_type` | text | NOT NULL | `image/webp`, `image/png`… |
-| `size_bytes` | integer | NOT NULL | |
-| `width` | integer | NULL | |
-| `height` | integer | NULL | |
-| `original_name` | text | NULL | uploaded filename |
-| `uploaded_by_admin_id` | uuid | FK → admins.id NULL | admin uploads (banners, icons) |
-| `uploaded_by_user_id` | uuid | FK → users.id NULL | player uploads (avatar, KYC) |
-| `is_private` | boolean | NOT NULL DEFAULT false | `true` (KYC) → signed URL only, never public |
-| `created_at` | timestamptz | NOT NULL DEFAULT now() | |
+| Column                 | Type        | Constraints                        | Notes                                                |
+| ---------------------- | ----------- | ---------------------------------- | ---------------------------------------------------- |
+| `id`                   | uuid        | PK                                 |                                                      |
+| `r2_key`               | text        | UNIQUE, NOT NULL                   | object key in the bucket, e.g. `avatars/{uuid}.webp` |
+| `bucket`               | text        | NOT NULL DEFAULT 'octanlink-media' | R2 bucket name                                       |
+| `kind`                 | media_kind  | NOT NULL                           | logical use → upload folder & size policy            |
+| `content_type`         | text        | NOT NULL                           | `image/webp`, `image/png`…                           |
+| `size_bytes`           | integer     | NOT NULL                           |                                                      |
+| `width`                | integer     | NULL                               |                                                      |
+| `height`               | integer     | NULL                               |                                                      |
+| `original_name`        | text        | NULL                               | uploaded filename                                    |
+| `uploaded_by_admin_id` | uuid        | FK → admins.id NULL                | admin uploads (banners, icons)                       |
+| `uploaded_by_user_id`  | uuid        | FK → users.id NULL                 | player uploads (avatar, KYC)                         |
+| `is_private`           | boolean     | NOT NULL DEFAULT false             | `true` (KYC) → signed URL only, never public         |
+| `created_at`           | timestamptz | NOT NULL DEFAULT now()             |                                                      |
 
 > **Resolution:** public asset URL = `${R2_PUBLIC_BASE_URL}/${r2_key}`.
 > Private assets (KYC) are served via short-lived **presigned GET** URLs, never a
 > public link. Uploads go straight to R2 via **presigned PUT** (see §7).
 
 ### 3.30 `admin_sessions` — back-office auth sessions
+
 Admin auth is separate from player `sessions` (different cookie, stricter expiry).
 
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `admin_id` | uuid | FK → admins.id ON DELETE CASCADE, NOT NULL | |
-| `token` | text | UNIQUE, NOT NULL | opaque session id / JWT id |
-| `ip_address` | inet | NULL | |
-| `user_agent` | text | NULL | |
-| `expires_at` | timestamptz | NOT NULL | |
-| `revoked_at` | timestamptz | NULL | force-logout support |
-| `created_at` | timestamptz | NOT NULL DEFAULT now() | |
+| Column       | Type        | Constraints                                | Notes                      |
+| ------------ | ----------- | ------------------------------------------ | -------------------------- |
+| `id`         | uuid        | PK                                         |                            |
+| `admin_id`   | uuid        | FK → admins.id ON DELETE CASCADE, NOT NULL |                            |
+| `token`      | text        | UNIQUE, NOT NULL                           | opaque session id / JWT id |
+| `ip_address` | inet        | NULL                                       |                            |
+| `user_agent` | text        | NULL                                       |                            |
+| `expires_at` | timestamptz | NOT NULL                                   |                            |
+| `revoked_at` | timestamptz | NULL                                       | force-logout support       |
+| `created_at` | timestamptz | NOT NULL DEFAULT now()                     |                            |
 
 ### 3.31 `admin_invitations` — invite-based onboarding
+
 Super/eligible admins invite staff by email; the invite carries the role(s) to
 apply on acceptance. No admin is ever created without an invite or the seed.
 
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | uuid | PK | |
-| `email` | text | NOT NULL | invitee |
-| `token` | text | UNIQUE, NOT NULL | single-use accept token |
-| `role_id` | uuid | FK → roles.id NULL | role granted on acceptance |
-| `invited_by_admin_id` | uuid | FK → admins.id NULL | |
-| `status` | invitation_status | NOT NULL DEFAULT 'pending' | |
-| `expires_at` | timestamptz | NOT NULL | |
-| `accepted_admin_id` | uuid | FK → admins.id NULL | set when accepted |
-| `created_at` | timestamptz | NOT NULL DEFAULT now() | |
+| Column                | Type              | Constraints                | Notes                      |
+| --------------------- | ----------------- | -------------------------- | -------------------------- |
+| `id`                  | uuid              | PK                         |                            |
+| `email`               | text              | NOT NULL                   | invitee                    |
+| `token`               | text              | UNIQUE, NOT NULL           | single-use accept token    |
+| `role_id`             | uuid              | FK → roles.id NULL         | role granted on acceptance |
+| `invited_by_admin_id` | uuid              | FK → admins.id NULL        |                            |
+| `status`              | invitation_status | NOT NULL DEFAULT 'pending' |                            |
+| `expires_at`          | timestamptz       | NOT NULL                   |                            |
+| `accepted_admin_id`   | uuid              | FK → admins.id NULL        | set when accepted          |
+| `created_at`          | timestamptz       | NOT NULL DEFAULT now()     |                            |
 
 ---
 
@@ -973,24 +1007,24 @@ CREATE INDEX ON media_assets (uploaded_by_user_id);
 
 ## 5. Mock-data → table mapping (for the seed step)
 
-| Current source | Target table(s) |
-|---|---|
-| `lib/auth-context.tsx` `DEMO_USER` | `users`, `wallets` |
-| `data/mock/wallet.json` | `wallets` |
-| `data/providers.sc.json` / `.gc.json` | `game_providers`, `provider_deposit_tiers` |
-| `data/mock/orders.json` | `orders` |
-| `data/mock/transactions.json` | `transactions` |
-| `data/mock/bonus.json` | `bonuses` (+ `user_bonus_claims` for demo user) |
-| `data/mock/referral.json` | `users.invite_code`, `referral_commissions` |
-| `data/mock/redemption-reviews.json` | `redemption_reviews` |
-| `lib/profile-tasks.ts` | `profile_tasks` |
-| `lib/help-content.ts` | `help_sections`, `help_items`, `help_steps` |
-| legal/guide pages | `content_pages` |
-| `components/game/BannerCarousel.tsx` | `banners` |
-| hardcoded site name/logo/support email, currency labels | `site_settings` |
-| Footer + Contact Us social/support links (new) | `social_links` |
-| RBAC / admin panel (new — not in current UI) | `admins`, `roles`, `permissions`, `role_permissions`, `admin_roles`, `admin_permissions`, `admin_sessions`, `admin_invitations`, `admin_audit_logs` |
-| all `*.icon_url` / `avatar_url` / banner images → R2 | `media_assets` (image cols store `r2_key`) |
+| Current source                                          | Target table(s)                                                                                                                                     |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lib/auth-context.tsx` `DEMO_USER`                      | `users`, `wallets`                                                                                                                                  |
+| `data/mock/wallet.json`                                 | `wallets`                                                                                                                                           |
+| `data/providers.sc.json` / `.gc.json`                   | `game_providers`, `provider_deposit_tiers`                                                                                                          |
+| `data/mock/orders.json`                                 | `orders`                                                                                                                                            |
+| `data/mock/transactions.json`                           | `transactions`                                                                                                                                      |
+| `data/mock/bonus.json`                                  | `bonuses` (+ `user_bonus_claims` for demo user)                                                                                                     |
+| `data/mock/referral.json`                               | `users.invite_code`, `referral_commissions`                                                                                                         |
+| `data/mock/redemption-reviews.json`                     | `redemption_reviews`                                                                                                                                |
+| `lib/profile-tasks.ts`                                  | `profile_tasks`                                                                                                                                     |
+| `lib/help-content.ts`                                   | `help_sections`, `help_items`, `help_steps`                                                                                                         |
+| legal/guide pages                                       | `content_pages`                                                                                                                                     |
+| `components/game/BannerCarousel.tsx`                    | `banners`                                                                                                                                           |
+| hardcoded site name/logo/support email, currency labels | `site_settings`                                                                                                                                     |
+| Footer + Contact Us social/support links (new)          | `social_links`                                                                                                                                      |
+| RBAC / admin panel (new — not in current UI)            | `admins`, `roles`, `permissions`, `role_permissions`, `admin_roles`, `admin_permissions`, `admin_sessions`, `admin_invitations`, `admin_audit_logs` |
+| all `*.icon_url` / `avatar_url` / banner images → R2    | `media_assets` (image cols store `r2_key`)                                                                                                          |
 
 ---
 
@@ -1020,6 +1054,7 @@ admins ──< admin_roles >── roles ──< role_permissions >── permis
 ```
 
 ### 7.1 Model rules
+
 - **Super admin = the `super_admin` role** (slug), assigned via `admin_roles` —
   not a column, not env. Any admin holding it gets implicit `*` (every check
   passes, no permission rows needed). The role is `is_system` + `level = 100`,
@@ -1035,6 +1070,7 @@ admins ──< admin_roles >── roles ──< role_permissions >── permis
 - Every mutating admin action writes an `admin_audit_logs` row.
 
 ### 7.2 Effective-permission resolution
+
 ```
 isSuper(admin)  = admin holds a role with slug 'super_admin'   # admin_roles ⋈ roles
 
@@ -1051,7 +1087,9 @@ function effectivePermissions(admin):
 
 can(admin, key) = isSuper(admin) OR key ∈ effectivePermissions(admin)
 ```
+
 Single-query form of the check (used by the `can()` server helper):
+
 ```sql
 SELECT EXISTS (
   SELECT 1 FROM admins a WHERE a.id = $adminId AND (
@@ -1083,6 +1121,7 @@ SELECT EXISTS (
 ```
 
 ### 7.3 DDL (RBAC tables)
+
 ```sql
 CREATE TABLE admins (
   id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1168,38 +1207,38 @@ CREATE TABLE admin_invitations (
 
 ### 7.4 Seed permissions (`resource.action`, grouped)
 
-| group | resource | actions |
-|---|---|---|
-| Players | `users` | read, write |
-| Players | `wallets` | read, write |
-| Players | `kyc` | read, write |
-| Finance | `orders` | read, write |
-| Finance | `transactions` | read, write |
-| Finance | `redemption_reviews` | read, write |
-| Games | `providers` | read, write |
-| Engagement | `bonuses` | read, write, delete |
-| Engagement | `referrals` | read, write |
-| Content | `content_pages` | read, write |
-| Content | `banners` | read, write, delete |
-| Content | `media` | upload, delete |
-| Config | `settings` | read, manage |
-| Config | `social_links` | read, manage |
-| Support | `support_tickets` | read, write |
-| Support | `postal_requests` | read, write |
-| Access | `admins` | read, manage |
-| Access | `roles` | read, manage |
-| Access | `permissions` | read, manage |
-| Access | `audit_logs` | read |
+| group      | resource             | actions             |
+| ---------- | -------------------- | ------------------- |
+| Players    | `users`              | read, write         |
+| Players    | `wallets`            | read, write         |
+| Players    | `kyc`                | read, write         |
+| Finance    | `orders`             | read, write         |
+| Finance    | `transactions`       | read, write         |
+| Finance    | `redemption_reviews` | read, write         |
+| Games      | `providers`          | read, write         |
+| Engagement | `bonuses`            | read, write, delete |
+| Engagement | `referrals`          | read, write         |
+| Content    | `content_pages`      | read, write         |
+| Content    | `banners`            | read, write, delete |
+| Content    | `media`              | upload, delete      |
+| Config     | `settings`           | read, manage        |
+| Config     | `social_links`       | read, manage        |
+| Support    | `support_tickets`    | read, write         |
+| Support    | `postal_requests`    | read, write         |
+| Access     | `admins`             | read, manage        |
+| Access     | `roles`              | read, manage        |
+| Access     | `permissions`        | read, manage        |
+| Access     | `audit_logs`         | read                |
 
 ### 7.5 Seed roles (level → permission set)
 
-| role (slug) | level | is_system | permissions |
-|---|---|---|---|
-| `super_admin` | 100 | yes | **`*`** (implicit — anyone holding this role, no rows) |
-| `admin` | 80 | yes | everything **except** `admins.manage`, `roles.manage`, `permissions.manage` |
-| `finance` | 50 | no | `orders.*`, `transactions.*`, `redemption_reviews.*`, `users.read`, `wallets.read`, `audit_logs.read` |
-| `content` | 40 | no | `content_pages.*`, `banners.*`, `media.*`, `settings.read`, `social_links.manage` |
-| `support` | 30 | no | `users.read`, `kyc.read`, `support_tickets.*`, `postal_requests.*`, `orders.read` |
+| role (slug)   | level | is_system | permissions                                                                                           |
+| ------------- | ----- | --------- | ----------------------------------------------------------------------------------------------------- |
+| `super_admin` | 100   | yes       | **`*`** (implicit — anyone holding this role, no rows)                                                |
+| `admin`       | 80    | yes       | everything **except** `admins.manage`, `roles.manage`, `permissions.manage`                           |
+| `finance`     | 50    | no        | `orders.*`, `transactions.*`, `redemption_reviews.*`, `users.read`, `wallets.read`, `audit_logs.read` |
+| `content`     | 40    | no        | `content_pages.*`, `banners.*`, `media.*`, `settings.read`, `social_links.manage`                     |
+| `support`     | 30    | no        | `users.read`, `kyc.read`, `support_tickets.*`, `postal_requests.*`, `orders.read`                     |
 
 > Bootstrap (no env): the seed inserts admin **users as data** — `superadmin`
 > (super_admin), `opsadmin` (admin), `finance1` (finance), `support1` (support),
@@ -1209,6 +1248,7 @@ CREATE TABLE admin_invitations (
 > `super_admin` role assignment, grantable to any number of admins.
 
 ### 7.6 Enforcement surface
+
 - **Middleware**: `/admin/*` routes require a valid `admin_sessions` token; else 401.
 - **Route/handler**: each admin API calls `requirePermission('orders.write')` →
   runs the §7.2 check → 403 on failure. Player-facing routes are unaffected.
@@ -1227,6 +1267,7 @@ Every image lives in **R2** (S3-compatible); Postgres stores only the object key
 `kyc/` (private).
 
 **Upload flow (presigned PUT — bytes never touch the app server):**
+
 1. Client asks API for an upload URL → API checks `media.upload` permission (admin)
    or ownership (player avatar/KYC), returns a **presigned PUT** URL + the `r2_key`.
 2. Client PUTs the file straight to R2.
@@ -1234,12 +1275,14 @@ Every image lives in **R2** (S3-compatible); Postgres stores only the object key
    the owning record (`users.avatar_url`, `game_providers.icon_url`, etc.).
 
 **Read flow:**
+
 - Public (`is_private = false`): URL = `${R2_PUBLIC_BASE_URL}/${r2_key}`, served via
   the R2 public bucket / Cloudflare CDN. Add to `next.config` `images.remotePatterns`.
 - Private (`is_private = true`, KYC docs): API returns a short-lived **presigned
   GET**; never exposed as a public URL.
 
 **Env (add to `.env.example`):**
+
 ```
 R2_ACCOUNT_ID=
 R2_ACCESS_KEY_ID=
@@ -1247,6 +1290,7 @@ R2_SECRET_ACCESS_KEY=
 R2_BUCKET=octanlink-media
 R2_PUBLIC_BASE_URL=https://media.octanlink.com   # public bucket / CDN domain
 ```
+
 SDK: `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` pointed at the R2
 endpoint `https://<account_id>.r2.cloudflarestorage.com`.
 
@@ -1266,15 +1310,15 @@ transactional with app data and no extra broker (Redis) is needed.
 
 **Scheduled jobs (cron):**
 
-| Job | Cron | Purpose |
-|---|---|---|
-| `providers.sync` | `0 */6 * * *` | refresh `game_providers` from the live API (replaces `scripts/fetch-providers.mjs`) |
-| `bonus.daily-reset` | `0 0 * * *` | reset `user_bonus_claims` for daily bonuses, set `next_available_at` |
-| `otp.purge` | `*/15 * * * *` | delete expired/consumed `otp_codes` |
-| `sessions.purge` | `0 * * * *` | delete expired `sessions` |
-| `referral.settle` | `0 1 * * *` | move eligible `referral_commissions` `pending → claimable` |
-| `media.gc` | `0 3 * * *` | delete orphaned R2 objects with no `media_assets` reference |
-| `audit.archive` | `0 4 * * 0` | archive old `admin_audit_logs` |
+| Job                 | Cron           | Purpose                                                                             |
+| ------------------- | -------------- | ----------------------------------------------------------------------------------- |
+| `providers.sync`    | `0 */6 * * *`  | refresh `game_providers` from the live API (replaces `scripts/fetch-providers.mjs`) |
+| `bonus.daily-reset` | `0 0 * * *`    | reset `user_bonus_claims` for daily bonuses, set `next_available_at`                |
+| `otp.purge`         | `*/15 * * * *` | delete expired/consumed `otp_codes`                                                 |
+| `sessions.purge`    | `0 * * * *`    | delete expired `sessions`                                                           |
+| `referral.settle`   | `0 1 * * *`    | move eligible `referral_commissions` `pending → claimable`                          |
+| `media.gc`          | `0 3 * * *`    | delete orphaned R2 objects with no `media_assets` reference                         |
+| `audit.archive`     | `0 4 * * 0`    | archive old `admin_audit_logs`                                                      |
 
 **On-demand (queued) jobs:** `email.send` (OTP/receipts), `image.process`
 (resize/webp after upload), `order.reconcile` (poll payment provider),
@@ -1286,8 +1330,8 @@ transactional with app data and no extra broker (Redis) is needed.
 
 ---
 
-*Next step after review: generate the ORM schema (Prisma/Drizzle) + migrations
+_Next step after review: generate the ORM schema (Prisma/Drizzle) + migrations
 from this file (RBAC + `media_assets` included), add a seed script that loads the
 mapping in §5 plus the RBAC matrix (§7), stand up the R2 client (§8) and pg-boss
 worker (§9), then replace `lib/mock.ts` / `lib/providers.ts` reads with DB queries
-behind the same return types in `lib/types.ts` so no component changes.*
+behind the same return types in `lib/types.ts` so no component changes._

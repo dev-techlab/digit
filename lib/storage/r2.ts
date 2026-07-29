@@ -37,7 +37,9 @@ let _client: S3Client | null = null;
 
 function client(): S3Client {
   if (!isR2Configured()) {
-    throw new Error('R2 is not configured — set R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY');
+    throw new Error(
+      'R2 is not configured — set R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY'
+    );
   }
   if (!_client) {
     _client = new S3Client({
@@ -80,11 +82,9 @@ export function presignUpload(r2Key: string, contentType: string, expiresIn = 30
 
 /** Short-lived presigned GET for private assets (e.g. KYC docs). */
 export function presignDownload(r2Key: string, expiresIn = 300) {
-  return getSignedUrl(
-    client(),
-    new GetObjectCommand({ Bucket: R2_BUCKET, Key: r2Key }),
-    { expiresIn }
-  );
+  return getSignedUrl(client(), new GetObjectCommand({ Bucket: R2_BUCKET, Key: r2Key }), {
+    expiresIn,
+  });
 }
 
 export async function deleteObject(r2Key: string): Promise<void> {

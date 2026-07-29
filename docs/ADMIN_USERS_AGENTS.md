@@ -38,7 +38,7 @@ Migration: `drizzle/0006_warm_starfox.sql`.
 
 **What an "agent" is here**: the root **store** account of the B2B agent panel hierarchy
 (`agents` table, `type = 'store'` — see `docs/ADMIN_PANEL_AUDIT.md` §3). A store then creates its
-own sale agents, sub agents, and store administrators from *its own* `/agent` panel — those are
+own sale agents, sub agents, and store administrators from _its own_ `/agent` panel — those are
 unchanged. What was missing was a way for the super-admin to create the first-level store
 accounts and see all of them in one place.
 
@@ -58,22 +58,22 @@ accounts and see all of them in one place.
 
 ## 3. Files touched
 
-| File | Change |
-|---|---|
-| `lib/db/schema/enums.ts` | + `userStatusEnum` |
-| `lib/db/schema/users.ts` | + `users.status` column |
-| `lib/user-service.ts` | login rejects non-active accounts; + `blockUser`/`unblockUser`/`revokeUserSessions` |
-| `drizzle/0006_warm_starfox.sql` | migration |
-| `app/api/admin/users/route.ts` | new — list + block/unblock |
-| `app/api/admin/agents/route.ts` | new — list + create + block/unblock/reset password |
-| `components/admin/screens/UsersScreen.tsx` | new |
-| `components/admin/screens/AgentsScreen.tsx` | new |
-| `app/admin/(panel)/users/page.tsx`, `app/admin/(panel)/agents/page.tsx` | new routes |
-| `components/admin/AdminShell.tsx` | + Users / Agents nav items (permission-gated) |
-| `scripts/seed.ts` | + `agents` resource in the RBAC permission matrix |
+| File                                                                    | Change                                                                              |
+| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `lib/db/schema/enums.ts`                                                | + `userStatusEnum`                                                                  |
+| `lib/db/schema/users.ts`                                                | + `users.status` column                                                             |
+| `lib/user-service.ts`                                                   | login rejects non-active accounts; + `blockUser`/`unblockUser`/`revokeUserSessions` |
+| `drizzle/0006_warm_starfox.sql`                                         | migration                                                                           |
+| `app/api/admin/users/route.ts`                                          | new — list + block/unblock                                                          |
+| `app/api/admin/agents/route.ts`                                         | new — list + create + block/unblock/reset password                                  |
+| `components/admin/screens/UsersScreen.tsx`                              | new                                                                                 |
+| `components/admin/screens/AgentsScreen.tsx`                             | new                                                                                 |
+| `app/admin/(panel)/users/page.tsx`, `app/admin/(panel)/agents/page.tsx` | new routes                                                                          |
+| `components/admin/AdminShell.tsx`                                       | + Users / Agents nav items (permission-gated)                                       |
+| `scripts/seed.ts`                                                       | + `agents` resource in the RBAC permission matrix                                   |
 
 ## 4. Out of scope
 
-- Sale agents, sub agents, store administrators, and members (players *of a store*) are managed
+- Sale agents, sub agents, store administrators, and members (players _of a store_) are managed
   from the `/agent` panel by the store itself and are unaffected by this change.
 - No new fields were added to the player registration form — see §1 for why.

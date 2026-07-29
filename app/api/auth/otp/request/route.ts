@@ -13,7 +13,10 @@ export async function POST(req: Request) {
   const destination = typeof body.destination === 'string' ? body.destination.trim() : '';
   const purpose = typeof body.purpose === 'string' ? body.purpose : '';
   if (!destination || !PURPOSES.has(purpose)) {
-    return NextResponse.json({ error: 'Valid destination and purpose are required' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Valid destination and purpose are required' },
+      { status: 400 }
+    );
   }
 
   const result = await requestOtp(destination, purpose as OtpPurpose);

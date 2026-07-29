@@ -1,10 +1,6 @@
 import { relations } from 'drizzle-orm';
 import { users, wallets, sessions } from './users';
-import {
-  gameProviders,
-  providerDepositTiers,
-  userProviderAccounts,
-} from './providers';
+import { gameProviders, providerDepositTiers, userProviderAccounts } from './providers';
 import { orders, transactions } from './finance';
 import {
   bonuses,

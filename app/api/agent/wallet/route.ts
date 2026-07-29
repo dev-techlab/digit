@@ -235,7 +235,7 @@ export async function POST(req: Request) {
       ? (body.method as (typeof WITHDRAW_METHODS)[number])
       : null;
     if (!method) return NextResponse.json({ error: 'Select a withdrawal method' }, { status: 400 });
-    
+
     try {
       await db.transaction(async (tx) => {
         // Lock the balance row for the life of the transaction so a concurrent
@@ -245,7 +245,7 @@ export async function POST(req: Request) {
           .from(s.agents)
           .where(eq(s.agents.id, agent.storeId))
           .for('update');
-        
+
         const commPer = Number(row.commissionPer || 0);
         const fee = amount * (commPer / 100);
         const netAmount = amount - fee;

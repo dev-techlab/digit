@@ -52,7 +52,10 @@ export function MemberRewardsScreen() {
         List are excluded.
       </p>
       <div className="mt-6 max-w-sm space-y-5">
-        <Field label="Phone Bind Reward SC" hint="SC credited when a member binds their phone number">
+        <Field
+          label="Phone Bind Reward SC"
+          hint="SC credited when a member binds their phone number"
+        >
           <TextInput type="number" value={reward} onChange={(e) => setReward(e.target.value)} />
         </Field>
         <Btn className="w-32 justify-center" onClick={save}>

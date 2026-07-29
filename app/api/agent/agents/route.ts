@@ -104,7 +104,9 @@ export async function POST(req: Request) {
         storeId: agent.storeId,
         parentAgentId: agent.id,
         ratioPct: Number.isFinite(Number(body.ratioPct)) ? String(body.ratioPct) : '0',
-        commissionPer: Number.isFinite(Number(body.commissionPer)) ? String(body.commissionPer) : '0',
+        commissionPer: Number.isFinite(Number(body.commissionPer))
+          ? String(body.commissionPer)
+          : '0',
         inviteCode: `MC${randomBytes(8).toString('hex').toUpperCase()}`,
         remark: typeof body.remark === 'string' ? body.remark.slice(0, 300) : null,
       })
@@ -120,7 +122,10 @@ export async function PUT(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (agent.type !== 'store') {
-    return NextResponse.json({ error: 'Only the store account can manage agents' }, { status: 403 });
+    return NextResponse.json(
+      { error: 'Only the store account can manage agents' },
+      { status: 403 }
+    );
   }
 
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);

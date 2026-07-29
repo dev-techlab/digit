@@ -79,7 +79,12 @@ export const JOBS: JobDef[] = [
       await db
         .update(s.referralCommissions)
         .set({ status: 'claimed' })
-        .where(and(eq(s.referralCommissions.status, 'pending'), lte(s.referralCommissions.joinedAt, cutoff)));
+        .where(
+          and(
+            eq(s.referralCommissions.status, 'pending'),
+            lte(s.referralCommissions.joinedAt, cutoff)
+          )
+        );
     },
   },
   {

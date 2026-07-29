@@ -39,8 +39,7 @@ const SOCIAL_ICONS: Record<string, LucideIcon> = {
 export async function Footer() {
   const [settings, socials] = await Promise.all([getSettings(), getSocialLinks()]);
   const siteName = (settings['site.name'] as string) ?? APP_NAME;
-  const logoUrl =
-    (settings['site.logo_url'] as string) ?? '/logo.png';
+  const logoUrl = (settings['site.logo_url'] as string) ?? '/logo.png';
 
   return (
     <footer className="mb-6 mt-8 border-t border-[var(--card-border)] px-6 py-8 text-center">

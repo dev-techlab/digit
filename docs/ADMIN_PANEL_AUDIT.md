@@ -34,22 +34,22 @@ customer-service bubble bottom-right (SaleSmartly chat widget). Light theme, `vx
 
 ### Sidebar navigation (order observed)
 
-| # | Item | Sub-items |
-|---|------|-----------|
-| 1 | Dashboard | — |
-| 2 | My Wallet | — |
-| 3 | Account System ▾ | Game Setting · Sale Agent List · Member List · Sub Agent List · Kiosk List · Member Rewards |
-| 4 | Promotion Config | — |
-| 5 | Store Administrator | — |
-| 6 | Transaction List | (tabs: Transaction List · Redemption Audit) |
-| 7 | CS Config | — |
-| 8 | Terms | — |
-| 9 | Download posters | — |
-| 10 | Tutorial | — |
-| 11 | Doc Preview | — |
-| 12 | Change Password | — |
-| 13 | Logout | — |
-| 14 | Customer Service (footer, opens chat) | — |
+| #   | Item                                  | Sub-items                                                                                   |
+| --- | ------------------------------------- | ------------------------------------------------------------------------------------------- |
+| 1   | Dashboard                             | —                                                                                           |
+| 2   | My Wallet                             | —                                                                                           |
+| 3   | Account System ▾                      | Game Setting · Sale Agent List · Member List · Sub Agent List · Kiosk List · Member Rewards |
+| 4   | Promotion Config                      | —                                                                                           |
+| 5   | Store Administrator                   | —                                                                                           |
+| 6   | Transaction List                      | (tabs: Transaction List · Redemption Audit)                                                 |
+| 7   | CS Config                             | —                                                                                           |
+| 8   | Terms                                 | —                                                                                           |
+| 9   | Download posters                      | —                                                                                           |
+| 10  | Tutorial                              | —                                                                                           |
+| 11  | Doc Preview                           | —                                                                                           |
+| 12  | Change Password                       | —                                                                                           |
+| 13  | Logout                                | —                                                                                           |
+| 14  | Customer Service (footer, opens chat) | —                                                                                           |
 
 ---
 
@@ -85,9 +85,9 @@ platform; members table with `createdAt` and last-played tracking.
     Bank Card, ACH Bank Transfer; Withdraw Amount; method-specific address field (e.g. PYUSD
     wallet address); `Confirm Withdraw`; first-time-address warning (email verification required).
 - **Report block tabs**: `Report` | `Agent Deposit Log` | `Agent Withdraw Log` | `Agent Transfer
-  Log` | `Agent Transfer Request Log`.
+Log` | `Agent Transfer Request Log`.
   - Report: date-range (max query 31 days) → daily rows `Start Time | End Time | Deposit |
-    Deposit Fee | Deposit Orders | …` + Summary row; pagination `Total 4, 20/page, Go to`.
+Deposit Fee | Deposit Orders | …` + Summary row; pagination `Total 4, 20/page, Go to`.
 
 **DB needs**: agent wallet balances (online + tips), agent funding transactions (type, method,
 amount, fee, address, status), store settings (name, limits, phone-bind reward, logo), invite
@@ -132,16 +132,16 @@ redeemDailyLimit, minDepositToUnlock, cached score + refreshedAt).
   Ratio (0.00 %), Kiosk (select), Cashier (select), Remark (0/300). Confirm/Cancel.
 - **Report — All Sale Agents modal (07)**: Date Range (defaults to month-to-date) + sortable
   columns: `Sale Agent | Deposit | Depositors | Withdrawal | Withdrawers | TotalIn Score |
-  TotalOut Score | Gross Net Score | Total Bonus Score | Game Deposit Fee | Platform Fee ❓`.
+TotalOut Score | Gross Net Score | Total Bonus Score | Game Deposit Fee | Platform Fee ❓`.
 
 ### 2.6 Member List (screenshot 08) + Add Member (09) + Edit Member (10)
 
 - Filters: username, Phone, Sale Agent, `More▾`.
 - Green `+ Add Member`.
 - Table: `Username | Phone | Sale Agent | Online SC | Deposit ⇅ | Withdraw ⇅ | TotalNet ❓⇅ |
-  TotalIn Score | TotalOut Score | …` — 18 members, numeric usernames (e.g. 5534453), badge `No
-  SC Reward` on some, phone e.g. `+17852206399`, Online SC `$4.00`. Pagination `Total 18,
-  10/page, pages 1-2, Go to`.
+TotalIn Score | TotalOut Score | …` — 18 members, numeric usernames (e.g. 5534453), badge `No
+SC Reward` on some, phone e.g. `+17852206399`, Online SC `$4.00`. Pagination `Total 18,
+10/page, pages 1-2, Go to`.
 - Row operations (10): `Game Platform Binding`, `More ▾`; login history visible (time, IP,
   OS/browser e.g. `166.199.171.12 macOS - Safari (Mobile)`).
 - **Add Member modal (09)**: *Username (prefilled `5293383`), *Password (prefilled `883219`),
@@ -154,7 +154,7 @@ remark), login history (time, ip, device), per-member aggregates, member↔platf
 ### 2.7 Promotion Config (screenshots 11, 12)
 
 - List page (12): filters Promotion Type / Status; green `+ Add Promotion`; table `# | User |
-  Promotion Type | Threshold | Reward | Condition | Operations`.
+Promotion Type | Threshold | Reward | Condition | Operations`.
 - **Add Promotion drawer (11)**:
   - *Promotion Type: `Promotion Game (100% Bonus)` ("The first game after the first deposit of
     the day") | `Double Game Bonus` | `Loyalty Drop`.
@@ -178,12 +178,12 @@ remark), login history (time, ip, device), per-member aggregates, member↔platf
 - Filters: Search (Member Username/Game PlayerId), Game Name (select), Transaction Type (All/…),
   Sale Agent, Sub Agent, Status, Time Range + ET, `Search/Reset`, `Collapse^`, bell toggle.
 - **Summary strip**: `Store Balance Vary ❓ | TotalIn Score | TotalOut Score | Gross Net Score ❓ |
-  Total Bonus Score ❓ | Game Deposit Fee | Platform Fee ❓` + `Report` button.
+Total Bonus Score ❓ | Game Deposit Fee | Platform Fee ❓` + `Report` button.
 - Table: `User Detail | Create Time | Amount ⇅ | Online SC Changes | Store Balance Vary | Game &
-  Product | …`.
+Product | …`.
 - **Report modal (15)**: filters Sub Agent / Sale Agent / Member Username; **Daily Breakdown**
   (`Date | Store Balance Vary | TotalIn Score | TotalOut Score | Gross Net Score | Total Bonus
-  Score | Game Deposit Fee | Platform Fee | TotalNet`) + **Game Breakdown** (same by Game).
+Score | Game Deposit Fee | Platform Fee | TotalNet`) + **Game Breakdown** (same by Game).
 
 ### 2.10 Redemption Audit (screenshot 16)
 
@@ -276,20 +276,20 @@ scale (indexes on `(store_id, created_at)` and `(store_id, platform_id, created_
 
 ## 4. Gap analysis vs current codebase
 
-| Area | Current state (`octanlink`) | Gap |
-|------|------------------------------|-----|
-| Player-facing app | Fully built (game lobby, wallet, bonus, orders, legal, profile) | n/a — out of scope here |
-| Admin auth | `admins` + sessions + RBAC + login/logout/me routes + login UI | ✅ Reusable as-is for panel auth |
-| Admin dashboard | Placeholder card ("build out real admin panel sections here") | ❌ Entire panel to build |
-| Agent hierarchy (store/sale/sub) | None | ❌ New tables + CRUD |
-| Members management | Player `users` exist but are not tied to stores/agents | ❌ New `members` model (panel-scoped) |
-| Game platform catalog | `gameProviders` (player-side GC/SC catalog from live API) | ❌ Separate agent-side platform + POS account model |
-| Wallet / funding | Player wallets only | ❌ Agent wallet + funding tx + logs |
-| Promotions | Player `bonuses` | ❌ Agent promotion config model |
-| Transactions / reports | Player `transactions` | ❌ Member tx ledger + daily/game breakdown reports |
-| Redemption audit | `redemptionReviews` (player-side) | ❌ Store-side audit queue |
-| CS config / Terms / Posters | Player-side content tables | ❌ Store-scoped versions |
-| UI kit for panel | Player-styled components (dark casino theme) | ❌ Light admin theme w/ sidebar + chip tabs + data tables |
+| Area                             | Current state (`octanlink`)                                     | Gap                                                       |
+| -------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------- |
+| Player-facing app                | Fully built (game lobby, wallet, bonus, orders, legal, profile) | n/a — out of scope here                                   |
+| Admin auth                       | `admins` + sessions + RBAC + login/logout/me routes + login UI  | ✅ Reusable as-is for panel auth                          |
+| Admin dashboard                  | Placeholder card ("build out real admin panel sections here")   | ❌ Entire panel to build                                  |
+| Agent hierarchy (store/sale/sub) | None                                                            | ❌ New tables + CRUD                                      |
+| Members management               | Player `users` exist but are not tied to stores/agents          | ❌ New `members` model (panel-scoped)                     |
+| Game platform catalog            | `gameProviders` (player-side GC/SC catalog from live API)       | ❌ Separate agent-side platform + POS account model       |
+| Wallet / funding                 | Player wallets only                                             | ❌ Agent wallet + funding tx + logs                       |
+| Promotions                       | Player `bonuses`                                                | ❌ Agent promotion config model                           |
+| Transactions / reports           | Player `transactions`                                           | ❌ Member tx ledger + daily/game breakdown reports        |
+| Redemption audit                 | `redemptionReviews` (player-side)                               | ❌ Store-side audit queue                                 |
+| CS config / Terms / Posters      | Player-side content tables                                      | ❌ Store-scoped versions                                  |
+| UI kit for panel                 | Player-styled components (dark casino theme)                    | ❌ Light admin theme w/ sidebar + chip tabs + data tables |
 
 ## 5. Implementation plan (what is being built now)
 

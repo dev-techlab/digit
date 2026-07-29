@@ -8,10 +8,7 @@ import { APP_NAME } from '@/lib/constants';
 export const metadata = { title: `Game Center · ${APP_NAME}` };
 
 export default async function GamePage() {
-  const [scProviders, gcProviders] = await Promise.all([
-    getProviders('SC'),
-    getProviders('GC'),
-  ]);
+  const [scProviders, gcProviders] = await Promise.all([getProviders('SC'), getProviders('GC')]);
   const providers = [...scProviders, ...gcProviders];
 
   return (

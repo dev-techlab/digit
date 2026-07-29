@@ -49,7 +49,15 @@ export function NoticesScreen() {
 
       <Card>
         <Table
-          headers={['Index', 'Notice Title', 'Notice Type', 'Notice Level', 'Publish Time', 'Publisher', 'Action']}
+          headers={[
+            'Index',
+            'Notice Title',
+            'Notice Type',
+            'Notice Level',
+            'Publish Time',
+            'Publisher',
+            'Action',
+          ]}
           empty={rows.length === 0}
         >
           {rows.map((n, i) => (

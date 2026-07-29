@@ -74,12 +74,8 @@
           "name": "otp_codes_user_id_users_id_fk",
           "tableFrom": "otp_codes",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -135,12 +131,8 @@
           "name": "postal_requests_user_id_users_id_fk",
           "tableFrom": "postal_requests",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -206,12 +198,8 @@
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -221,9 +209,7 @@
         "sessions_token_unique": {
           "name": "sessions_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -281,12 +267,8 @@
           "name": "support_tickets_user_id_users_id_fk",
           "tableFrom": "support_tickets",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -414,12 +396,8 @@
           "name": "users_referred_by_user_id_users_id_fk",
           "tableFrom": "users",
           "tableTo": "users",
-          "columnsFrom": [
-            "referred_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["referred_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -429,16 +407,12 @@
         "users_username_unique": {
           "name": "users_username_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "username"
-          ]
+          "columns": ["username"]
         },
         "users_invite_code_unique": {
           "name": "users_invite_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "invite_code"
-          ]
+          "columns": ["invite_code"]
         }
       },
       "policies": {},
@@ -518,12 +492,8 @@
           "name": "wallets_user_id_users_id_fk",
           "tableFrom": "wallets",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -533,9 +503,7 @@
         "wallets_user_id_unique": {
           "name": "wallets_user_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id"
-          ]
+          "columns": ["user_id"]
         }
       },
       "policies": {},
@@ -716,12 +684,8 @@
           "name": "provider_deposit_tiers_provider_id_game_providers_id_fk",
           "tableFrom": "provider_deposit_tiers",
           "tableTo": "game_providers",
-          "columnsFrom": [
-            "provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -802,12 +766,8 @@
           "name": "user_provider_accounts_user_id_users_id_fk",
           "tableFrom": "user_provider_accounts",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -815,12 +775,8 @@
           "name": "user_provider_accounts_provider_id_game_providers_id_fk",
           "tableFrom": "user_provider_accounts",
           "tableTo": "game_providers",
-          "columnsFrom": [
-            "provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -830,10 +786,7 @@
         "user_provider_accounts_user_id_provider_id_unique": {
           "name": "user_provider_accounts_user_id_provider_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "provider_id"
-          ]
+          "columns": ["user_id", "provider_id"]
         }
       },
       "policies": {},
@@ -936,12 +889,8 @@
           "name": "orders_user_id_users_id_fk",
           "tableFrom": "orders",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -951,9 +900,7 @@
         "orders_order_no_unique": {
           "name": "orders_order_no_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "order_no"
-          ]
+          "columns": ["order_no"]
         }
       },
       "policies": {},
@@ -1028,12 +975,8 @@
           "name": "transactions_user_id_users_id_fk",
           "tableFrom": "transactions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1267,12 +1210,8 @@
           "name": "redemption_reviews_user_id_users_id_fk",
           "tableFrom": "redemption_reviews",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1280,12 +1219,8 @@
           "name": "redemption_reviews_provider_id_game_providers_id_fk",
           "tableFrom": "redemption_reviews",
           "tableTo": "game_providers",
-          "columnsFrom": [
-            "provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1353,12 +1288,8 @@
           "name": "referral_commissions_referrer_user_id_users_id_fk",
           "tableFrom": "referral_commissions",
           "tableTo": "users",
-          "columnsFrom": [
-            "referrer_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["referrer_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1366,12 +1297,8 @@
           "name": "referral_commissions_invitee_user_id_users_id_fk",
           "tableFrom": "referral_commissions",
           "tableTo": "users",
-          "columnsFrom": [
-            "invitee_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["invitee_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1432,12 +1359,8 @@
           "name": "user_bonus_claims_user_id_users_id_fk",
           "tableFrom": "user_bonus_claims",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1445,12 +1368,8 @@
           "name": "user_bonus_claims_bonus_id_bonuses_id_fk",
           "tableFrom": "user_bonus_claims",
           "tableTo": "bonuses",
-          "columnsFrom": [
-            "bonus_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["bonus_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1460,10 +1379,7 @@
         "user_bonus_claims_user_id_bonus_id_unique": {
           "name": "user_bonus_claims_user_id_bonus_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "bonus_id"
-          ]
+          "columns": ["user_id", "bonus_id"]
         }
       },
       "policies": {},
@@ -1513,12 +1429,8 @@
           "name": "user_profile_task_claims_user_id_users_id_fk",
           "tableFrom": "user_profile_task_claims",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1526,12 +1438,8 @@
           "name": "user_profile_task_claims_task_key_profile_tasks_key_fk",
           "tableFrom": "user_profile_task_claims",
           "tableTo": "profile_tasks",
-          "columnsFrom": [
-            "task_key"
-          ],
-          "columnsTo": [
-            "key"
-          ],
+          "columnsFrom": ["task_key"],
+          "columnsTo": ["key"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1541,10 +1449,7 @@
         "user_profile_task_claims_user_id_task_key_unique": {
           "name": "user_profile_task_claims_user_id_task_key_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "task_key"
-          ]
+          "columns": ["user_id", "task_key"]
         }
       },
       "policies": {},
@@ -1685,12 +1590,8 @@
           "name": "help_items_section_id_help_sections_id_fk",
           "tableFrom": "help_items",
           "tableTo": "help_sections",
-          "columnsFrom": [
-            "section_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["section_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1797,12 +1698,8 @@
           "name": "help_steps_item_id_help_items_id_fk",
           "tableFrom": "help_steps",
           "tableTo": "help_items",
-          "columnsFrom": [
-            "item_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["item_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1938,9 +1835,7 @@
         "social_links_platform_unique": {
           "name": "social_links_platform_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "platform"
-          ]
+          "columns": ["platform"]
         }
       },
       "policies": {},
@@ -2008,12 +1903,8 @@
           "name": "admin_audit_logs_admin_id_admins_id_fk",
           "tableFrom": "admin_audit_logs",
           "tableTo": "admins",
-          "columnsFrom": [
-            "admin_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["admin_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2093,12 +1984,8 @@
           "name": "admin_invitations_role_id_roles_id_fk",
           "tableFrom": "admin_invitations",
           "tableTo": "roles",
-          "columnsFrom": [
-            "role_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["role_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2106,12 +1993,8 @@
           "name": "admin_invitations_invited_by_admin_id_admins_id_fk",
           "tableFrom": "admin_invitations",
           "tableTo": "admins",
-          "columnsFrom": [
-            "invited_by_admin_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["invited_by_admin_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -2119,12 +2002,8 @@
           "name": "admin_invitations_accepted_admin_id_admins_id_fk",
           "tableFrom": "admin_invitations",
           "tableTo": "admins",
-          "columnsFrom": [
-            "accepted_admin_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["accepted_admin_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2134,9 +2013,7 @@
         "admin_invitations_token_unique": {
           "name": "admin_invitations_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -2187,12 +2064,8 @@
           "name": "admin_permissions_admin_id_admins_id_fk",
           "tableFrom": "admin_permissions",
           "tableTo": "admins",
-          "columnsFrom": [
-            "admin_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["admin_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2200,12 +2073,8 @@
           "name": "admin_permissions_permission_id_permissions_id_fk",
           "tableFrom": "admin_permissions",
           "tableTo": "permissions",
-          "columnsFrom": [
-            "permission_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["permission_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2213,12 +2082,8 @@
           "name": "admin_permissions_granted_by_admin_id_admins_id_fk",
           "tableFrom": "admin_permissions",
           "tableTo": "admins",
-          "columnsFrom": [
-            "granted_by_admin_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["granted_by_admin_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2226,10 +2091,7 @@
       "compositePrimaryKeys": {
         "admin_permissions_admin_id_permission_id_pk": {
           "name": "admin_permissions_admin_id_permission_id_pk",
-          "columns": [
-            "admin_id",
-            "permission_id"
-          ]
+          "columns": ["admin_id", "permission_id"]
         }
       },
       "uniqueConstraints": {},
@@ -2273,12 +2135,8 @@
           "name": "admin_roles_admin_id_admins_id_fk",
           "tableFrom": "admin_roles",
           "tableTo": "admins",
-          "columnsFrom": [
-            "admin_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["admin_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2286,12 +2144,8 @@
           "name": "admin_roles_role_id_roles_id_fk",
           "tableFrom": "admin_roles",
           "tableTo": "roles",
-          "columnsFrom": [
-            "role_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["role_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2299,12 +2153,8 @@
           "name": "admin_roles_assigned_by_admin_id_admins_id_fk",
           "tableFrom": "admin_roles",
           "tableTo": "admins",
-          "columnsFrom": [
-            "assigned_by_admin_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["assigned_by_admin_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2312,10 +2162,7 @@
       "compositePrimaryKeys": {
         "admin_roles_admin_id_role_id_pk": {
           "name": "admin_roles_admin_id_role_id_pk",
-          "columns": [
-            "admin_id",
-            "role_id"
-          ]
+          "columns": ["admin_id", "role_id"]
         }
       },
       "uniqueConstraints": {},
@@ -2384,12 +2231,8 @@
           "name": "admin_sessions_admin_id_admins_id_fk",
           "tableFrom": "admin_sessions",
           "tableTo": "admins",
-          "columnsFrom": [
-            "admin_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["admin_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2399,9 +2242,7 @@
         "admin_sessions_token_unique": {
           "name": "admin_sessions_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -2471,12 +2312,8 @@
           "name": "admins_created_by_admin_id_admins_id_fk",
           "tableFrom": "admins",
           "tableTo": "admins",
-          "columnsFrom": [
-            "created_by_admin_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_admin_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2486,16 +2323,12 @@
         "admins_username_unique": {
           "name": "admins_username_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "username"
-          ]
+          "columns": ["username"]
         },
         "admins_email_unique": {
           "name": "admins_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -2566,9 +2399,7 @@
         "permissions_key_unique": {
           "name": "permissions_key_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "key"
-          ]
+          "columns": ["key"]
         }
       },
       "policies": {},
@@ -2611,12 +2442,8 @@
           "name": "role_permissions_role_id_roles_id_fk",
           "tableFrom": "role_permissions",
           "tableTo": "roles",
-          "columnsFrom": [
-            "role_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["role_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2624,12 +2451,8 @@
           "name": "role_permissions_permission_id_permissions_id_fk",
           "tableFrom": "role_permissions",
           "tableTo": "permissions",
-          "columnsFrom": [
-            "permission_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["permission_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2637,12 +2460,8 @@
           "name": "role_permissions_granted_by_admin_id_admins_id_fk",
           "tableFrom": "role_permissions",
           "tableTo": "admins",
-          "columnsFrom": [
-            "granted_by_admin_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["granted_by_admin_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2650,10 +2469,7 @@
       "compositePrimaryKeys": {
         "role_permissions_role_id_permission_id_pk": {
           "name": "role_permissions_role_id_permission_id_pk",
-          "columns": [
-            "role_id",
-            "permission_id"
-          ]
+          "columns": ["role_id", "permission_id"]
         }
       },
       "uniqueConstraints": {},
@@ -2726,16 +2542,12 @@
         "roles_name_unique": {
           "name": "roles_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         },
         "roles_slug_unique": {
           "name": "roles_slug_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         }
       },
       "policies": {},
@@ -2836,16 +2648,12 @@
         "game_platforms_name_unique": {
           "name": "game_platforms_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         },
         "game_platforms_slug_unique": {
           "name": "game_platforms_slug_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         }
       },
       "policies": {},
@@ -2983,12 +2791,8 @@
           "name": "agents_store_id_agents_id_fk",
           "tableFrom": "agents",
           "tableTo": "agents",
-          "columnsFrom": [
-            "store_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["store_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2996,12 +2800,8 @@
           "name": "agents_parent_agent_id_agents_id_fk",
           "tableFrom": "agents",
           "tableTo": "agents",
-          "columnsFrom": [
-            "parent_agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["parent_agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -3011,16 +2811,12 @@
         "agents_username_unique": {
           "name": "agents_username_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "username"
-          ]
+          "columns": ["username"]
         },
         "agents_invite_code_unique": {
           "name": "agents_invite_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "invite_code"
-          ]
+          "columns": ["invite_code"]
         }
       },
       "policies": {},
@@ -3088,12 +2884,8 @@
           "name": "agent_sessions_agent_id_agents_id_fk",
           "tableFrom": "agent_sessions",
           "tableTo": "agents",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3103,9 +2895,7 @@
         "agent_sessions_token_unique": {
           "name": "agent_sessions_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -3170,12 +2960,8 @@
           "name": "store_settings_store_id_agents_id_fk",
           "tableFrom": "store_settings",
           "tableTo": "agents",
-          "columnsFrom": [
-            "store_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["store_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3329,12 +3115,8 @@
           "name": "store_platform_accounts_store_id_agents_id_fk",
           "tableFrom": "store_platform_accounts",
           "tableTo": "agents",
-          "columnsFrom": [
-            "store_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["store_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3342,12 +3124,8 @@
           "name": "store_platform_accounts_platform_id_game_platforms_id_fk",
           "tableFrom": "store_platform_accounts",
           "tableTo": "game_platforms",
-          "columnsFrom": [
-            "platform_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["platform_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3421,12 +3199,8 @@
           "name": "store_administrators_store_id_agents_id_fk",
           "tableFrom": "store_administrators",
           "tableTo": "agents",
-          "columnsFrom": [
-            "store_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["store_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3436,9 +3210,7 @@
         "store_administrators_username_unique": {
           "name": "store_administrators_username_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "username"
-          ]
+          "columns": ["username"]
         }
       },
       "policies": {},
@@ -3496,12 +3268,8 @@
           "name": "kiosks_store_id_agents_id_fk",
           "tableFrom": "kiosks",
           "tableTo": "agents",
-          "columnsFrom": [
-            "store_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["store_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3638,12 +3406,8 @@
           "name": "members_store_id_agents_id_fk",
           "tableFrom": "members",
           "tableTo": "agents",
-          "columnsFrom": [
-            "store_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["store_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3651,12 +3415,8 @@
           "name": "members_sale_agent_id_agents_id_fk",
           "tableFrom": "members",
           "tableTo": "agents",
-          "columnsFrom": [
-            "sale_agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["sale_agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3664,12 +3424,8 @@
           "name": "members_sub_agent_id_agents_id_fk",
           "tableFrom": "members",
           "tableTo": "agents",
-          "columnsFrom": [
-            "sub_agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["sub_agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3739,12 +3495,8 @@
           "name": "member_logins_member_id_members_id_fk",
           "tableFrom": "member_logins",
           "tableTo": "members",
-          "columnsFrom": [
-            "member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["member_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3826,12 +3578,8 @@
           "name": "member_platform_accounts_member_id_members_id_fk",
           "tableFrom": "member_platform_accounts",
           "tableTo": "members",
-          "columnsFrom": [
-            "member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["member_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3839,12 +3587,8 @@
           "name": "member_platform_accounts_platform_id_game_platforms_id_fk",
           "tableFrom": "member_platform_accounts",
           "tableTo": "game_platforms",
-          "columnsFrom": [
-            "platform_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["platform_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4020,12 +3764,8 @@
           "name": "member_transactions_store_id_agents_id_fk",
           "tableFrom": "member_transactions",
           "tableTo": "agents",
-          "columnsFrom": [
-            "store_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["store_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4033,12 +3773,8 @@
           "name": "member_transactions_member_id_members_id_fk",
           "tableFrom": "member_transactions",
           "tableTo": "members",
-          "columnsFrom": [
-            "member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["member_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -4046,12 +3782,8 @@
           "name": "member_transactions_platform_id_game_platforms_id_fk",
           "tableFrom": "member_transactions",
           "tableTo": "game_platforms",
-          "columnsFrom": [
-            "platform_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["platform_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -4180,12 +3912,8 @@
           "name": "agent_transactions_agent_id_agents_id_fk",
           "tableFrom": "agent_transactions",
           "tableTo": "agents",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4193,12 +3921,8 @@
           "name": "agent_transactions_counterparty_agent_id_agents_id_fk",
           "tableFrom": "agent_transactions",
           "tableTo": "agents",
-          "columnsFrom": [
-            "counterparty_agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["counterparty_agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -4330,12 +4054,8 @@
           "name": "promotions_store_id_agents_id_fk",
           "tableFrom": "promotions",
           "tableTo": "agents",
-          "columnsFrom": [
-            "store_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["store_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4343,12 +4063,8 @@
           "name": "promotions_assign_agent_id_agents_id_fk",
           "tableFrom": "promotions",
           "tableTo": "agents",
-          "columnsFrom": [
-            "assign_agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["assign_agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4456,12 +4172,8 @@
           "name": "redemption_audits_store_id_agents_id_fk",
           "tableFrom": "redemption_audits",
           "tableTo": "agents",
-          "columnsFrom": [
-            "store_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["store_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4469,12 +4181,8 @@
           "name": "redemption_audits_member_id_members_id_fk",
           "tableFrom": "redemption_audits",
           "tableTo": "members",
-          "columnsFrom": [
-            "member_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["member_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -4482,12 +4190,8 @@
           "name": "redemption_audits_platform_id_game_platforms_id_fk",
           "tableFrom": "redemption_audits",
           "tableTo": "game_platforms",
-          "columnsFrom": [
-            "platform_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["platform_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -4495,12 +4199,8 @@
           "name": "redemption_audits_reviewed_by_agent_id_agents_id_fk",
           "tableFrom": "redemption_audits",
           "tableTo": "agents",
-          "columnsFrom": [
-            "reviewed_by_agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reviewed_by_agent_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -4568,12 +4268,8 @@
           "name": "cs_configs_store_id_agents_id_fk",
           "tableFrom": "cs_configs",
           "tableTo": "agents",
-          "columnsFrom": [
-            "store_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["store_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4650,12 +4346,8 @@
           "name": "store_terms_store_id_agents_id_fk",
           "tableFrom": "store_terms",
           "tableTo": "agents",
-          "columnsFrom": [
-            "store_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["store_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4730,12 +4422,8 @@
           "name": "agent_notices_store_id_agents_id_fk",
           "tableFrom": "agent_notices",
           "tableTo": "agents",
-          "columnsFrom": [
-            "store_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["store_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4893,12 +4581,8 @@
           "name": "media_assets_uploaded_by_admin_id_admins_id_fk",
           "tableFrom": "media_assets",
           "tableTo": "admins",
-          "columnsFrom": [
-            "uploaded_by_admin_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["uploaded_by_admin_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -4906,12 +4590,8 @@
           "name": "media_assets_uploaded_by_user_id_users_id_fk",
           "tableFrom": "media_assets",
           "tableTo": "users",
-          "columnsFrom": [
-            "uploaded_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["uploaded_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -4921,9 +4601,7 @@
         "media_assets_r2_key_unique": {
           "name": "media_assets_r2_key_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "r2_key"
-          ]
+          "columns": ["r2_key"]
         }
       },
       "policies": {},
@@ -4935,93 +4613,52 @@
     "public.admin_status": {
       "name": "admin_status",
       "schema": "public",
-      "values": [
-        "active",
-        "suspended",
-        "invited"
-      ]
+      "values": ["active", "suspended", "invited"]
     },
     "public.banner_badge_icon": {
       "name": "banner_badge_icon",
       "schema": "public",
-      "values": [
-        "coin",
-        "percent"
-      ]
+      "values": ["coin", "percent"]
     },
     "public.banner_type": {
       "name": "banner_type",
       "schema": "public",
-      "values": [
-        "placeholder",
-        "gradient"
-      ]
+      "values": ["placeholder", "gradient"]
     },
     "public.bonus_status": {
       "name": "bonus_status",
       "schema": "public",
-      "values": [
-        "claimable",
-        "claimed",
-        "locked",
-        "none"
-      ]
+      "values": ["claimable", "claimed", "locked", "none"]
     },
     "public.fee_mode": {
       "name": "fee_mode",
       "schema": "public",
-      "values": [
-        "standard",
-        "waiver"
-      ]
+      "values": ["standard", "waiver"]
     },
     "public.help_item_icon": {
       "name": "help_item_icon",
       "schema": "public",
-      "values": [
-        "play",
-        "coins",
-        "btc",
-        "pyusd"
-      ]
+      "values": ["play", "coins", "btc", "pyusd"]
     },
     "public.help_section_icon": {
       "name": "help_section_icon",
       "schema": "public",
-      "values": [
-        "video",
-        "faq",
-        "guide"
-      ]
+      "values": ["video", "faq", "guide"]
     },
     "public.help_tab": {
       "name": "help_tab",
       "schema": "public",
-      "values": [
-        "general",
-        "deposit",
-        "withdraw"
-      ]
+      "values": ["general", "deposit", "withdraw"]
     },
     "public.invitation_status": {
       "name": "invitation_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "accepted",
-        "revoked",
-        "expired"
-      ]
+      "values": ["pending", "accepted", "revoked", "expired"]
     },
     "public.kyc_status": {
       "name": "kyc_status",
       "schema": "public",
-      "values": [
-        "unverified",
-        "pending",
-        "verified",
-        "rejected"
-      ]
+      "values": ["unverified", "pending", "verified", "rejected"]
     },
     "public.media_kind": {
       "name": "media_kind",
@@ -5040,98 +4677,52 @@
     "public.order_status": {
       "name": "order_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "completed",
-        "failed",
-        "cancelled"
-      ]
+      "values": ["pending", "completed", "failed", "cancelled"]
     },
     "public.otp_purpose": {
       "name": "otp_purpose",
       "schema": "public",
-      "values": [
-        "register",
-        "login",
-        "bind_phone",
-        "reset_password"
-      ]
+      "values": ["register", "login", "bind_phone", "reset_password"]
     },
     "public.payment_method": {
       "name": "payment_method",
       "schema": "public",
-      "values": [
-        "cashapp",
-        "btc",
-        "lightning",
-        "pyusd",
-        "ach",
-        "card",
-        "chime"
-      ]
+      "values": ["cashapp", "btc", "lightning", "pyusd", "ach", "card", "chime"]
     },
     "public.permission_effect": {
       "name": "permission_effect",
       "schema": "public",
-      "values": [
-        "allow",
-        "deny"
-      ]
+      "values": ["allow", "deny"]
     },
     "public.postal_status": {
       "name": "postal_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "completed",
-        "rejected"
-      ]
+      "values": ["pending", "completed", "rejected"]
     },
     "public.provider_type": {
       "name": "provider_type",
       "schema": "public",
-      "values": [
-        "SC",
-        "GC"
-      ]
+      "values": ["SC", "GC"]
     },
     "public.referral_status": {
       "name": "referral_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "claimed"
-      ]
+      "values": ["pending", "claimed"]
     },
     "public.review_status": {
       "name": "review_status",
       "schema": "public",
-      "values": [
-        "reviewing",
-        "approved",
-        "rejected"
-      ]
+      "values": ["reviewing", "approved", "rejected"]
     },
     "public.schedule_icon": {
       "name": "schedule_icon",
       "schema": "public",
-      "values": [
-        "calendar",
-        "clock"
-      ]
+      "values": ["calendar", "clock"]
     },
     "public.setting_type": {
       "name": "setting_type",
       "schema": "public",
-      "values": [
-        "string",
-        "number",
-        "boolean",
-        "json",
-        "url",
-        "color",
-        "image"
-      ]
+      "values": ["string", "number", "boolean", "json", "url", "color", "image"]
     },
     "public.social_platform": {
       "name": "social_platform",
@@ -5152,145 +4743,82 @@
     "public.ticket_status": {
       "name": "ticket_status",
       "schema": "public",
-      "values": [
-        "open",
-        "answered",
-        "closed"
-      ]
+      "values": ["open", "answered", "closed"]
     },
     "public.tx_status": {
       "name": "tx_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "completed",
-        "failed",
-        "cancelled"
-      ]
+      "values": ["pending", "completed", "failed", "cancelled"]
     },
     "public.tx_type": {
       "name": "tx_type",
       "schema": "public",
-      "values": [
-        "deposit",
-        "withdraw"
-      ]
+      "values": ["deposit", "withdraw"]
     },
     "public.user_status": {
       "name": "user_status",
       "schema": "public",
-      "values": [
-        "active",
-        "blocked"
-      ]
+      "values": ["active", "blocked"]
     },
     "public.agent_status": {
       "name": "agent_status",
       "schema": "public",
-      "values": [
-        "active",
-        "disabled"
-      ]
+      "values": ["active", "disabled"]
     },
     "public.agent_tx_status": {
       "name": "agent_tx_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "completed",
-        "failed",
-        "cancelled"
-      ]
+      "values": ["pending", "completed", "failed", "cancelled"]
     },
     "public.agent_tx_type": {
       "name": "agent_tx_type",
       "schema": "public",
-      "values": [
-        "deposit",
-        "withdraw",
-        "transfer"
-      ]
+      "values": ["deposit", "withdraw", "transfer"]
     },
     "public.agent_type": {
       "name": "agent_type",
       "schema": "public",
-      "values": [
-        "store",
-        "sale",
-        "sub"
-      ]
+      "values": ["store", "sale", "sub"]
     },
     "public.audit_status": {
       "name": "audit_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "approved",
-        "rejected"
-      ]
+      "values": ["pending", "approved", "rejected"]
     },
     "public.member_tx_channel": {
       "name": "member_tx_channel",
       "schema": "public",
-      "values": [
-        "online",
-        "kiosk"
-      ]
+      "values": ["online", "kiosk"]
     },
     "public.member_tx_type": {
       "name": "member_tx_type",
       "schema": "public",
-      "values": [
-        "recharge",
-        "redeem",
-        "bonus",
-        "transfer"
-      ]
+      "values": ["recharge", "redeem", "bonus", "transfer"]
     },
     "public.poster_category": {
       "name": "poster_category",
       "schema": "public",
-      "values": [
-        "portrait",
-        "card"
-      ]
+      "values": ["portrait", "card"]
     },
     "public.promotion_status": {
       "name": "promotion_status",
       "schema": "public",
-      "values": [
-        "enabled",
-        "disabled"
-      ]
+      "values": ["enabled", "disabled"]
     },
     "public.promotion_type": {
       "name": "promotion_type",
       "schema": "public",
-      "values": [
-        "promotion_game",
-        "double_game",
-        "loyalty_drop"
-      ]
+      "values": ["promotion_game", "double_game", "loyalty_drop"]
     },
     "public.terms_locale": {
       "name": "terms_locale",
       "schema": "public",
-      "values": [
-        "en",
-        "es"
-      ]
+      "values": ["en", "es"]
     },
     "public.withdraw_method": {
       "name": "withdraw_method",
       "schema": "public",
-      "values": [
-        "paypal_pyusd",
-        "cashapp_usdc",
-        "bitcoin",
-        "bitcoin_lightning",
-        "bank_card",
-        "ach"
-      ]
+      "values": ["paypal_pyusd", "cashapp_usdc", "bitcoin", "bitcoin_lightning", "bank_card", "ach"]
     }
   },
   "schemas": {},

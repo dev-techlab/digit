@@ -99,7 +99,10 @@ export async function verifyOtp(
     if (row.attempts >= MAX_ATTEMPTS) return { ok: false, error: 'Too many attempts' };
 
     // Count this attempt before checking, so brute force is bounded.
-    await tx.update(s.otpCodes).set({ attempts: row.attempts + 1 }).where(eq(s.otpCodes.id, row.id));
+    await tx
+      .update(s.otpCodes)
+      .set({ attempts: row.attempts + 1 })
+      .where(eq(s.otpCodes.id, row.id));
 
     if (row.code !== hashCode(code, destination)) return { ok: false, error: 'Invalid code' };
 

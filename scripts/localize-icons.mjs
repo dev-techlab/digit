@@ -47,7 +47,8 @@ async function main() {
   const remoteUrls = new Set();
   for (const { rows } of files) {
     for (const p of rows) {
-      if (typeof p.iconUrl === 'string' && /^https?:\/\//.test(p.iconUrl)) remoteUrls.add(p.iconUrl);
+      if (typeof p.iconUrl === 'string' && /^https?:\/\//.test(p.iconUrl))
+        remoteUrls.add(p.iconUrl);
     }
   }
 

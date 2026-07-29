@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const adminId = await getAdminIdFromRequest(req);
   if (!adminId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  
+
   try {
     await requirePermission(adminId, 'platforms.read');
   } catch (e) {
@@ -41,10 +41,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   let filteredAgents = connectedAgents;
   if (search) {
     const q = search.toLowerCase();
-    filteredAgents = connectedAgents.filter(a => 
-      a.username.toLowerCase().includes(q) || 
-      (a.nickname && a.nickname.toLowerCase().includes(q)) ||
-      (a.email && a.email.toLowerCase().includes(q))
+    filteredAgents = connectedAgents.filter(
+      (a) =>
+        a.username.toLowerCase().includes(q) ||
+        (a.nickname && a.nickname.toLowerCase().includes(q)) ||
+        (a.email && a.email.toLowerCase().includes(q))
     );
   }
 

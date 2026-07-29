@@ -117,7 +117,9 @@ export async function syncGamePlatforms(): Promise<SyncGamePlatformsResult> {
     // New rows default to the first (GC) candidate.
     let chosen = candidates[0];
     if (candidates.length > 1) {
-      crossTypeConflicts.push(`${chosen.name} (${candidates.map((c) => c.providerType).join('/')})`);
+      crossTypeConflicts.push(
+        `${chosen.name} (${candidates.map((c) => c.providerType).join('/')})`
+      );
       if (match?.providerType) {
         chosen = candidates.find((c) => c.providerType === match.providerType) ?? chosen;
       }
@@ -149,7 +151,9 @@ export async function syncGamePlatforms(): Promise<SyncGamePlatformsResult> {
   }
 
   if (crossTypeConflicts.length) {
-    console.warn(`[providers.sync] name collision across SC/GC catalogs (one mapping kept per row): ${crossTypeConflicts.join(', ')}`);
+    console.warn(
+      `[providers.sync] name collision across SC/GC catalogs (one mapping kept per row): ${crossTypeConflicts.join(', ')}`
+    );
   }
 
   const total = await db.select({ n: s.gamePlatforms.id }).from(s.gamePlatforms);

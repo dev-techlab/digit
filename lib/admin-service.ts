@@ -198,5 +198,8 @@ export async function createAdminSession(adminId: string, meta?: { userAgent?: s
 
 /** Revoke a single admin session by its token (logout). */
 export async function revokeAdminSessionByToken(token: string) {
-  await db.update(s.adminSessions).set({ revokedAt: new Date() }).where(eq(s.adminSessions.token, token));
+  await db
+    .update(s.adminSessions)
+    .set({ revokedAt: new Date() })
+    .where(eq(s.adminSessions.token, token));
 }

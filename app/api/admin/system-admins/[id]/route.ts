@@ -58,7 +58,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     // Log the update
     const changesToLog = { ...updateData };
     delete changesToLog.passwordHash; // Don't log passwords
-    
+
     await db.insert(s.adminAuditLogs).values({
       adminId,
       action: 'update_admin',
@@ -111,6 +111,9 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ error: 'Failed to delete admin. They may have dependent records.' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to delete admin. They may have dependent records.' },
+      { status: 500 }
+    );
   }
 }

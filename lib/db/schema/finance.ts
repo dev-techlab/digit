@@ -1,11 +1,5 @@
 import { pgTable, uuid, text, boolean, numeric, timestamp } from 'drizzle-orm/pg-core';
-import {
-  orderStatusEnum,
-  feeModeEnum,
-  paymentMethodEnum,
-  txStatusEnum,
-  txTypeEnum,
-} from './enums';
+import { orderStatusEnum, feeModeEnum, paymentMethodEnum, txStatusEnum, txTypeEnum } from './enums';
 import { users } from './users';
 
 export const orders = pgTable('orders', {

@@ -25,30 +25,16 @@ export const paymentMethodEnum = pgEnum('payment_method', [
   'card',
   'chime',
 ]);
-export const txStatusEnum = pgEnum('tx_status', [
-  'pending',
-  'completed',
-  'failed',
-  'cancelled',
-]);
+export const txStatusEnum = pgEnum('tx_status', ['pending', 'completed', 'failed', 'cancelled']);
 export const txTypeEnum = pgEnum('tx_type', ['deposit', 'withdraw']);
 
 // --- Engagement ---
 export const bannerTypeEnum = pgEnum('banner_type', ['placeholder', 'gradient']);
 export const bannerBadgeIconEnum = pgEnum('banner_badge_icon', ['coin', 'percent']);
 export const scheduleIconEnum = pgEnum('schedule_icon', ['calendar', 'clock']);
-export const bonusStatusEnum = pgEnum('bonus_status', [
-  'claimable',
-  'claimed',
-  'locked',
-  'none',
-]);
+export const bonusStatusEnum = pgEnum('bonus_status', ['claimable', 'claimed', 'locked', 'none']);
 export const referralStatusEnum = pgEnum('referral_status', ['pending', 'claimed']);
-export const reviewStatusEnum = pgEnum('review_status', [
-  'reviewing',
-  'approved',
-  'rejected',
-]);
+export const reviewStatusEnum = pgEnum('review_status', ['reviewing', 'approved', 'rejected']);
 
 // --- Auth / flows ---
 export const otpPurposeEnum = pgEnum('otp_purpose', [
@@ -57,11 +43,7 @@ export const otpPurposeEnum = pgEnum('otp_purpose', [
   'bind_phone',
   'reset_password',
 ]);
-export const postalStatusEnum = pgEnum('postal_status', [
-  'pending',
-  'completed',
-  'rejected',
-]);
+export const postalStatusEnum = pgEnum('postal_status', ['pending', 'completed', 'rejected']);
 export const ticketStatusEnum = pgEnum('ticket_status', ['open', 'answered', 'closed']);
 
 // --- CMS / help ---

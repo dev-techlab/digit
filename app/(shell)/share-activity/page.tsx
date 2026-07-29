@@ -10,7 +10,10 @@ export default async function ShareActivityPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-4 lg:py-6">
-      <RequireAuth title="Sign in required" body="Sign in to invite friends and track your rewards.">
+      <RequireAuth
+        title="Sign in required"
+        body="Sign in to invite friends and track your rewards."
+      >
         <ShareActivity referral={referral} />
       </RequireAuth>
     </div>

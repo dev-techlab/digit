@@ -16,12 +16,18 @@ async function authorize(
 ): Promise<{ adminId: string; error: undefined } | { adminId: undefined; error: NextResponse }> {
   const adminId = await getAdminIdFromRequest(req);
   if (!adminId)
-    return { adminId: undefined, error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+    return {
+      adminId: undefined,
+      error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+    };
   try {
     await requirePermission(adminId, permKey);
   } catch (e) {
     if (e instanceof PermissionError) {
-      return { adminId: undefined, error: NextResponse.json({ error: e.message }, { status: e.status }) };
+      return {
+        adminId: undefined,
+        error: NextResponse.json({ error: e.message }, { status: e.status }),
+      };
     }
     throw e;
   }
@@ -70,7 +76,11 @@ export async function POST(req: Request) {
 
   if (!title) return NextResponse.json({ error: 'title required' }, { status: 400 });
   if (!description) return NextResponse.json({ error: 'description required' }, { status: 400 });
-  if (!id) return NextResponse.json({ error: 'id (or a title to derive it from) is required' }, { status: 400 });
+  if (!id)
+    return NextResponse.json(
+      { error: 'id (or a title to derive it from) is required' },
+      { status: 400 }
+    );
 
   const values: typeof s.bonuses.$inferInsert = {
     id,
@@ -81,7 +91,8 @@ export async function POST(req: Request) {
     bannerType,
     bannerGradient: bannerType === 'gradient' ? str(body.bannerGradient) || null : null,
     bannerBadgeIcon:
-      bannerType === 'gradient' && (body.bannerBadgeIcon === 'coin' || body.bannerBadgeIcon === 'percent')
+      bannerType === 'gradient' &&
+      (body.bannerBadgeIcon === 'coin' || body.bannerBadgeIcon === 'percent')
         ? body.bannerBadgeIcon
         : null,
     bannerBadgeText: bannerType === 'gradient' ? str(body.bannerBadgeText) || null : null,
@@ -137,7 +148,9 @@ export async function PUT(req: Request) {
   if (str(body.title)) set.title = str(body.title);
   if (str(body.description)) set.description = str(body.description);
   if (Array.isArray(body.tags)) {
-    set.tags = body.tags.filter((t: unknown): t is string => typeof t === 'string' && t.trim().length > 0);
+    set.tags = body.tags.filter(
+      (t: unknown): t is string => typeof t === 'string' && t.trim().length > 0
+    );
   }
   if (typeof body.active === 'boolean') set.active = body.active;
   if (body.bannerType === 'gradient' || body.bannerType === 'placeholder') {
@@ -150,13 +163,16 @@ export async function PUT(req: Request) {
       if (body.bannerGradient != null) set.bannerGradient = str(body.bannerGradient) || null;
       if (body.bannerBadgeIcon === 'coin' || body.bannerBadgeIcon === 'percent')
         set.bannerBadgeIcon = body.bannerBadgeIcon;
-      else if (body.bannerBadgeIcon === null || body.bannerBadgeIcon === '') set.bannerBadgeIcon = null;
+      else if (body.bannerBadgeIcon === null || body.bannerBadgeIcon === '')
+        set.bannerBadgeIcon = null;
       if (body.bannerBadgeText != null) set.bannerBadgeText = str(body.bannerBadgeText) || null;
     }
   }
-  if (body.scheduleIcon === 'clock' || body.scheduleIcon === 'calendar') set.scheduleIcon = body.scheduleIcon;
+  if (body.scheduleIcon === 'clock' || body.scheduleIcon === 'calendar')
+    set.scheduleIcon = body.scheduleIcon;
   if (body.scheduleText != null) set.scheduleText = str(body.scheduleText);
-  if ('scheduleCountdownSeconds' in body) set.scheduleCountdownSeconds = int(body.scheduleCountdownSeconds);
+  if ('scheduleCountdownSeconds' in body)
+    set.scheduleCountdownSeconds = int(body.scheduleCountdownSeconds);
   if (body.sort != null) set.sort = int(body.sort) ?? 0;
 
   const [row] = await db.update(s.bonuses).set(set).where(eq(s.bonuses.id, id)).returning();

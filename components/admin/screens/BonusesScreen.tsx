@@ -88,7 +88,8 @@ export function BonusesScreen() {
       bannerBadgeText: b.bannerBadgeText ?? '',
       scheduleIcon: b.scheduleIcon,
       scheduleText: b.scheduleText,
-      scheduleCountdownSeconds: b.scheduleCountdownSeconds != null ? String(b.scheduleCountdownSeconds) : '',
+      scheduleCountdownSeconds:
+        b.scheduleCountdownSeconds != null ? String(b.scheduleCountdownSeconds) : '',
       sort: String(b.sort),
     });
   };
@@ -142,7 +143,10 @@ export function BonusesScreen() {
   const toggleActive = async (b: Bonus, active: boolean) => {
     setBonuses((rows) => rows.map((r) => (r.id === b.id ? { ...r, active } : r)));
     try {
-      await api('/api/admin/bonuses', { method: 'PUT', body: JSON.stringify({ id: b.id, active }) });
+      await api('/api/admin/bonuses', {
+        method: 'PUT',
+        body: JSON.stringify({ id: b.id, active }),
+      });
     } catch {
       setBonuses((rows) => rows.map((r) => (r.id === b.id ? { ...r, active: !active } : r)));
     }
@@ -187,17 +191,25 @@ export function BonusesScreen() {
             <td className="px-4 py-2.5">
               <div className="flex flex-wrap gap-1">
                 {b.tags.map((t) => (
-                  <span key={t} className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">
+                  <span
+                    key={t}
+                    className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500"
+                  >
                     {t}
                   </span>
                 ))}
               </div>
             </td>
             <td className="px-4 py-2.5 text-xs text-slate-500">
-              {b.bannerType === 'gradient' ? `Gradient${b.bannerBadgeText ? ` · ${b.bannerBadgeText}` : ''}` : 'Placeholder'}
+              {b.bannerType === 'gradient'
+                ? `Gradient${b.bannerBadgeText ? ` · ${b.bannerBadgeText}` : ''}`
+                : 'Placeholder'}
             </td>
             <td className="px-4 py-2.5 text-xs text-slate-500">
-              {b.scheduleText || (b.scheduleCountdownSeconds != null ? `Countdown ${b.scheduleCountdownSeconds}s` : '-')}
+              {b.scheduleText ||
+                (b.scheduleCountdownSeconds != null
+                  ? `Countdown ${b.scheduleCountdownSeconds}s`
+                  : '-')}
             </td>
             <td className="px-4 py-2.5">{b.sort}</td>
             <td className="px-4 py-2.5">
@@ -289,7 +301,9 @@ export function BonusesScreen() {
               <Field label="Banner Type">
                 <Select
                   value={draft.bannerType}
-                  onChange={(e) => setDraft({ ...draft, bannerType: e.target.value as Draft['bannerType'] })}
+                  onChange={(e) =>
+                    setDraft({ ...draft, bannerType: e.target.value as Draft['bannerType'] })
+                  }
                 >
                   <option value="placeholder">Placeholder</option>
                   <option value="gradient">Gradient</option>
@@ -297,12 +311,18 @@ export function BonusesScreen() {
               </Field>
               <Field label="Active">
                 <div className="pt-1.5">
-                  <Toggle checked={draft.active} onChange={(v) => setDraft({ ...draft, active: v })} />
+                  <Toggle
+                    checked={draft.active}
+                    onChange={(v) => setDraft({ ...draft, active: v })}
+                  />
                 </div>
               </Field>
               {draft.bannerType === 'gradient' && (
                 <>
-                  <Field label="Gradient classes" hint="Tailwind, e.g. from-fuchsia-600 via-rose-600 to-orange-600">
+                  <Field
+                    label="Gradient classes"
+                    hint="Tailwind, e.g. from-fuchsia-600 via-rose-600 to-orange-600"
+                  >
                     <TextInput
                       value={draft.bannerGradient}
                       onChange={(e) => setDraft({ ...draft, bannerGradient: e.target.value })}
@@ -312,7 +332,10 @@ export function BonusesScreen() {
                     <Select
                       value={draft.bannerBadgeIcon}
                       onChange={(e) =>
-                        setDraft({ ...draft, bannerBadgeIcon: e.target.value as Draft['bannerBadgeIcon'] })
+                        setDraft({
+                          ...draft,
+                          bannerBadgeIcon: e.target.value as Draft['bannerBadgeIcon'],
+                        })
                       }
                     >
                       <option value="">None</option>
@@ -332,7 +355,9 @@ export function BonusesScreen() {
               <Field label="Schedule Icon">
                 <Select
                   value={draft.scheduleIcon}
-                  onChange={(e) => setDraft({ ...draft, scheduleIcon: e.target.value as Draft['scheduleIcon'] })}
+                  onChange={(e) =>
+                    setDraft({ ...draft, scheduleIcon: e.target.value as Draft['scheduleIcon'] })
+                  }
                 >
                   <option value="calendar">Calendar</option>
                   <option value="clock">Clock</option>

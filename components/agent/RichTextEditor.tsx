@@ -153,8 +153,8 @@ export function RichTextEditor({
           'min-h-[22rem] max-w-none px-4 py-3 text-sm leading-relaxed text-slate-700 outline-none',
           '[&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:mt-3 [&_h3]:text-base [&_h3]:font-semibold',
           '[&_blockquote]:border-l-4 [&_blockquote]:border-slate-200 [&_blockquote]:pl-3 [&_blockquote]:text-slate-500',
-          '[&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_a]:text-blue-500 [&_a]:underline',
-          "empty:before:text-slate-300 empty:before:content-[attr(data-placeholder)]"
+          '[&_a]:text-blue-500 [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6',
+          'empty:before:text-slate-300 empty:before:content-[attr(data-placeholder)]'
         )}
       />
     </div>

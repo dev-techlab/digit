@@ -59,7 +59,8 @@ export function PromotionScreen() {
     remark: '',
   });
 
-  const load = () => api<{ promotions: PromoRow[] }>('/api/agent/promotions').then((d) => setRows(d.promotions));
+  const load = () =>
+    api<{ promotions: PromoRow[] }>('/api/agent/promotions').then((d) => setRows(d.promotions));
   useEffect(() => {
     void load();
   }, []);
@@ -150,7 +151,16 @@ export function PromotionScreen() {
           <Plus size={16} /> Add Promotion
         </Btn>
         <Table
-          headers={['#', 'User', 'Promotion Type', 'Threshold', 'Reward', 'Condition', 'Status', 'Operations']}
+          headers={[
+            '#',
+            'User',
+            'Promotion Type',
+            'Threshold',
+            'Reward',
+            'Condition',
+            'Status',
+            'Operations',
+          ]}
           empty={filtered.length === 0}
         >
           {filtered.map((r, i) => (
@@ -176,7 +186,10 @@ export function PromotionScreen() {
               </td>
               <td className="px-4 py-3">
                 <div className="flex gap-3 whitespace-nowrap text-sm">
-                  <button className="text-blue-500 hover:underline" onClick={() => void toggleStatus(r)}>
+                  <button
+                    className="text-blue-500 hover:underline"
+                    onClick={() => void toggleStatus(r)}
+                  >
                     {r.status === 'enabled' ? 'Disable' : 'Enable'}
                   </button>
                   <button className="text-red-500 hover:underline" onClick={() => void remove(r)}>
@@ -247,7 +260,10 @@ export function PromotionScreen() {
               />
             </Field>
           </div>
-          <Field label="Redemption Multiplier" hint="Redemption condition = Bonus amount × multiplier">
+          <Field
+            label="Redemption Multiplier"
+            hint="Redemption condition = Bonus amount × multiplier"
+          >
             <Select
               value={form.redemptionMultiplier}
               onChange={(e) => setForm({ ...form, redemptionMultiplier: e.target.value })}
@@ -294,7 +310,10 @@ export function PromotionScreen() {
             label="Online Only"
             hint="When enabled, this promotion only applies to online balance transfers."
           >
-            <Toggle checked={form.onlineOnly} onChange={(v) => setForm({ ...form, onlineOnly: v })} />
+            <Toggle
+              checked={form.onlineOnly}
+              onChange={(v) => setForm({ ...form, onlineOnly: v })}
+            />
           </Field>
           <Field label="Status">
             <div className="flex gap-5 text-sm text-slate-600">

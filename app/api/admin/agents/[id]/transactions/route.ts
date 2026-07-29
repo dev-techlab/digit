@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const adminId = await getAdminIdFromRequest(req);
   if (!adminId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  
+
   try {
     await requirePermission(adminId, 'agents.read');
   } catch (e) {

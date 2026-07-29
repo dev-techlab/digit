@@ -225,17 +225,20 @@ export function AgentShell({ children }: { children: React.ReactNode }) {
 
   const brand = (
     <div className="flex items-center gap-2.5 px-5 py-4">
-      <Image src="/logo.png" alt="Logo" width={128} height={128} className="h-8 w-8 shrink-0 rounded-lg object-contain" />
+      <Image
+        src="/logo.png"
+        alt="Logo"
+        width={128}
+        height={128}
+        className="h-8 w-8 shrink-0 rounded-lg object-contain"
+      />
       {!collapsed && <span className="text-lg font-bold text-slate-800">{APP_NAME}</span>}
     </div>
   );
 
   return (
     <PanelCtx.Provider value={ctx}>
-      <div
-        className="flex min-h-dvh bg-[#f5f6fa] text-slate-700"
-        style={{ colorScheme: 'light' }}
-      >
+      <div className="flex min-h-dvh bg-[#f5f6fa] text-slate-700" style={{ colorScheme: 'light' }}>
         {/* Desktop sidebar (≥lg) */}
         <aside
           className={cn(
@@ -314,7 +317,7 @@ export function AgentShell({ children }: { children: React.ReactNode }) {
           </header>
 
           {/* Current page pill */}
-          <div className="flex items-center gap-2 overflow-x-auto px-4 pt-3 sm:px-5 [scrollbar-width:none]">
+          <div className="flex items-center gap-2 overflow-x-auto px-4 pt-3 [scrollbar-width:none] sm:px-5">
             <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-blue-500 px-3 py-1.5 text-sm font-medium text-white">
               {title}
             </span>
@@ -326,7 +329,11 @@ export function AgentShell({ children }: { children: React.ReactNode }) {
           {chatOpen && (
             <div className="fixed bottom-4 right-4 z-50 flex h-[70vh] max-h-[560px] w-[calc(100vw-2rem)] max-w-sm flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-2xl sm:bottom-8 sm:right-8">
               <div className="flex items-center justify-between bg-gradient-to-r from-blue-100 to-slate-50 px-4 py-3">
-                <button className="text-slate-500" aria-label="Back" onClick={() => setChatOpen(false)}>
+                <button
+                  className="text-slate-500"
+                  aria-label="Back"
+                  onClick={() => setChatOpen(false)}
+                >
                   <ChevronLeft size={20} />
                 </button>
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-400">

@@ -58,8 +58,7 @@ export function Btn({
         variant === 'primary' && 'bg-blue-500 text-white hover:bg-blue-600',
         variant === 'success' && 'bg-green-500 text-white hover:bg-green-600',
         variant === 'danger' && 'bg-red-500 text-white hover:bg-red-600',
-        variant === 'ghost' &&
-          'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
+        variant === 'ghost' && 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
         className
       )}
     >
@@ -305,7 +304,12 @@ export function Pagination({
       <span>Total {total}</span>
       <span>{pageSize}/page</span>
       <div className="flex items-center gap-1">
-        <Btn variant="ghost" className="px-2 py-1" disabled={page <= 1} onClick={() => onPage(page - 1)}>
+        <Btn
+          variant="ghost"
+          className="px-2 py-1"
+          disabled={page <= 1}
+          onClick={() => onPage(page - 1)}
+        >
           ‹
         </Btn>
         {Array.from({ length: Math.min(pages, 7) }, (_, i) => i + 1).map((p) => (
@@ -314,13 +318,20 @@ export function Pagination({
             onClick={() => onPage(p)}
             className={cn(
               'h-8 w-8 rounded-md text-sm',
-              p === page ? 'bg-blue-500 font-semibold text-white' : 'text-slate-600 hover:bg-slate-100'
+              p === page
+                ? 'bg-blue-500 font-semibold text-white'
+                : 'text-slate-600 hover:bg-slate-100'
             )}
           >
             {p}
           </button>
         ))}
-        <Btn variant="ghost" className="px-2 py-1" disabled={page >= pages} onClick={() => onPage(page + 1)}>
+        <Btn
+          variant="ghost"
+          className="px-2 py-1"
+          disabled={page >= pages}
+          onClick={() => onPage(page + 1)}
+        >
           ›
         </Btn>
       </div>

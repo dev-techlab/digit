@@ -288,11 +288,31 @@ async function main() {
   const posterCount = await db.select({ n: sql<number>`count(*)::int` }).from(s.posters);
   if (posterCount[0].n === 0) {
     await db.insert(s.posters).values([
-      { category: 'portrait', title: 'One-Stop Gaming', imageUrl: '/posters/portrait-1.png', sort: 0 },
-      { category: 'portrait', title: 'Big Win Jackpot', imageUrl: '/posters/portrait-2.png', sort: 1 },
+      {
+        category: 'portrait',
+        title: 'One-Stop Gaming',
+        imageUrl: '/posters/portrait-1.png',
+        sort: 0,
+      },
+      {
+        category: 'portrait',
+        title: 'Big Win Jackpot',
+        imageUrl: '/posters/portrait-2.png',
+        sort: 1,
+      },
       { category: 'portrait', title: 'Scan to Join', imageUrl: '/posters/portrait-3.png', sort: 2 },
-      { category: 'portrait', title: 'Multi-Platform', imageUrl: '/posters/portrait-4.png', sort: 3 },
-      { category: 'portrait', title: 'Quick Deposit', imageUrl: '/posters/portrait-5.png', sort: 4 },
+      {
+        category: 'portrait',
+        title: 'Multi-Platform',
+        imageUrl: '/posters/portrait-4.png',
+        sort: 3,
+      },
+      {
+        category: 'portrait',
+        title: 'Quick Deposit',
+        imageUrl: '/posters/portrait-5.png',
+        sort: 4,
+      },
       { category: 'card', title: 'Play Anytime', imageUrl: '/posters/card-1.png', sort: 0 },
       { category: 'card', title: 'Free Money', imageUrl: '/posters/card-2.png', sort: 1 },
       { category: 'card', title: 'Play Anywhere', imageUrl: '/posters/card-3.png', sort: 2 },

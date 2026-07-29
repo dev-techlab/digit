@@ -42,7 +42,13 @@ export function AdminForgotPasswordView() {
 
       <div className="relative z-10 my-6 w-full max-w-[440px] rounded-[24px] bg-white/95 p-6 shadow-[0_25px_70px_rgba(60,30,120,0.28)] sm:rounded-[28px] sm:p-8">
         <div className="flex justify-center">
-          <Image src="/logo.png" alt="Logo" width={128} height={128} className="h-14 w-14 rounded-2xl object-contain shadow-lg" />
+          <Image
+            src="/logo.png"
+            alt="Logo"
+            width={128}
+            height={128}
+            className="h-14 w-14 rounded-2xl object-contain shadow-lg"
+          />
         </div>
 
         <div className="mt-4 text-center">
@@ -56,8 +62,8 @@ export function AdminForgotPasswordView() {
           <div className="mt-6 flex flex-col items-center gap-3 text-center sm:mt-8">
             <CheckCircle2 className="h-10 w-10 text-blue-500" strokeWidth={1.8} />
             <p className="text-sm text-slate-500 sm:text-base">
-              If an account exists for <span className="font-semibold text-slate-700">{email}</span>,
-              we&apos;ve sent instructions to reset the password.
+              If an account exists for <span className="font-semibold text-slate-700">{email}</span>
+              , we&apos;ve sent instructions to reset the password.
             </p>
           </div>
         ) : (

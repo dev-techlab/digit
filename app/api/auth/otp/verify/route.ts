@@ -20,7 +20,10 @@ export async function POST(req: Request) {
   const purpose = typeof body.purpose === 'string' ? body.purpose : '';
   const code = typeof body.code === 'string' ? body.code : '';
   if (!destination || !PURPOSES.has(purpose) || !code) {
-    return NextResponse.json({ error: 'destination, purpose and code are required' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'destination, purpose and code are required' },
+      { status: 400 }
+    );
   }
 
   const result = await verifyOtp(destination, purpose as OtpPurpose, code);

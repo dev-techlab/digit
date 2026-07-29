@@ -44,7 +44,10 @@ export async function POST(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (agent.type !== 'store') {
-    return NextResponse.json({ error: 'Only the store account can manage promotions' }, { status: 403 });
+    return NextResponse.json(
+      { error: 'Only the store account can manage promotions' },
+      { status: 403 }
+    );
   }
 
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);
@@ -63,7 +66,10 @@ export async function POST(req: Request) {
       .from(s.agents)
       .where(and(eq(s.agents.id, body.assignAgentId), eq(s.agents.storeId, agent.storeId)));
     if (!assignee) {
-      return NextResponse.json({ error: 'assignAgentId must belong to this store' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'assignAgentId must belong to this store' },
+        { status: 400 }
+      );
     }
     assignAgentId = assignee.id;
   }
@@ -98,7 +104,10 @@ export async function PUT(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (agent.type !== 'store') {
-    return NextResponse.json({ error: 'Only the store account can manage promotions' }, { status: 403 });
+    return NextResponse.json(
+      { error: 'Only the store account can manage promotions' },
+      { status: 403 }
+    );
   }
 
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);
@@ -130,7 +139,10 @@ export async function DELETE(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (agent.type !== 'store') {
-    return NextResponse.json({ error: 'Only the store account can manage promotions' }, { status: 403 });
+    return NextResponse.json(
+      { error: 'Only the store account can manage promotions' },
+      { status: 403 }
+    );
   }
   const id = new URL(req.url).searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });

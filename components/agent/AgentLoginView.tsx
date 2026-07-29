@@ -76,7 +76,13 @@ export function AgentLoginView() {
 
       <div className="relative z-10 my-6 w-full max-w-[440px] rounded-[24px] bg-white/95 p-6 shadow-[0_25px_70px_rgba(60,30,120,0.28)] sm:rounded-[28px] sm:p-8">
         <div className="flex justify-center">
-          <Image src="/logo.png" alt="Logo" width={128} height={128} className="h-14 w-14 rounded-2xl object-contain shadow-lg" />
+          <Image
+            src="/logo.png"
+            alt="Logo"
+            width={128}
+            height={128}
+            className="h-14 w-14 rounded-2xl object-contain shadow-lg"
+          />
         </div>
 
         <div className="mt-4 text-center">
@@ -111,9 +117,7 @@ export function AgentLoginView() {
                   className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400 sm:text-base"
                 />
               </div>
-              {usernameError && (
-                <p className="mt-1 text-xs text-red-400">Please enter Username</p>
-              )}
+              {usernameError && <p className="mt-1 text-xs text-red-400">Please enter Username</p>}
             </div>
 
             <div>

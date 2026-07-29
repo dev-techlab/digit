@@ -43,13 +43,7 @@ export function AuthModalFrame({ open, onClose, tagline, children }: AuthModalFr
           <div className="pointer-events-none absolute -right-14 bottom-16 h-52 w-52 rounded-full bg-white/10 blur-2xl" />
 
           <div className="relative h-20 w-20 overflow-hidden rounded-2xl shadow-lg">
-            <Image
-              src="/logo.png"
-              alt={APP_NAME}
-              fill
-              sizes="80px"
-              unoptimized
-            />
+            <Image src="/logo.png" alt={APP_NAME} fill sizes="80px" unoptimized />
           </div>
           <p className="relative mt-5 text-2xl font-black text-white">{APP_NAME}</p>
           <p className="relative mt-2 text-sm text-white/85">{tagline}</p>

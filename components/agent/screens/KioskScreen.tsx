@@ -18,7 +18,8 @@ export function KioskScreen() {
   const [form, setForm] = useState({ name: '', code: '' });
   const [err, setErr] = useState<string | null>(null);
 
-  const load = () => api<{ kiosks: KioskRow[] }>('/api/agent/kiosks').then((d) => setRows(d.kiosks));
+  const load = () =>
+    api<{ kiosks: KioskRow[] }>('/api/agent/kiosks').then((d) => setRows(d.kiosks));
   useEffect(() => {
     void load();
   }, []);
@@ -78,10 +79,16 @@ export function KioskScreen() {
         <div className="space-y-4">
           {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{err}</p>}
           <Field label="Name" required>
-            <TextInput value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <TextInput
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
           </Field>
           <Field label="Code" required>
-            <TextInput value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
+            <TextInput
+              value={form.code}
+              onChange={(e) => setForm({ ...form, code: e.target.value })}
+            />
           </Field>
         </div>
       </Modal>
