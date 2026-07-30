@@ -11,6 +11,9 @@ import {
   Plus,
   HelpCircle,
   AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
 } from 'lucide-react';
 import { api, Btn, Card, Field, fmtMoney, fmtDateTime, Modal, TextInput } from '../ui';
 import { DataTable } from '@/components/ui/DataTable';
@@ -102,6 +105,9 @@ export function WalletScreen() {
   const [copied, setCopied] = useState(false);
   const logoInput = useRef<HTMLInputElement>(null);
 
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideStep, setGuideStep] = useState(1);
+
   const [fromDate, setFromDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 4);
@@ -125,6 +131,8 @@ export function WalletScreen() {
   const [emailCode, setEmailCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
   const [newEmail, setNewEmail] = useState('');
+  const [fundError, setFundError] = useState('');
+  const [reasonModal, setReasonModal] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     storeName: '',
@@ -183,8 +191,8 @@ export function WalletScreen() {
     reader.onload = () => setForm((f) => ({ ...f, logoUrl: reader.result as string }));
     reader.readAsDataURL(file);
   };
-
   const submitFund = async () => {
+    setFundError('');
     try {
       const payload: Record<string, unknown> = { action: fundTab, amount: Number(amount) };
       if (fundTab === 'deposit') payload.method = method;
@@ -204,7 +212,7 @@ export function WalletScreen() {
       flash(true, `${fundTab[0].toUpperCase()}${fundTab.slice(1)} request submitted`);
       void load();
     } catch (e) {
-      flash(false, (e as Error).message);
+      setFundError((e as Error).message);
     }
   };
 
@@ -233,6 +241,28 @@ export function WalletScreen() {
       {st}
     </span>
   );
+
+  const actionCell = (r: LogRow) => {
+    if (r.status === 'pending') {
+      return (
+        <button className="text-red-500 hover:underline" onClick={() => void cancelTx(r.id)}>
+          Cancel
+        </button>
+      );
+    }
+    if (r.remark && (r.status === 'failed' || r.status === 'cancelled')) {
+      return (
+        <button
+          className="text-slate-400 transition hover:text-blue-500"
+          onClick={() => setReasonModal(r.remark!)}
+          title="View Reason"
+        >
+          <Eye size={15} />
+        </button>
+      );
+    }
+    return '-';
+  };
 
   const dateFilter = (
     <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-slate-100 bg-white p-3 shadow-sm">
@@ -295,6 +325,7 @@ export function WalletScreen() {
     setFundTab(t);
     setMethod('paypal_pyusd');
     setAmount('');
+    setFundError('');
   };
 
   return (
@@ -581,7 +612,7 @@ export function WalletScreen() {
               {Number(amount) > 0 && (
                 <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
                   <div className="flex justify-between">
-                    <span>Withdrawal Fee ({data.store.commissionPer}%):</span>
+                    <span>Platform Fee ({data.store.commissionPer}%):</span>
                     <span className="font-semibold text-slate-800">
                       {fmtMoney((Number(amount) * Number(data.store.commissionPer || 0)) / 100)}
                     </span>
@@ -591,7 +622,7 @@ export function WalletScreen() {
                     <span className="font-bold text-green-600">
                       {fmtMoney(
                         Number(amount) -
-                          (Number(amount) * Number(data.store.commissionPer || 0)) / 100
+                        (Number(amount) * Number(data.store.commissionPer || 0)) / 100
                       )}
                     </span>
                   </div>
@@ -607,6 +638,12 @@ export function WalletScreen() {
             </>
           )}
 
+          {fundError && (
+            <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-500">
+              {fundError}
+            </div>
+          )}
+
           <Btn
             className="w-full justify-center"
             onClick={submitFund}
@@ -618,9 +655,12 @@ export function WalletScreen() {
           </Btn>
 
           {fundTab === 'deposit' && (
-            <p className="flex items-center justify-center gap-1.5 text-sm text-slate-400">
+            <button
+              className="flex w-full items-center justify-center gap-1.5 text-sm text-slate-400 hover:text-slate-600 transition"
+              onClick={() => setGuideOpen(true)}
+            >
               <HelpCircle size={14} /> Deposit Guide
-            </p>
+            </button>
           )}
 
           {fundTab === 'transfer' && (
@@ -709,17 +749,7 @@ export function WalletScreen() {
                   header: 'Actions',
                   enableSorting: false,
                   enableGlobalFilter: false,
-                  cell: (r) =>
-                    r.status === 'pending' ? (
-                      <button
-                        className="text-red-500 hover:underline"
-                        onClick={() => void cancelTx(r.id)}
-                      >
-                        Cancel
-                      </button>
-                    ) : (
-                      '-'
-                    ),
+                  cell: actionCell,
                 },
               ]}
             />
@@ -777,29 +807,10 @@ export function WalletScreen() {
                   cell: (r) => statusChip(r.status),
                 },
                 {
-                  header: 'Reason',
-                  accessorKey: 'remark',
-                  cell: (r) => (
-                    <div className="max-w-[150px] truncate" title={r.remark || undefined}>
-                      {r.remark || '-'}
-                    </div>
-                  ),
-                },
-                {
                   header: 'Actions',
                   enableSorting: false,
                   enableGlobalFilter: false,
-                  cell: (r) =>
-                    r.status === 'pending' ? (
-                      <button
-                        className="text-red-500 hover:underline"
-                        onClick={() => void cancelTx(r.id)}
-                      >
-                        Cancel
-                      </button>
-                    ) : (
-                      '-'
-                    ),
+                  cell: actionCell,
                 },
               ]}
             />
@@ -855,14 +866,7 @@ export function WalletScreen() {
                   header: 'Actions',
                   enableSorting: false,
                   enableGlobalFilter: false,
-                  cell: (r) => (
-                    <button
-                      className="text-red-500 hover:underline"
-                      onClick={() => void cancelTx(r.id)}
-                    >
-                      Cancel
-                    </button>
-                  ),
+                  cell: actionCell,
                 },
               ]}
             />
@@ -955,6 +959,52 @@ export function WalletScreen() {
             />
           </Field>
         )}
+      </Modal>
+
+      {/* Deposit Guide Modal */}
+      <Modal
+        open={guideOpen}
+        onClose={() => {
+          setGuideOpen(false);
+          setGuideStep(1); // Reset to first step on close
+        }}
+        title={method === 'paypal_pyusd' ? 'How to buy PYUSD using PayPal?' : 'Deposit Guide'}
+      >
+        <div className="relative flex flex-col items-center justify-center py-4">
+          <img
+            src={`/img/deposit-guide/deposite-step-${guideStep}.png`}
+            alt={`Step ${guideStep}`}
+            className="max-h-[65vh] object-contain drop-shadow-md"
+          />
+          <button
+            className="absolute left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-slate-400 text-white shadow hover:bg-slate-500 disabled:opacity-30 disabled:hover:bg-slate-400"
+            disabled={guideStep <= 1}
+            onClick={() => setGuideStep(s => s - 1)}
+          >
+            <ChevronLeft size={24} />
+          </button>
+          <button
+            className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-slate-400 text-white shadow hover:bg-slate-500 disabled:opacity-30 disabled:hover:bg-slate-400"
+            disabled={guideStep >= 4}
+            onClick={() => setGuideStep(s => s + 1)}
+          >
+            <ChevronRight size={24} />
+          </button>
+        </div>
+      </Modal>
+
+      {/* Rejection Reason Modal */}
+      <Modal
+        title="Reason"
+        open={!!reasonModal}
+        onClose={() => setReasonModal(null)}
+      >
+        <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+          {reasonModal}
+        </div>
+        <div className="mt-6 flex justify-end">
+          <Btn onClick={() => setReasonModal(null)}>Close</Btn>
+        </div>
       </Modal>
     </div>
   );

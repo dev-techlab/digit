@@ -137,15 +137,15 @@ export async function POST(req: Request) {
           .set({ onlineBalance: sql`${s.agents.onlineBalance} + ${Number(txRow.amount)}` })
           .where(eq(s.agents.id, txRow.agentId));
       }
+    });
 
-      await logAdminAction({
-        adminId,
-        action: `agent_withdrawal.${action}`,
-        entityType: 'agent_transaction',
-        entityId: id,
-        changes: { status: action === 'accept' ? 'completed' : 'failed', remark },
-        ipAddress: clientIp(req),
-      });
+    await logAdminAction({
+      adminId,
+      action: `agent_withdrawal.${action}`,
+      entityType: 'agent_transaction',
+      entityId: id,
+      changes: { status: action === 'accept' ? 'completed' : 'failed', remark },
+      ipAddress: clientIp(req),
     });
 
     return NextResponse.json({ ok: true });
