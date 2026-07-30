@@ -71,13 +71,12 @@ export function PostersScreen() {
         <h3 className="mb-3 border-b border-slate-100 pb-2 text-lg font-semibold text-slate-800">
           {label}
         </h3>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {items.map((p) => (
             <Card key={p.id} className="flex flex-col items-center gap-3">
               <div
-                className={`flex w-full items-center justify-center rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 text-slate-500 ${
-                  category === 'portrait' ? 'aspect-[9/16]' : 'aspect-[16/10]'
-                }`}
+                className={`flex w-full items-center justify-center rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 text-slate-500 ${category === 'portrait' ? 'aspect-[9/16]' : 'aspect-[16/10]'
+                  }`}
               >
                 <div className="flex flex-col items-center gap-2">
                   <ImageIcon size={32} />
