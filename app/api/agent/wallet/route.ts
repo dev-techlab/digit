@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { and, desc, eq, gte, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, lt, lte, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/lib/db';
 import * as s from '@/lib/db/schema';
@@ -18,6 +18,12 @@ export async function GET(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const { searchParams } = new URL(req.url);
+  const fromStr = searchParams.get('from');
+  const toStr = searchParams.get('to');
+  const tzParam = searchParams.get('tz') || 'America/New_York';
+  const tzStr = tzParam === 'browser' ? 'UTC' : tzParam; // Fallback if browser is somehow passed
+
   const [store] = await db
     .select({
       email: s.agents.email,
@@ -25,6 +31,7 @@ export async function GET(req: Request) {
       inviteCode: s.agents.inviteCode,
       onlineBalance: s.agents.onlineBalance,
       tipsBalance: s.agents.tipsBalance,
+      commissionPer: s.agents.commissionPer,
     })
     .from(s.agents)
     .where(eq(s.agents.id, agent.storeId));
@@ -35,6 +42,13 @@ export async function GET(req: Request) {
     .where(eq(s.storeSettings.storeId, agent.storeId));
 
   const counterparty = alias(s.agents, 'counterparty');
+  
+  const dateFilter = and(
+    eq(s.agentTransactions.agentId, agent.storeId),
+    fromStr ? gte(sql`${s.agentTransactions.createdAt} AT TIME ZONE ${tzStr}`, `${fromStr} 00:00:00`) : undefined,
+    toStr ? lte(sql`${s.agentTransactions.createdAt} AT TIME ZONE ${tzStr}`, `${toStr} 23:59:59`) : undefined
+  );
+
   const logs = await db
     .select({
       id: s.agentTransactions.id,
@@ -54,27 +68,20 @@ export async function GET(req: Request) {
     })
     .from(s.agentTransactions)
     .leftJoin(counterparty, eq(counterparty.id, s.agentTransactions.counterpartyAgentId))
-    .where(eq(s.agentTransactions.agentId, agent.storeId))
+    .where(dateFilter)
     .orderBy(desc(s.agentTransactions.createdAt))
     .limit(200);
 
-  // Daily deposit report for the trailing 4 days (mirrors the production widget).
-  const from = new Date(Date.now() - 4 * 864e5);
+  // Daily deposit report for the date range
   const report = await db
     .select({
-      day: sql<string>`to_char(date_trunc('day', ${s.agentTransactions.createdAt}), 'YYYY-MM-DD')`,
+      day: sql<string>`to_char(date_trunc('day', ${s.agentTransactions.createdAt} AT TIME ZONE ${tzStr}), 'YYYY-MM-DD')`,
       deposit: sql<string>`coalesce(sum(${s.agentTransactions.amount}) filter (where ${s.agentTransactions.type} = 'deposit'), 0)`,
       depositFee: sql<string>`coalesce(sum(${s.agentTransactions.fee}) filter (where ${s.agentTransactions.type} = 'deposit'), 0)`,
       depositOrders: sql<number>`count(*) filter (where ${s.agentTransactions.type} = 'deposit')::int`,
     })
     .from(s.agentTransactions)
-    .where(
-      and(
-        eq(s.agentTransactions.agentId, agent.storeId),
-        gte(s.agentTransactions.createdAt, from),
-        lt(s.agentTransactions.createdAt, new Date())
-      )
-    )
+    .where(dateFilter)
     .groupBy(sql`1`)
     .orderBy(sql`1 desc`);
 

@@ -61,6 +61,7 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
     remark: '',
   });
   const [err, setErr] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(
     (q = search) =>
@@ -96,6 +97,23 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
       void load();
     } catch (e) {
       setErr((e as Error).message);
+    }
+  };
+
+  const toggleStatus = async (row: AgentRow) => {
+    const next = row.status === 'active' ? 'disabled' : 'active';
+    setBusyId(row.id);
+    setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, status: next } : r)));
+    try {
+      await api('/api/agent/agents', {
+        method: 'PUT',
+        body: JSON.stringify({ id: row.id, status: next }),
+      });
+    } catch (e) {
+      setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, status: row.status } : r)));
+      window.alert(e instanceof Error ? e.message : 'Failed to update status.');
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -197,15 +215,40 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
             {
               header: 'Status',
               accessorKey: 'status',
-              cell: (r) => <span className="capitalize">{r.status}</span>,
+              cell: (r) => (
+                <span
+                  className={
+                    r.status === 'active'
+                      ? 'rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-600'
+                      : 'rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-500'
+                  }
+                >
+                  {r.status === 'active' ? 'Active' : 'Disabled'}
+                </span>
+              ),
             },
             { header: 'Remark', accessorKey: 'remark', cell: (r) => r.remark ?? '-' },
+            {
+              header: 'Operations',
+              enableSorting: false,
+              enableGlobalFilter: false,
+              cell: (r) => (
+                <Btn
+                  variant={r.status === 'active' ? 'danger' : 'success'}
+                  className="px-3 py-1.5 text-xs"
+                  disabled={busyId === r.id}
+                  onClick={() => void toggleStatus(r)}
+                >
+                  {r.status === 'active' ? 'Disable' : 'Enable'}
+                </Btn>
+              ),
+            },
           ]}
         />
       </Card>
 
       <Drawer
-        title="Add User"
+        title={`Add ${label}`}
         open={addOpen}
         onClose={() => setAddOpen(false)}
         footer={

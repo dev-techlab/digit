@@ -13,7 +13,7 @@ export default async function GamePage() {
 
   return (
     <div className="pb-4">
-      <PwaInstallBanner />
+      {/* <PwaInstallBanner /> */}
       <BannerCarousel />
       <GcNotice />
       <div className="px-4 pt-4 md:px-0">

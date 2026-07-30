@@ -102,6 +102,12 @@ export function DesktopSidebar() {
               key={href}
               href={href}
               title={label}
+              onClick={(e) => {
+                if (!isAuthenticated && (href === '/share-activity' || href === '/bonus')) {
+                  e.preventDefault();
+                  openAuth('login');
+                }
+              }}
               className={cn(
                 'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
                 collapsed && 'justify-center px-0',

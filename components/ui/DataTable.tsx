@@ -177,6 +177,7 @@ export function DataTable<T>({
                     key={i}
                     className={cn(
                       'whitespace-nowrap px-4 py-3 font-semibold',
+                      col.className,
                       canSort && 'cursor-pointer select-none hover:bg-slate-100'
                     )}
                     onClick={() => canSort && handleSort(col.accessorKey as string)}

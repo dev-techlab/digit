@@ -4,18 +4,42 @@ import { type ReactNode, useEffect } from 'react';
 import { X, PackageOpen, Search, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
+const inFlightRequests = new Map<string, Promise<any>>();
+
 /** JSON fetch that throws the API `error` message on non-2xx. */
 export async function api<T = unknown>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    ...init,
-    headers: init?.body ? { 'Content-Type': 'application/json', ...init?.headers } : init?.headers,
-  });
-  const data = (await res.json().catch(() => ({}))) as T & { error?: string };
-  if (!res.ok) {
-    const message = (data as { error?: string }).error;
-    throw new Error(message || `Request failed (${res.status})`);
+  const isGet = !init?.method || init.method.toUpperCase() === 'GET';
+  const cacheKey = isGet ? url : null;
+
+  if (cacheKey && inFlightRequests.has(cacheKey)) {
+    return inFlightRequests.get(cacheKey) as Promise<T>;
   }
-  return data;
+
+  const reqPromise = (async () => {
+    const res = await fetch(url, {
+      ...init,
+      headers: init?.body ? { 'Content-Type': 'application/json', ...init?.headers } : init?.headers,
+    });
+    const data = (await res.json().catch(() => ({}))) as T & { error?: string };
+    if (!res.ok) {
+      const message = (data as { error?: string }).error;
+      throw new Error(message || `Request failed (${res.status})`);
+    }
+    return data;
+  })();
+
+  if (cacheKey) {
+    inFlightRequests.set(cacheKey, reqPromise);
+    reqPromise
+      .catch(() => {})
+      .finally(() => {
+        if (inFlightRequests.get(cacheKey) === reqPromise) {
+          inFlightRequests.delete(cacheKey);
+        }
+      });
+  }
+
+  return reqPromise;
 }
 
 export const fmtMoney = (v: unknown) =>

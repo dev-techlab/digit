@@ -7,9 +7,10 @@ import {
   useEffect,
   useMemo,
   useState,
+  useRef,
   ReactNode,
 } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 /** Player profile as returned by /api/auth/{me,login,register,otp/verify} (lib/user-service.ts#getUserProfile). */
 export interface MockUser {
@@ -42,10 +43,22 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUserState] = useState<MockUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetched = useRef(false);
+
   useEffect(() => {
+    // Only fetch player auth on player-facing routes
+    if (pathname.startsWith('/admin') || pathname.startsWith('/agent')) {
+      setIsLoading(false);
+      return;
+    }
+
+    if (fetched.current) return;
+    fetched.current = true;
+
     let cancelled = false;
     fetch('/api/auth/me')
       .then((res) => (res.ok ? res.json() : null))
@@ -61,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [pathname]);
 
   // Login/register/OTP-verify hand us the freshly-authenticated profile, but
   // wallet/orders/bonus/etc. are Server-Component data keyed off the session

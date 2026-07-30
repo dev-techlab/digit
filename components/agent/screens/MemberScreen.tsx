@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Gamepad2, MoreHorizontal, AlertCircle } from 'lucide-react';
 import { api, Btn, Card, Field, fmtDateTime, fmtMoney, Modal, TextInput } from '../ui';
 import { DataTable } from '@/components/ui/DataTable';
 
@@ -126,15 +126,16 @@ export function MemberScreen() {
             {
               header: 'Username',
               accessorKey: 'username',
+              className: 'sticky left-0 bg-white z-10 shadow-[1px_0_0_0_#f1f5f9]',
               cell: (r) => (
-                <>
+                <div className="flex items-center gap-1.5">
                   <span className="font-medium text-slate-700">{r.username}</span>
                   {!r.scRewardEnabled && (
-                    <span className="ml-2 rounded bg-red-50 px-1.5 py-0.5 text-xs text-red-500">
-                      No SC Reward
+                    <span title="No SC Reward" className="flex items-center">
+                      <AlertCircle size={14} className="text-red-500" />
                     </span>
                   )}
-                </>
+                </div>
               ),
             },
             { header: 'Phone', accessorKey: 'phone', cell: (r) => r.phone ?? '' },
@@ -170,22 +171,24 @@ export function MemberScreen() {
               enableSorting: false,
               enableGlobalFilter: false,
               cell: (r) => (
-                <div className="flex gap-2 whitespace-nowrap">
+                <div className="flex items-center gap-3">
                   <button
-                    className="text-blue-500 hover:underline"
+                    className="text-slate-400 hover:text-blue-500"
+                    title="Game Platform Binding"
                     onClick={() => void openDetail(r)}
                   >
-                    Game Platform Binding
+                    <Gamepad2 size={16} />
                   </button>
                   <button
-                    className="text-slate-500 hover:underline"
+                    className="text-slate-400 hover:text-slate-700"
+                    title="More Options"
                     onClick={() => {
                       setEditRow(r);
                       setRemark(r.remark ?? '');
                       setErr(null);
                     }}
                   >
-                    More ▾
+                    <MoreHorizontal size={16} />
                   </button>
                 </div>
               ),

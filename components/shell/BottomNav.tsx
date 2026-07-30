@@ -3,10 +3,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { NAV_ITEMS } from '@/lib/nav';
+import { useAuth } from '@/lib/auth-context';
+import { useAuthModal } from '@/lib/auth-modal-context';
 import { cn } from '@/lib/cn';
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { isAuthenticated } = useAuth();
+  const { open: openAuth } = useAuthModal();
 
   return (
     <nav
@@ -20,6 +24,12 @@ export function BottomNav() {
             <Link
               key={href}
               href={href}
+              onClick={(e) => {
+                if (!isAuthenticated && (href === '/share-activity' || href === '/bonus' || href === '/profile')) {
+                  e.preventDefault();
+                  openAuth('login');
+                }
+              }}
               className={cn(
                 'nav-item flex flex-col items-center gap-1 py-3 text-[11px] font-medium transition-colors',
                 active ? 'text-brand' : 'text-[var(--text-secondary)]'

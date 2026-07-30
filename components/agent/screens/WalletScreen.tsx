@@ -40,6 +40,7 @@ interface WalletData {
     inviteCode: string;
     onlineBalance: string;
     tipsBalance: string;
+    commissionPer: string;
   };
   settings: {
     storeName: string;
@@ -101,6 +102,23 @@ export function WalletScreen() {
   const [copied, setCopied] = useState(false);
   const logoInput = useRef<HTMLInputElement>(null);
 
+  const [fromDate, setFromDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 4);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  });
+  const [toDate, setToDate] = useState(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  });
+  const [timezone, setTimezone] = useState('America/New_York');
+
   // Change Email — 2-step modal (verify current email → enter new email).
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailStep, setEmailStep] = useState<1 | 2>(1);
@@ -121,8 +139,13 @@ export function WalletScreen() {
     setTimeout(() => setMsg(null), 3000);
   };
 
-  const load = () =>
-    api<WalletData>('/api/agent/wallet').then((d) => {
+  const load = (f = fromDate, t = toDate, tz = timezone) => {
+    const params = new URLSearchParams();
+    if (f) params.append('from', f);
+    if (t) params.append('to', t);
+    if (tz) params.append('tz', tz === 'browser' ? Intl.DateTimeFormat().resolvedOptions().timeZone : tz);
+
+    return api<WalletData>(`/api/agent/wallet?${params.toString()}`).then((d) => {
       setData(d);
       if (d.settings) {
         setForm({
@@ -134,14 +157,15 @@ export function WalletScreen() {
         });
       }
     });
+  };
   useEffect(() => {
     void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!data) return <p className="p-6 text-sm text-slate-400">Loading…</p>;
 
   const inviteLink = `${process.env.NEXT_PUBLIC_SITE_URL}?inviteCode=${data.store.inviteCode}`;
-  const dateRange = `${new Date(Date.now() - 4 * 864e5).toLocaleDateString('en-US')} 00:00:00 - ${new Date().toLocaleDateString('en-US')} 00:00:00`;
 
   const saveSettings = async () => {
     try {
@@ -211,13 +235,59 @@ export function WalletScreen() {
   );
 
   const dateFilter = (
-    <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 p-3">
-      <span className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-600">
-        📅 {dateRange}
-      </span>
-      <span className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm text-slate-400">
-        US Eastern (ET)
-      </span>
+    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-slate-100 bg-white p-3 shadow-sm">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-slate-600">Date Range</span>
+        <div className="flex items-center overflow-hidden rounded-lg border border-slate-200 bg-white">
+          <span className="pl-3 text-slate-400">📅</span>
+          <input
+            type="date"
+            className="px-2 py-1.5 text-sm text-slate-700 outline-none"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+          />
+          <span className="text-slate-300">-</span>
+          <input
+            type="date"
+            className="px-2 py-1.5 text-sm text-slate-700 outline-none"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <select
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-600 outline-none focus:border-blue-500"
+          value={timezone}
+          onChange={(e) => setTimezone(e.target.value)}
+        >
+          <option value="browser">Browser Local</option>
+          <option value="America/New_York">US Eastern (ET)</option>
+          <option value="America/Chicago">US Central (CT)</option>
+          <option value="America/Denver">US Mountain (MT)</option>
+          <option value="America/Los_Angeles">US Pacific (PT)</option>
+          <option value="America/Anchorage">US Alaska (AKT)</option>
+          <option value="Pacific/Honolulu">US Hawaii (HST)</option>
+          <option value="Asia/Shanghai">China (UTC+8)</option>
+        </select>
+      </div>
+      <span className="text-xs text-slate-400">Max query 31 days</span>
+      <Btn onClick={() => void load()}>Search</Btn>
+      <Btn
+        variant="ghost"
+        onClick={() => {
+          const d = new Date();
+          const t = d.toISOString().split('T')[0];
+          d.setDate(d.getDate() - 4);
+          const f = d.toISOString().split('T')[0];
+          setFromDate(f);
+          setToDate(t);
+          setTimezone('America/New_York');
+          void load(f, t, 'America/New_York');
+        }}
+      >
+        Reset
+      </Btn>
     </div>
   );
 
@@ -508,6 +578,25 @@ export function WalletScreen() {
                   onChange={(e) => setAmount(e.target.value)}
                 />
               </Field>
+              {Number(amount) > 0 && (
+                <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+                  <div className="flex justify-between">
+                    <span>Withdrawal Fee ({data.store.commissionPer}%):</span>
+                    <span className="font-semibold text-slate-800">
+                      {fmtMoney((Number(amount) * Number(data.store.commissionPer || 0)) / 100)}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex justify-between border-t border-slate-200 pt-2">
+                    <span>Net Payable Amount:</span>
+                    <span className="font-bold text-green-600">
+                      {fmtMoney(
+                        Number(amount) -
+                          (Number(amount) * Number(data.store.commissionPer || 0)) / 100
+                      )}
+                    </span>
+                  </div>
+                </div>
+              )}
               <Field label="Address / Account">
                 <TextInput
                   placeholder="Please enter your wallet address"
@@ -533,15 +622,7 @@ export function WalletScreen() {
               <HelpCircle size={14} /> Deposit Guide
             </p>
           )}
-          {fundTab === 'withdraw' && (
-            <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-700">
-              <p className="font-semibold">First Time Using Withdraw Address</p>
-              <p className="mt-1">
-                You are setting up your withdraw address for the first time. Email verification is
-                required to ensure account security.
-              </p>
-            </div>
-          )}
+
           {fundTab === 'transfer' && (
             <div className="flex gap-2 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-700">
               <AlertCircle size={17} className="mt-0.5 shrink-0" />

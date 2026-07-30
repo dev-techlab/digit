@@ -16,6 +16,7 @@ import {
   Store,
   Gift,
   Banknote,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -137,17 +138,20 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       {(me.isSuperAdmin || me.permissions.includes('users.read')) && (
         <NavItem icon={Users} label="Users" href="/admin/users" />
       )}
-      {me.isSuperAdmin && (
-        <NavItem icon={ShieldCheck} label="System Admins" href="/admin/system-admins" />
-      )}
       {(me.isSuperAdmin || me.permissions.includes('agents.read')) && (
         <NavItem icon={Store} label="Agents" href="/admin/agents" />
       )}
       {(me.isSuperAdmin || me.permissions.includes('agents.write')) && (
-        <NavItem icon={Banknote} label="Withdrawals" href="/admin/withdrawals" />
+        <>
+          <NavItem icon={Banknote} label="Withdrawals" href="/admin/withdrawals" />
+          <NavItem icon={Wallet} label="Deposits" href="/admin/deposits" />
+        </>
       )}
       {(me.isSuperAdmin || me.permissions.includes('bonuses.read')) && (
         <NavItem icon={Gift} label="Bonuses" href="/admin/bonuses" />
+      )}
+      {me.isSuperAdmin && (
+        <NavItem icon={ShieldCheck} label="System Admins" href="/admin/system-admins" />
       )}
       <div className="my-3 border-t border-slate-100" />
       <NavItem icon={Lock} label="Change Password" href="/admin/change-password" />

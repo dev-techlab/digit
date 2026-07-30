@@ -367,8 +367,10 @@ export function Sidebar({
                 icon={Gift}
                 label="Invite & Earn"
                 sub="Share your link and earn rewards"
-                href="/share-activity"
-                onClose={onClose}
+                onClick={() => {
+                  onClose();
+                  openAuth('login');
+                }}
               />
               <MenuRow
                 icon={HelpCircle}
