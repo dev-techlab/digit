@@ -82,10 +82,9 @@ export function PostersScreen() {
                 {p.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img 
-                    src={p.imageUrl.startsWith('http') ? p.imageUrl : `https://static.digitlink.mobi${p.imageUrl}`} 
+                    src={p.imageUrl} 
                     alt={p.title || 'Poster'} 
                     className="absolute inset-0 h-full w-full object-cover" 
-                    referrerPolicy="no-referrer" 
                   />
                 ) : (
                   <div className="flex flex-col items-center gap-2">

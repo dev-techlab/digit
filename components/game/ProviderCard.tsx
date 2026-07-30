@@ -55,13 +55,7 @@ export function ProviderCard({ provider }: { provider: GameProvider }) {
         <div className="flex w-16 shrink-0 flex-col items-center gap-1">
           <div className="relative h-12 w-12 overflow-hidden rounded-lg bg-white/5">
             <Image
-              src={(() => {
-                let url = provider.iconUrl || '';
-                if (url.startsWith('/providers/')) {
-                  url = url.replace('/providers/', '/img/p/');
-                }
-                return url ? (url.startsWith('http') ? url : `https://static.digitlink.mobi${url}`) : '';
-              })()}
+              src={provider.iconUrl || ''}
               alt={provider.name}
               fill
               sizes="48px"
