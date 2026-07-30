@@ -78,12 +78,13 @@ export function WithdrawalsScreen() {
     if (!item) return;
 
     if (actionType === 'reject' && !remark.trim()) {
-      actionModal.setErr('A reason is required when rejecting a withdrawal.');
+      actionModal.setFieldErrs({ remark: 'A reason is required when rejecting a withdrawal.' });
       return;
     }
 
     actionModal.setBusy(true);
     actionModal.setErr(null);
+    actionModal.setFieldErrs({});
     try {
       await api('/api/admin/withdrawals', {
         method: 'POST',
@@ -273,10 +274,17 @@ export function WithdrawalsScreen() {
             )}
           </div>
 
-          <Field label="Reason / Remark" required={actionModal.actionType === 'reject'}>
+          <Field 
+            label="Reason / Remark" 
+            required={actionModal.actionType === 'reject'}
+            error={actionModal.fieldErrs.remark}
+          >
             <TextInput
               value={remark}
-              onChange={(e) => setRemark(e.target.value)}
+              onChange={(e) => {
+                setRemark(e.target.value);
+                actionModal.setFieldErrs((prev) => ({ ...prev, remark: '' }));
+              }}
               placeholder={
                 actionModal.actionType === 'reject'
                   ? 'Please provide a reason for rejection'

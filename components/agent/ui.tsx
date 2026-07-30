@@ -113,10 +113,12 @@ export function Field({
   required,
   children,
   hint,
+  error,
 }: {
   label: string;
   required?: boolean;
   hint?: string;
+  error?: string;
   children: ReactNode;
 }) {
   return (
@@ -126,7 +128,8 @@ export function Field({
         {label}
       </span>
       {children}
-      {hint && <span className="mt-1 block text-xs text-slate-400">{hint}</span>}
+      {hint && !error && <span className="mt-1 block text-xs text-slate-400">{hint}</span>}
+      {error && <span className="mt-1 block text-xs font-medium text-red-500">{error}</span>}
     </label>
   );
 }

@@ -32,6 +32,7 @@ export function WalletFunding({ commissionPer, onSuccess }: WalletFundingProps) 
   const [recipient, setRecipient] = useState('');
   const [transferRemark, setTransferRemark] = useState('');
   const [fundError, setFundError] = useState('');
+  const [fieldErrs, setFieldErrs] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
   const switchFundTab = (t: 'deposit' | 'withdraw' | 'transfer') => {
@@ -39,10 +40,29 @@ export function WalletFunding({ commissionPer, onSuccess }: WalletFundingProps) 
     setMethod('paypal_pyusd');
     setAmount('');
     setFundError('');
+    setFieldErrs({});
   };
 
   const submitFund = async () => {
     setFundError('');
+    setFieldErrs({});
+    
+    // Frontend validation
+    const errs: Record<string, string> = {};
+    if (fundTab === 'transfer' && !recipient.trim()) {
+      errs.recipient = 'Recipient agent username is required';
+    }
+    if (!amount || Number(amount) <= 0) {
+      errs.amount = 'Please enter a valid amount';
+    } else if (fundTab === 'deposit' && Number(amount) < 50) {
+      errs.amount = 'Minimum deposit is 50 USD';
+    }
+    
+    if (Object.keys(errs).length > 0) {
+      setFieldErrs(errs);
+      return;
+    }
+
     setLoading(true);
     try {
       const payload: Record<string, unknown> = { action: fundTab, amount: Number(amount) };
@@ -63,7 +83,14 @@ export function WalletFunding({ commissionPer, onSuccess }: WalletFundingProps) 
       window.alert(`${fundTab[0].toUpperCase()}${fundTab.slice(1)} request submitted`);
       onSuccess();
     } catch (e) {
-      setFundError((e as Error).message);
+      const msg = (e as Error).message;
+      if (msg.toLowerCase().includes('amount') || msg.toLowerCase().includes('balance')) {
+        setFieldErrs({ amount: msg });
+      } else if (msg.toLowerCase().includes('recipient')) {
+        setFieldErrs({ recipient: msg });
+      } else {
+        setFundError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -123,50 +150,65 @@ export function WalletFunding({ commissionPer, onSuccess }: WalletFundingProps) 
 
         {fundTab === 'transfer' && (
           <>
-            <Field label="Recipient agent" required>
+            <Field label="Recipient agent" required error={fieldErrs.recipient}>
               <TextInput
                 placeholder="Recipient agent username"
                 value={recipient}
-                onChange={(e) => setRecipient(e.target.value)}
+                onChange={(e) => {
+                  setRecipient(e.target.value);
+                  setFieldErrs((prev) => ({ ...prev, recipient: '' }));
+                }}
               />
             </Field>
-            <Field label="Transfer amount" required>
+            <Field label="Transfer amount" required error={fieldErrs.amount}>
               <TextInput
                 type="number"
                 placeholder="$Enter transfer amount"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => {
+                  setAmount(e.target.value);
+                  setFieldErrs((prev) => ({ ...prev, amount: '' }));
+                }}
               />
             </Field>
-            <Field label="Remark" hint={`${transferRemark.length} / 100`}>
+            <Field label="Remark" hint={`${transferRemark.length} / 100`} error={fieldErrs.remark}>
               <TextInput
                 maxLength={100}
                 placeholder="Enter transfer remark (optional)"
                 value={transferRemark}
-                onChange={(e) => setTransferRemark(e.target.value)}
+                onChange={(e) => {
+                  setTransferRemark(e.target.value);
+                  setFieldErrs((prev) => ({ ...prev, remark: '' }));
+                }}
               />
             </Field>
           </>
         )}
 
         {fundTab === 'deposit' && (
-          <Field label="Deposit Amount" required>
+          <Field label="Deposit Amount" required error={fieldErrs.amount}>
             <TextInput
               type="number"
               placeholder="$Please enter deposit amount (Minimum 50 USD)"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => {
+                setAmount(e.target.value);
+                setFieldErrs((prev) => ({ ...prev, amount: '' }));
+              }}
             />
           </Field>
         )}
         {fundTab === 'withdraw' && (
           <>
-            <Field label="Withdraw Amount" required>
+            <Field label="Withdraw Amount" required error={fieldErrs.amount}>
               <TextInput
                 type="number"
                 placeholder="$Please enter withdraw amount"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => {
+                  setAmount(e.target.value);
+                  setFieldErrs((prev) => ({ ...prev, amount: '' }));
+                }}
               />
             </Field>
             {Number(amount) > 0 && (
@@ -185,11 +227,14 @@ export function WalletFunding({ commissionPer, onSuccess }: WalletFundingProps) 
                 </div>
               </div>
             )}
-            <Field label="Address / Account">
+            <Field label="Address / Account" error={fieldErrs.address}>
               <TextInput
                 placeholder="Please enter your wallet address"
                 value={address}
-                onChange={(e) => setAddress(e.target.value)}
+                onChange={(e) => {
+                  setAddress(e.target.value);
+                  setFieldErrs((prev) => ({ ...prev, address: '' }));
+                }}
               />
             </Field>
           </>

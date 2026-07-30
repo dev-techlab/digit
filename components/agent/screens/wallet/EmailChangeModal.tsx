@@ -26,16 +26,24 @@ export function EmailChangeModal({
   const [code, setCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
   const [newEmail, setNewEmail] = useState('');
+  const [fieldErrs, setFieldErrs] = useState<Record<string, string>>({});
 
   const handleClose = () => {
     setStep(1);
     setCode('');
     setCodeSent(false);
     setNewEmail('');
+    setFieldErrs({});
     onClose();
   };
 
   const submit = async () => {
+    setFieldErrs({});
+    if (!newEmail.includes('@')) {
+      setFieldErrs({ email: 'Please enter a valid email address' });
+      return;
+    }
+
     try {
       await api('/api/agent/wallet', {
         method: 'PUT',
@@ -44,7 +52,7 @@ export function EmailChangeModal({
       onSuccess();
       handleClose();
     } catch (e) {
-      window.alert((e as Error).message);
+      setFieldErrs({ email: (e as Error).message });
     }
   };
 
@@ -109,12 +117,20 @@ export function EmailChangeModal({
           </div>
         </div>
       ) : (
-        <Field label="New Email" required hint="A verification email will be sent to this address.">
+        <Field 
+          label="New Email" 
+          required 
+          hint="A verification email will be sent to this address."
+          error={fieldErrs.email}
+        >
           <TextInput
             type="email"
             placeholder="name@example.com"
             value={newEmail}
-            onChange={(e) => setNewEmail(e.target.value)}
+            onChange={(e) => {
+              setNewEmail(e.target.value);
+              setFieldErrs({});
+            }}
           />
         </Field>
       )}
