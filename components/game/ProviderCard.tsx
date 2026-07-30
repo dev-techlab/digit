@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+
 import { useState } from 'react';
 import { Star, DollarSign, UserRound, RefreshCw, Loader2 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
@@ -54,13 +54,11 @@ export function ProviderCard({ provider }: { provider: GameProvider }) {
       <div className="flex gap-4">
         <div className="flex w-16 shrink-0 flex-col items-center gap-1">
           <div className="relative h-12 w-12 overflow-hidden rounded-lg bg-white/5">
-            <Image
-              src={provider.iconUrl}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={provider.iconUrl || ''}
               alt={provider.name}
-              fill
-              sizes="48px"
-              className="object-cover"
-              unoptimized
+              className="h-full w-full object-cover"
             />
           </div>
           <span className="line-clamp-1 text-center text-[9px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
