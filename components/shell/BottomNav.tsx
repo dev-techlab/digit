@@ -25,7 +25,10 @@ export function BottomNav() {
               key={href}
               href={href}
               onClick={(e) => {
-                if (!isAuthenticated && (href === '/share-activity' || href === '/bonus' || href === '/profile')) {
+                if (
+                  !isAuthenticated &&
+                  (href === '/share-activity' || href === '/bonus' || href === '/profile')
+                ) {
                   e.preventDefault();
                   openAuth('login');
                 }

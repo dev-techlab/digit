@@ -151,7 +151,8 @@ export function WalletScreen() {
     const params = new URLSearchParams();
     if (f) params.append('from', f);
     if (t) params.append('to', t);
-    if (tz) params.append('tz', tz === 'browser' ? Intl.DateTimeFormat().resolvedOptions().timeZone : tz);
+    if (tz)
+      params.append('tz', tz === 'browser' ? Intl.DateTimeFormat().resolvedOptions().timeZone : tz);
 
     return api<WalletData>(`/api/agent/wallet?${params.toString()}`).then((d) => {
       setData(d);
@@ -622,7 +623,7 @@ export function WalletScreen() {
                     <span className="font-bold text-green-600">
                       {fmtMoney(
                         Number(amount) -
-                        (Number(amount) * Number(data.store.commissionPer || 0)) / 100
+                          (Number(amount) * Number(data.store.commissionPer || 0)) / 100
                       )}
                     </span>
                   </div>
@@ -656,7 +657,7 @@ export function WalletScreen() {
 
           {fundTab === 'deposit' && (
             <button
-              className="flex w-full items-center justify-center gap-1.5 text-sm text-slate-400 hover:text-slate-600 transition"
+              className="flex w-full items-center justify-center gap-1.5 text-sm text-slate-400 transition hover:text-slate-600"
               onClick={() => setGuideOpen(true)}
             >
               <HelpCircle size={14} /> Deposit Guide
@@ -971,6 +972,7 @@ export function WalletScreen() {
         title={method === 'paypal_pyusd' ? 'How to buy PYUSD using PayPal?' : 'Deposit Guide'}
       >
         <div className="relative flex flex-col items-center justify-center py-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/img/deposit-guide/deposite-step-${guideStep}.png`}
             alt={`Step ${guideStep}`}
@@ -979,14 +981,14 @@ export function WalletScreen() {
           <button
             className="absolute left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-slate-400 text-white shadow hover:bg-slate-500 disabled:opacity-30 disabled:hover:bg-slate-400"
             disabled={guideStep <= 1}
-            onClick={() => setGuideStep(s => s - 1)}
+            onClick={() => setGuideStep((s) => s - 1)}
           >
             <ChevronLeft size={24} />
           </button>
           <button
             className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-slate-400 text-white shadow hover:bg-slate-500 disabled:opacity-30 disabled:hover:bg-slate-400"
             disabled={guideStep >= 4}
-            onClick={() => setGuideStep(s => s + 1)}
+            onClick={() => setGuideStep((s) => s + 1)}
           >
             <ChevronRight size={24} />
           </button>
@@ -994,12 +996,8 @@ export function WalletScreen() {
       </Modal>
 
       {/* Rejection Reason Modal */}
-      <Modal
-        title="Reason"
-        open={!!reasonModal}
-        onClose={() => setReasonModal(null)}
-      >
-        <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+      <Modal title="Reason" open={!!reasonModal} onClose={() => setReasonModal(null)}>
+        <div className="whitespace-pre-wrap rounded-lg bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">
           {reasonModal}
         </div>
         <div className="mt-6 flex justify-end">

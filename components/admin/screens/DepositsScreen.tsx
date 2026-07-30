@@ -1,6 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useDataTable } from '@/hooks/useDataTable';
+import { useActionModal } from '@/hooks/useActionModal';
 import { Check, X } from 'lucide-react';
 import {
   api,
@@ -51,77 +53,48 @@ const statusChip = (st: string) => (
 );
 
 export function DepositsScreen() {
-  const [rows, setRows] = useState<DepositRow[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('pending');
-  const [loading, setLoading] = useState(true);
+  const table = useDataTable<DepositRow>('/api/admin/deposits', 'deposits');
 
-  const [actionModal, setActionModal] = useState<{
-    open: boolean;
-    type: 'accept' | 'reject';
-    row: DepositRow | null;
-  }>({
-    open: false,
-    type: 'accept',
-    row: null,
-  });
+  const actionModal = useActionModal<DepositRow, 'accept' | 'reject'>();
   const [remark, setRemark] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  const load = useCallback(
-    (p = page, q = search, s = statusFilter) =>
-      api<{ deposits: DepositRow[]; total: number }>(
-        `/api/admin/deposits?page=${p}&pageSize=20&search=${encodeURIComponent(q)}&status=${encodeURIComponent(s)}`
-      )
-        .then((d) => {
-          setRows(d.deposits);
-          setTotal(d.total);
-        })
-        .finally(() => setLoading(false)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [page, search, statusFilter]
-  );
 
   useEffect(() => {
-    void load(1, search, statusFilter);
+    void table.load(1, '', { status: 'pending' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openAction = (type: 'accept' | 'reject', row: DepositRow) => {
-    setActionModal({ open: true, type, row });
+    actionModal.openModal(row, type);
     setRemark('');
-    setErr(null);
   };
 
   const submitAction = async () => {
-    const { row, type } = actionModal;
-    if (!row) return;
+    const { item, actionType } = actionModal;
+    if (!item) return;
 
-    if (type === 'reject' && !remark.trim()) {
-      setErr('A reason is required when rejecting a deposit.');
+    if (actionType === 'reject' && !remark.trim()) {
+      actionModal.setErr('A reason is required when rejecting a deposit.');
       return;
     }
 
-    setBusy(true);
-    setErr(null);
+    actionModal.setBusy(true);
+    actionModal.setErr(null);
     try {
       await api('/api/admin/deposits', {
         method: 'POST',
         body: JSON.stringify({
-          id: row.id,
-          action: type,
+          id: item.id,
+          action: actionType,
           remark,
         }),
       });
-      setActionModal({ open: false, type: 'accept', row: null });
-      void load(page, search, statusFilter);
+      actionModal.closeModal();
+      void table.reload();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed to process deposit request.');
+      actionModal.setErr(e instanceof Error ? e.message : 'Failed to process deposit request.');
     } finally {
-      setBusy(false);
+      actionModal.setBusy(false);
     }
   };
 
@@ -129,17 +102,20 @@ export function DepositsScreen() {
     <div className="space-y-5">
       <Card>
         <DataTable
-          data={rows}
+          data={table.rows}
           rowKey={(r) => r.id}
           manualPagination
-          totalRows={total}
-          currentPage={page}
+          totalRows={table.total}
+          currentPage={table.page}
           onPageChange={(p) => {
-            setPage(p);
-            void load(p, search, statusFilter);
+            table.setPage(p);
+            void table.load(p, table.search, { status: statusFilter });
           }}
-          globalSearch={search}
-          onSearchChange={setSearch}
+          globalSearch={table.search}
+          onSearchChange={(v) => {
+            table.setSearch(v);
+            void table.load(1, v, { status: statusFilter });
+          }}
           extraToolbar={
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-500">Status:</span>
@@ -148,8 +124,8 @@ export function DepositsScreen() {
                 value={statusFilter}
                 onChange={(e) => {
                   setStatusFilter(e.target.value);
-                  setPage(1);
-                  void load(1, search, e.target.value);
+                  table.setPage(1);
+                  void table.load(1, table.search, { status: e.target.value });
                 }}
               >
                 <option value="">All</option>
@@ -227,61 +203,58 @@ export function DepositsScreen() {
       </Card>
 
       <Modal
-        title={actionModal.type === 'accept' ? 'Accept Deposit' : 'Reject Deposit'}
+        title={actionModal.actionType === 'accept' ? 'Accept Deposit' : 'Reject Deposit'}
         open={actionModal.open}
-        onClose={() => !busy && setActionModal({ open: false, type: 'accept', row: null })}
+        onClose={actionModal.closeModal}
         footer={
           <>
-            <Btn
-              variant="ghost"
-              onClick={() => setActionModal({ open: false, type: 'accept', row: null })}
-              disabled={busy}
-            >
+            <Btn variant="ghost" onClick={actionModal.closeModal} disabled={actionModal.busy}>
               Cancel
             </Btn>
             <Btn
-              variant={actionModal.type === 'accept' ? 'success' : 'danger'}
+              variant={actionModal.actionType === 'accept' ? 'success' : 'danger'}
               onClick={submitAction}
-              disabled={busy}
+              disabled={actionModal.busy}
             >
-              {busy ? 'Processing...' : 'Confirm'}
+              {actionModal.busy ? 'Processing...' : 'Confirm'}
             </Btn>
           </>
         }
       >
         <div className="space-y-4">
-          {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{err}</p>}
+          {actionModal.err && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{actionModal.err}</p>
+          )}
 
           <div className="space-y-2 rounded-lg bg-slate-50 p-4 text-sm">
             <div className="flex justify-between">
               <span className="text-slate-500">Agent:</span>
-              <span className="font-semibold text-slate-700">{actionModal.row?.username}</span>
+              <span className="font-semibold text-slate-700">{actionModal.item?.username}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Deposit Amount:</span>
-              <span className="font-semibold text-green-600">
-                {fmtMoney(actionModal.row?.amount || '0')}
+              <span className="text-slate-500">Requested Amount:</span>
+              <span className="font-semibold text-slate-700">
+                {fmtMoney(actionModal.item?.amount || '0')}
               </span>
             </div>
-            {actionModal.type === 'accept' && (
+            {actionModal.actionType === 'accept' && (
               <div className="mt-3 font-medium text-green-600">
                 Accepting this deposit will immediately add{' '}
-                {fmtMoney(actionModal.row?.amount || '0')} to the agent&apos;s balance.
               </div>
             )}
-            {actionModal.type === 'reject' && (
+            {actionModal.actionType === 'reject' && (
               <div className="mt-3 font-medium text-red-500">
                 Rejecting this deposit will fail the request and no balance will be added.
               </div>
             )}
           </div>
 
-          <Field label="Reason / Remark" required={actionModal.type === 'reject'}>
+          <Field label="Reason / Remark" required={actionModal.actionType === 'reject'}>
             <TextInput
               value={remark}
               onChange={(e) => setRemark(e.target.value)}
               placeholder={
-                actionModal.type === 'reject'
+                actionModal.actionType === 'reject'
                   ? 'Please provide a reason for rejection'
                   : 'Optional note'
               }

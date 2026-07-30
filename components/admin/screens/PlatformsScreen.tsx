@@ -13,6 +13,7 @@ import {
   fmtDateTime,
 } from '@/components/agent/ui';
 import { DataTable } from '@/components/ui/DataTable';
+import { useActionModal } from '@/hooks/useActionModal';
 import Link from 'next/link';
 
 interface Platform {
@@ -85,18 +86,16 @@ export function PlatformsScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [loading, setLoading] = useState(true);
-  const [draft, setDraft] = useState<Draft | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
 
-  const [agentsModalOpen, setAgentsModalOpen] = useState(false);
-  const [selectedPlatform, setSelectedPlatform] = useState<Platform | null>(null);
+  const draftModal = useActionModal<Draft>();
+  const [draft, setDraft] = useState<Draft | null>(null);
+
+  const agentsModal = useActionModal<Platform>();
   const [connectedAgents, setConnectedAgents] = useState<any[]>([]);
   const [agentsLoading, setAgentsLoading] = useState(false);
   const [agentSearch, setAgentSearch] = useState('');
 
-  const [deleteTarget, setDeleteTarget] = useState<Platform | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const deleteModal = useActionModal<Platform>();
 
   const load = () =>
     api<{ platforms: Platform[] }>('/api/admin/platforms')
@@ -107,12 +106,12 @@ export function PlatformsScreen() {
   }, []);
 
   const openAdd = () => {
-    setError(null);
-    setDraft(emptyDraft());
+    const d = emptyDraft();
+    setDraft(d);
+    draftModal.openModal(d);
   };
   const openEdit = (p: Platform) => {
-    setError(null);
-    setDraft({
+    const d: Draft = {
       id: p.id,
       name: p.name,
       slug: p.slug,
@@ -122,17 +121,19 @@ export function PlatformsScreen() {
       launchUrl: p.launchUrl ?? '',
       sort: String(p.sort),
       isActive: p.isActive,
-    });
+    };
+    setDraft(d);
+    draftModal.openModal(d);
   };
 
   const save = async () => {
     if (!draft) return;
     if (!draft.name.trim()) {
-      setError('Name is required.');
+      draftModal.setErr('Name is required.');
       return;
     }
-    setSaving(true);
-    setError(null);
+    draftModal.setBusy(true);
+    draftModal.setErr(null);
     try {
       const payload = {
         ...(draft.id ? { id: draft.id } : {}),
@@ -149,12 +150,12 @@ export function PlatformsScreen() {
         method: draft.id ? 'PUT' : 'POST',
         body: JSON.stringify(payload),
       });
-      setDraft(null);
+      draftModal.closeModal();
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save platform.');
+      draftModal.setErr(e instanceof Error ? e.message : 'Failed to save platform.');
     } finally {
-      setSaving(false);
+      draftModal.setBusy(false);
     }
   };
 
@@ -171,24 +172,23 @@ export function PlatformsScreen() {
   };
 
   const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
+    if (!deleteModal.item) return;
+    deleteModal.setBusy(true);
     try {
-      await api(`/api/admin/platforms?id=${encodeURIComponent(deleteTarget.id)}`, {
+      await api(`/api/admin/platforms?id=${encodeURIComponent(deleteModal.item.id)}`, {
         method: 'DELETE',
       });
-      setDeleteTarget(null);
+      deleteModal.closeModal();
       await load();
     } catch (e) {
       window.alert(e instanceof Error ? e.message : 'Failed to delete platform.');
     } finally {
-      setDeleting(false);
+      deleteModal.setBusy(false);
     }
   };
 
   const openAgentsModal = async (p: Platform) => {
-    setSelectedPlatform(p);
-    setAgentsModalOpen(true);
+    agentsModal.openModal(p);
     setAgentSearch('');
     await loadAgents(p.id, '');
   };
@@ -208,9 +208,9 @@ export function PlatformsScreen() {
   };
 
   useEffect(() => {
-    if (selectedPlatform && agentsModalOpen) {
+    if (agentsModal.item && agentsModal.open) {
       const timeoutId = setTimeout(() => {
-        void loadAgents(selectedPlatform.id, agentSearch);
+        void loadAgents(agentsModal.item!.id, agentSearch);
       }, 300);
       return () => clearTimeout(timeoutId);
     }
@@ -301,7 +301,7 @@ export function PlatformsScreen() {
                   <Pencil size={15} />
                 </button>
                 <button
-                  onClick={() => setDeleteTarget(p)}
+                  onClick={() => deleteModal.openModal(p)}
                   className="text-slate-400 hover:text-red-500"
                   aria-label="Delete"
                 >
@@ -315,24 +315,26 @@ export function PlatformsScreen() {
 
       <Modal
         title={draft?.id ? 'Edit Platform' : 'Add Platform'}
-        open={!!draft}
-        onClose={() => setDraft(null)}
+        open={draftModal.open}
+        onClose={draftModal.closeModal}
         wide
         footer={
           <>
-            <Btn variant="ghost" onClick={() => setDraft(null)}>
+            <Btn variant="ghost" onClick={draftModal.closeModal}>
               Cancel
             </Btn>
-            <Btn onClick={save} disabled={saving}>
-              {saving ? 'Saving…' : 'Save'}
+            <Btn onClick={save} disabled={draftModal.busy}>
+              {draftModal.busy ? 'Saving…' : 'Save'}
             </Btn>
           </>
         }
       >
         {draft && (
           <div className="space-y-4">
-            {error && (
-              <p className="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">{error}</p>
+            {draftModal.err && (
+              <p className="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">
+                {draftModal.err}
+              </p>
             )}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Field label="Name" required>
@@ -400,11 +402,11 @@ export function PlatformsScreen() {
       </Modal>
 
       <Modal
-        title={`Connected Agents - ${selectedPlatform?.name}`}
-        open={agentsModalOpen}
-        onClose={() => setAgentsModalOpen(false)}
+        title={`Connected Agents - ${agentsModal.item?.name}`}
+        open={agentsModal.open}
+        onClose={agentsModal.closeModal}
         wide
-        footer={<Btn onClick={() => setAgentsModalOpen(false)}>Close</Btn>}
+        footer={<Btn onClick={agentsModal.closeModal}>Close</Btn>}
       >
         <div className="space-y-4">
           <TextInput
@@ -468,22 +470,22 @@ export function PlatformsScreen() {
       {/* Delete Confirmation Modal */}
       <Modal
         title="Delete Platform"
-        open={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
+        open={deleteModal.open}
+        onClose={deleteModal.closeModal}
         footer={
           <>
-            <Btn variant="ghost" onClick={() => setDeleteTarget(null)}>
+            <Btn variant="ghost" onClick={deleteModal.closeModal}>
               Cancel
             </Btn>
-            <Btn variant="danger" onClick={confirmDelete} disabled={deleting}>
-              {deleting ? 'Deleting…' : 'Delete'}
+            <Btn variant="danger" onClick={confirmDelete} disabled={deleteModal.busy}>
+              {deleteModal.busy ? 'Deleting…' : 'Delete'}
             </Btn>
           </>
         }
       >
         <div className="space-y-3">
           <p className="text-sm text-slate-600">
-            Are you sure you want to delete <strong>{deleteTarget?.name}</strong>?
+            Are you sure you want to delete <strong>{deleteModal.item?.name}</strong>?
           </p>
           <p className="text-sm text-slate-500">
             It will disappear from this list and from every store&apos;s Game Setting screen.

@@ -5,6 +5,8 @@ import { Edit, ShieldCheck, ShieldAlert, Trash2, Plus } from 'lucide-react';
 import { api, Btn, Card, Field, fmtDateTime, Modal, TextInput } from '@/components/agent/ui';
 import { DataTable } from '@/components/ui/DataTable';
 import { useAdminPanel } from '@/components/admin/AdminShell';
+import { useDataTable } from '@/hooks/useDataTable';
+import { useActionModal } from '@/hooks/useActionModal';
 
 interface SystemAdminRow {
   id: string;
@@ -19,73 +21,50 @@ const emptyForm = () => ({ username: '', email: '', password: '' });
 
 export function SystemAdminsScreen() {
   const { me } = useAdminPanel();
-  const [rows, setRows] = useState<SystemAdminRow[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
+  const table = useDataTable<SystemAdminRow>('/api/admin/system-admins', 'admins');
 
-  const [open, setOpen] = useState(false);
+  const createModal = useActionModal<null>();
   const [form, setForm] = useState(emptyForm());
-  const [err, setErr] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
 
-  const [editOpen, setEditOpen] = useState(false);
-  const [editRow, setEditRow] = useState<SystemAdminRow | null>(null);
+  const editModal = useActionModal<SystemAdminRow>();
   const [editForm, setEditForm] = useState({ email: '', password: '', status: 'active' });
-  const [editBusy, setEditBusy] = useState(false);
-  const [editErr, setEditErr] = useState<string | null>(null);
 
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [deleteBusy, setDeleteBusy] = useState(false);
-
-  const load = useCallback(
-    (p = page, q = search) =>
-      api<{ admins: SystemAdminRow[]; total: number }>(
-        `/api/admin/system-admins?page=${p}&pageSize=20&search=${encodeURIComponent(q)}`
-      )
-        .then((d) => {
-          setRows(d.admins);
-          setTotal(d.total);
-        })
-        .finally(() => setLoading(false)),
-    [page, search]
-  );
+  const deleteModal = useActionModal<SystemAdminRow>();
 
   useEffect(() => {
-    void load(1, '');
+    void table.load(1, '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const create = async () => {
-    setErr(null);
+    createModal.setErr(null);
     if (!form.username.trim() || !form.email.trim() || !form.password) {
-      setErr('Username, email, and password are required.');
+      createModal.setErr('Username, email, and password are required.');
       return;
     }
-    setSaving(true);
+    createModal.setBusy(true);
     try {
       await api('/api/admin/system-admins', {
         method: 'POST',
         body: JSON.stringify({ ...form }),
       });
       setForm(emptyForm());
-      setOpen(false);
-      void load(1, '');
-      setPage(1);
+      createModal.closeModal();
+      table.setPage(1);
+      void table.load(1, table.search);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed to create admin.');
+      createModal.setErr(e instanceof Error ? e.message : 'Failed to create admin.');
     } finally {
-      setSaving(false);
+      createModal.setBusy(false);
     }
   };
 
   const saveEdit = async () => {
-    if (!editRow) return;
-    setEditErr(null);
-    setEditBusy(true);
+    if (!editModal.item) return;
+    editModal.setErr(null);
+    editModal.setBusy(true);
     try {
-      await api(`/api/admin/system-admins/${editRow.id}`, {
+      await api(`/api/admin/system-admins/${editModal.item.id}`, {
         method: 'PUT',
         body: JSON.stringify({
           email: editForm.email,
@@ -93,26 +72,26 @@ export function SystemAdminsScreen() {
           ...(editForm.password ? { password: editForm.password } : {}),
         }),
       });
-      void load(page, search);
-      setEditOpen(false);
+      void table.reload();
+      editModal.closeModal();
     } catch (e) {
-      setEditErr(e instanceof Error ? e.message : 'Failed to update admin.');
+      editModal.setErr(e instanceof Error ? e.message : 'Failed to update admin.');
     } finally {
-      setEditBusy(false);
+      editModal.setBusy(false);
     }
   };
 
   const removeAdmin = async () => {
-    if (!deleteId) return;
-    setDeleteBusy(true);
+    if (!deleteModal.item) return;
+    deleteModal.setBusy(true);
     try {
-      await api(`/api/admin/system-admins/${deleteId}`, { method: 'DELETE' });
-      setDeleteId(null);
-      void load(page, search);
+      await api(`/api/admin/system-admins/${deleteModal.item.id}`, { method: 'DELETE' });
+      deleteModal.closeModal();
+      void table.reload();
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Failed to delete admin.');
     } finally {
-      setDeleteBusy(false);
+      deleteModal.setBusy(false);
     }
   };
 
@@ -135,25 +114,27 @@ export function SystemAdminsScreen() {
           variant="success"
           className="mb-4"
           onClick={() => {
-            setErr(null);
             setForm(emptyForm());
-            setOpen(true);
+            createModal.openModal(null);
           }}
         >
           <Plus size={16} /> Add System Admin
         </Btn>
         <DataTable
-          data={rows}
+          data={table.rows}
           rowKey={(r) => r.id}
           manualPagination
-          totalRows={total}
-          currentPage={page}
+          totalRows={table.total}
+          currentPage={table.page}
           onPageChange={(p) => {
-            setPage(p);
-            void load(p);
+            table.setPage(p);
+            void table.load(p);
           }}
-          globalSearch={search}
-          onSearchChange={setSearch}
+          globalSearch={table.search}
+          onSearchChange={(v) => {
+            table.setSearch(v);
+            void table.load(1, v);
+          }}
           columns={[
             {
               header: 'Username',
@@ -215,12 +196,10 @@ export function SystemAdminsScreen() {
                   <Btn
                     variant="ghost"
                     className="px-2 text-xs"
-                    disabled={editBusy && editRow?.id === r.id}
+                    disabled={editModal.busy && editModal.item?.id === r.id}
                     onClick={() => {
-                      setEditRow(r);
                       setEditForm({ email: r.email, password: '', status: r.status });
-                      setEditErr(null);
-                      setEditOpen(true);
+                      editModal.openModal(r);
                     }}
                   >
                     <Edit size={16} className="text-blue-500" />
@@ -229,14 +208,14 @@ export function SystemAdminsScreen() {
                     <Btn
                       variant="ghost"
                       className="px-2 text-xs"
-                      disabled={deleteBusy && deleteId === r.id}
+                      disabled={deleteModal.busy && deleteModal.item?.id === r.id}
                       onClick={() => {
                         if (
                           window.confirm(
                             `Are you sure you want to permanently delete admin ${r.username}?`
                           )
                         ) {
-                          setDeleteId(r.id);
+                          deleteModal.openModal(r);
                           void removeAdmin();
                         }
                       }}
@@ -254,21 +233,23 @@ export function SystemAdminsScreen() {
       {/* Add Modal */}
       <Modal
         title="Add System Admin"
-        open={open}
-        onClose={() => setOpen(false)}
+        open={createModal.open}
+        onClose={createModal.closeModal}
         footer={
           <>
-            <Btn variant="ghost" onClick={() => setOpen(false)}>
+            <Btn variant="ghost" onClick={createModal.closeModal}>
               Cancel
             </Btn>
-            <Btn onClick={create} disabled={saving}>
-              {saving ? 'Creating…' : 'Confirm'}
+            <Btn onClick={create} disabled={createModal.busy}>
+              {createModal.busy ? 'Creating…' : 'Confirm'}
             </Btn>
           </>
         }
       >
         <div className="space-y-4">
-          {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{err}</p>}
+          {createModal.err && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{createModal.err}</p>
+          )}
           <Field label="Username" required>
             <TextInput
               value={form.username}
@@ -296,26 +277,26 @@ export function SystemAdminsScreen() {
       {/* Edit Modal */}
       <Modal
         title="Edit System Admin"
-        open={editOpen}
-        onClose={() => setEditOpen(false)}
+        open={editModal.open}
+        onClose={editModal.closeModal}
         footer={
           <>
-            <Btn variant="ghost" onClick={() => setEditOpen(false)}>
+            <Btn variant="ghost" onClick={editModal.closeModal}>
               Cancel
             </Btn>
-            <Btn onClick={saveEdit} disabled={editBusy}>
-              {editBusy ? 'Saving…' : 'Save'}
+            <Btn onClick={saveEdit} disabled={editModal.busy}>
+              {editModal.busy ? 'Saving…' : 'Save'}
             </Btn>
           </>
         }
       >
         <div className="space-y-4">
-          {editErr && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{editErr}</p>
+          {editModal.err && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{editModal.err}</p>
           )}
           <div className="mb-4">
             <label className="text-sm font-medium text-slate-700">Username</label>
-            <div className="mt-1 font-semibold text-slate-900">{editRow?.username}</div>
+            <div className="mt-1 font-semibold text-slate-900">{editModal.item?.username}</div>
           </div>
           <Field label="Email" required>
             <TextInput

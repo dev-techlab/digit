@@ -42,11 +42,15 @@ export async function GET(req: Request) {
     .where(eq(s.storeSettings.storeId, agent.storeId));
 
   const counterparty = alias(s.agents, 'counterparty');
-  
+
   const dateFilter = and(
     eq(s.agentTransactions.agentId, agent.storeId),
-    fromStr ? gte(sql`${s.agentTransactions.createdAt} AT TIME ZONE ${tzStr}`, `${fromStr} 00:00:00`) : undefined,
-    toStr ? lte(sql`${s.agentTransactions.createdAt} AT TIME ZONE ${tzStr}`, `${toStr} 23:59:59`) : undefined
+    fromStr
+      ? gte(sql`${s.agentTransactions.createdAt} AT TIME ZONE ${tzStr}`, `${fromStr} 00:00:00`)
+      : undefined,
+    toStr
+      ? lte(sql`${s.agentTransactions.createdAt} AT TIME ZONE ${tzStr}`, `${toStr} 23:59:59`)
+      : undefined
   );
 
   const logs = await db

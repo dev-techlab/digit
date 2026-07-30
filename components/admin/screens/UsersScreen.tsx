@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, Btn, Card, fmtDateTime, fmtMoney, Select } from '@/components/agent/ui';
 import { DataTable } from '@/components/ui/DataTable';
+import { useDataTable } from '@/hooks/useDataTable';
 
 interface UserRow {
   id: string;
@@ -21,42 +22,27 @@ interface UserRow {
 
 /** Every player who self-registered on the home page / game lobby, with wallet + access controls. */
 export function UsersScreen() {
-  const [rows, setRows] = useState<UserRow[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  const load = useCallback(
-    (p = page, q = search, st = status) =>
-      api<{ users: UserRow[]; total: number }>(
-        `/api/admin/users?page=${p}&pageSize=20&search=${encodeURIComponent(q)}&status=${encodeURIComponent(st)}`
-      )
-        .then((d) => {
-          setRows(d.users);
-          setTotal(d.total);
-        })
-        .finally(() => setLoading(false)),
-    [page, search, status]
-  );
+  const table = useDataTable<UserRow>('/api/admin/users', 'users');
+
   useEffect(() => {
-    void load(1, '', '');
+    void table.load(1, '', { status: '' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggleStatus = async (row: UserRow) => {
     const next = row.status === 'active' ? 'blocked' : 'active';
     setBusyId(row.id);
-    setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, status: next } : r)));
+    table.setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, status: next } : r)));
     try {
       await api('/api/admin/users', {
         method: 'PUT',
         body: JSON.stringify({ id: row.id, status: next }),
       });
     } catch (e) {
-      setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, status: row.status } : r)));
+      table.setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, status: row.status } : r)));
       window.alert(e instanceof Error ? e.message : 'Failed to update status.');
     } finally {
       setBusyId(null);
@@ -67,17 +53,20 @@ export function UsersScreen() {
     <div className="space-y-4">
       <Card>
         <DataTable
-          data={rows}
+          data={table.rows}
           rowKey={(r) => r.id}
           manualPagination
-          totalRows={total}
-          currentPage={page}
+          totalRows={table.total}
+          currentPage={table.page}
           onPageChange={(p) => {
-            setPage(p);
-            void load(p);
+            table.setPage(p);
+            void table.load(p, table.search, { status });
           }}
-          globalSearch={search}
-          onSearchChange={setSearch}
+          globalSearch={table.search}
+          onSearchChange={(v) => {
+            table.setSearch(v);
+            void table.load(1, v, { status });
+          }}
           extraToolbar={
             <div className="flex items-center gap-2">
               <span className="text-sm text-slate-500">Status:</span>
@@ -87,8 +76,8 @@ export function UsersScreen() {
                 onChange={(e) => {
                   const st = e.target.value;
                   setStatus(st);
-                  setPage(1);
-                  void load(1, search, st);
+                  table.setPage(1);
+                  void table.load(1, table.search, { status: st });
                 }}
               >
                 <option value="">All</option>

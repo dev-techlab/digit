@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useDataTable } from '@/hooks/useDataTable';
+import { useActionModal } from '@/hooks/useActionModal';
 import Link from 'next/link';
 import { Copy, Edit, Plus } from 'lucide-react';
 import {
@@ -48,47 +50,27 @@ const emptyForm = () => ({
 
 /** Top-level store/agent accounts — the B2B side that resells game credits to members. */
 export function AgentsScreen() {
-  const [rows, setRows] = useState<AgentRow[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
+  const table = useDataTable<AgentRow>('/api/admin/agents', 'agents');
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const [open, setOpen] = useState(false);
+  const createModal = useActionModal<null>();
   const [form, setForm] = useState(emptyForm());
-  const [err, setErr] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
   const [created, setCreated] = useState<{ username: string; password: string } | null>(null);
 
-  const [editOpen, setEditOpen] = useState(false);
-  const [editRow, setEditRow] = useState<AgentRow | null>(null);
+  const editModal = useActionModal<AgentRow>();
   const [editForm, setEditForm] = useState({
     nickname: '',
     email: '',
     commissionPer: '0',
     remark: '',
   });
-  const [editBusy, setEditBusy] = useState(false);
-  const [editErr, setEditErr] = useState<string | null>(null);
+
   const [platforms, setPlatforms] = useState<PlatformOption[]>([]);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [gameSearch, setGameSearch] = useState('');
 
-  const load = useCallback(
-    (p = page, q = search) =>
-      api<{ agents: AgentRow[]; total: number }>(
-        `/api/admin/agents?page=${p}&pageSize=20&search=${encodeURIComponent(q)}`
-      )
-        .then((d) => {
-          setRows(d.agents);
-          setTotal(d.total);
-        })
-        .finally(() => setLoading(false)),
-    [page, search]
-  );
   useEffect(() => {
-    void load(1, '');
+    void table.load(1, '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -120,12 +102,12 @@ export function AgentsScreen() {
   }, []);
 
   const create = async () => {
-    setErr(null);
+    createModal.setErr(null);
     if (!form.username.trim() || !form.password) {
-      setErr('Username and password are required.');
+      createModal.setErr('Username and password are required.');
       return;
     }
-    setSaving(true);
+    createModal.setBusy(true);
     try {
       const agentData = await api<{ agent: { id: string; username: string; password: string } }>(
         '/api/admin/agents',
@@ -149,24 +131,24 @@ export function AgentsScreen() {
       setForm(emptyForm());
       setSelectedPlatforms([]);
       setGameSearch('');
-      void load(1, '');
-      setPage(1);
+      void table.reload();
+      createModal.closeModal();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed to create agent.');
+      createModal.setErr(e instanceof Error ? e.message : 'Failed to create agent.');
     } finally {
-      setSaving(false);
+      createModal.setBusy(false);
     }
   };
 
   const saveEdit = async () => {
-    if (!editRow) return;
-    setEditErr(null);
-    setEditBusy(true);
+    if (!editModal.item) return;
+    editModal.setErr(null);
+    editModal.setBusy(true);
     try {
       await api('/api/admin/agents', {
         method: 'PUT',
         body: JSON.stringify({
-          id: editRow.id,
+          id: editModal.item.id,
           nickname: editForm.nickname,
           email: editForm.email,
           commissionPer: editForm.commissionPer,
@@ -176,30 +158,30 @@ export function AgentsScreen() {
       await api('/api/admin/agent-platforms', {
         method: 'PUT',
         body: JSON.stringify({
-          agentId: editRow.id,
+          agentId: editModal.item.id,
           assignments: selectedPlatforms.map((id) => ({ platformId: id })),
         }),
       });
-      void load(page, search);
-      setEditOpen(false);
+      void table.reload();
+      editModal.closeModal();
     } catch (e) {
-      setEditErr(e instanceof Error ? e.message : 'Failed to update agent.');
+      editModal.setErr(e instanceof Error ? e.message : 'Failed to update agent.');
     } finally {
-      setEditBusy(false);
+      editModal.setBusy(false);
     }
   };
 
   const toggleStatus = async (row: AgentRow) => {
     const next = row.status === 'active' ? 'disabled' : 'active';
     setBusyId(row.id);
-    setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, status: next } : r)));
+    table.setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, status: next } : r)));
     try {
       await api('/api/admin/agents', {
         method: 'PUT',
         body: JSON.stringify({ id: row.id, status: next }),
       });
     } catch (e) {
-      setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, status: row.status } : r)));
+      table.setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, status: row.status } : r)));
       window.alert(e instanceof Error ? e.message : 'Failed to update status.');
     } finally {
       setBusyId(null);
@@ -270,28 +252,30 @@ export function AgentsScreen() {
           variant="success"
           className="mb-4"
           onClick={async () => {
-            setErr(null);
             setForm(emptyForm());
             setSelectedPlatforms([]);
             setGameSearch('');
             await loadPlatforms();
-            setOpen(true);
+            createModal.openModal(null);
           }}
         >
           <Plus size={16} /> Add Agent
         </Btn>
         <DataTable
-          data={rows}
+          data={table.rows}
           rowKey={(r) => r.id}
           manualPagination
-          totalRows={total}
-          currentPage={page}
+          totalRows={table.total}
+          currentPage={table.page}
           onPageChange={(p) => {
-            setPage(p);
-            void load(p);
+            table.setPage(p);
+            void table.load(p);
           }}
-          globalSearch={search}
-          onSearchChange={setSearch}
+          globalSearch={table.search}
+          onSearchChange={(v) => {
+            table.setSearch(v);
+            void table.load(1, v);
+          }}
           columns={[
             {
               header: 'Username',
@@ -366,18 +350,16 @@ export function AgentsScreen() {
                   <Btn
                     variant="ghost"
                     className="px-1 text-xs"
-                    disabled={editBusy && editRow?.id === r.id}
+                    disabled={editModal.busy && editModal.item?.id === r.id}
                     onClick={() => {
-                      setEditRow(r);
                       setEditForm({
                         nickname: r.nickname ?? '',
                         email: r.email ?? '',
                         commissionPer: r.commissionPer,
                         remark: r.remark ?? '',
                       });
-                      setEditErr(null);
                       void loadPlatforms(r.id);
-                      setEditOpen(true);
+                      editModal.openModal(r);
                     }}
                   >
                     <Edit size={14} />
@@ -399,21 +381,23 @@ export function AgentsScreen() {
 
       <Modal
         title="Add Agent"
-        open={open}
-        onClose={() => setOpen(false)}
+        open={createModal.open}
+        onClose={createModal.closeModal}
         footer={
           <>
-            <Btn variant="ghost" onClick={() => setOpen(false)}>
+            <Btn variant="ghost" onClick={createModal.closeModal}>
               Cancel
             </Btn>
-            <Btn onClick={create} disabled={saving}>
-              {saving ? 'Creating…' : 'Confirm'}
+            <Btn onClick={create} disabled={createModal.busy}>
+              {createModal.busy ? 'Creating…' : 'Confirm'}
             </Btn>
           </>
         }
       >
         <div className="space-y-4">
-          {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{err}</p>}
+          {createModal.err && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{createModal.err}</p>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <Field label="Username" required>
               <TextInput
@@ -497,22 +481,22 @@ export function AgentsScreen() {
 
       <Modal
         title="Edit Agent"
-        open={editOpen}
-        onClose={() => setEditOpen(false)}
+        open={editModal.open}
+        onClose={editModal.closeModal}
         footer={
           <>
-            <Btn variant="ghost" onClick={() => setEditOpen(false)}>
+            <Btn variant="ghost" onClick={editModal.closeModal}>
               Cancel
             </Btn>
-            <Btn onClick={saveEdit} disabled={editBusy}>
-              {editBusy ? 'Saving…' : 'Save'}
+            <Btn onClick={saveEdit} disabled={editModal.busy}>
+              {editModal.busy ? 'Saving…' : 'Save'}
             </Btn>
           </>
         }
       >
         <div className="space-y-4">
-          {editErr && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{editErr}</p>
+          {editModal.err && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{editModal.err}</p>
           )}
           <div className="grid grid-cols-2 gap-4">
             <Field label="Nickname">

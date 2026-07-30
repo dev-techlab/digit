@@ -18,7 +18,9 @@ export async function api<T = unknown>(url: string, init?: RequestInit): Promise
   const reqPromise = (async () => {
     const res = await fetch(url, {
       ...init,
-      headers: init?.body ? { 'Content-Type': 'application/json', ...init?.headers } : init?.headers,
+      headers: init?.body
+        ? { 'Content-Type': 'application/json', ...init?.headers }
+        : init?.headers,
     });
     const data = (await res.json().catch(() => ({}))) as T & { error?: string };
     if (!res.ok) {

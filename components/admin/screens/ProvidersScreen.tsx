@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { api, Btn, Field, Modal, Select, Table, TextInput, Toggle } from '@/components/agent/ui';
+import { useActionModal } from '@/hooks/useActionModal';
 
 interface Provider {
   id: number;
@@ -99,8 +100,8 @@ export function ProvidersScreen() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+
+  const draftModal = useActionModal<Draft>();
 
   const load = () =>
     api<{ providers: Provider[] }>('/api/admin/providers')
@@ -113,12 +114,12 @@ export function ProvidersScreen() {
   }, []);
 
   const openAdd = () => {
-    setError(null);
-    setDraft(emptyDraft());
+    const d = emptyDraft();
+    setDraft(d);
+    draftModal.openModal(d);
   };
   const openEdit = (p: Provider) => {
-    setError(null);
-    setDraft({
+    const d: Draft = {
       id: String(p.id),
       isNew: false,
       name: p.name,
@@ -137,33 +138,36 @@ export function ProvidersScreen() {
       redeemField: String(p.redeemField),
       invalidPasswordState: p.invalidPasswordState === 1,
       canChangePassword: p.canChangePassword === 1,
-    });
+    };
+    setDraft(d);
+    draftModal.openModal(d);
   };
 
   const save = async () => {
     if (!draft) return;
+
     if (draft.isNew && !draft.id.trim()) {
-      setError('Provider ID is required.');
+      draftModal.setErr('Provider ID is required.');
       return;
     }
     if (!draft.name.trim()) {
-      setError('Name is required.');
+      draftModal.setErr('Name is required.');
       return;
     }
     if (!draft.providerCode.trim()) {
-      setError('Provider code is required.');
+      draftModal.setErr('Provider code is required.');
       return;
     }
     if (!draft.launchUrlTemplate.trim()) {
-      setError('Launch URL is required.');
+      draftModal.setErr('Launch URL is required.');
       return;
     }
     if (!draft.iconUrl.trim()) {
-      setError('Icon URL is required.');
+      draftModal.setErr('Icon URL is required.');
       return;
     }
-    setSaving(true);
-    setError(null);
+    draftModal.setBusy(true);
+    draftModal.setErr(null);
     try {
       const payload = {
         id: Number(draft.id),
@@ -188,12 +192,12 @@ export function ProvidersScreen() {
         method: draft.isNew ? 'POST' : 'PUT',
         body: JSON.stringify(payload),
       });
-      setDraft(null);
+      draftModal.closeModal();
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save provider.');
+      draftModal.setErr(e instanceof Error ? e.message : 'Failed to save provider.');
     } finally {
-      setSaving(false);
+      draftModal.setBusy(false);
     }
   };
 
@@ -283,24 +287,26 @@ export function ProvidersScreen() {
 
       <Modal
         title={draft?.isNew ? 'Add Provider' : 'Edit Provider'}
-        open={!!draft}
-        onClose={() => setDraft(null)}
+        open={draftModal.open}
+        onClose={draftModal.closeModal}
         wide
         footer={
           <>
-            <Btn variant="ghost" onClick={() => setDraft(null)}>
+            <Btn variant="ghost" onClick={draftModal.closeModal}>
               Cancel
             </Btn>
-            <Btn onClick={save} disabled={saving}>
-              {saving ? 'Saving…' : 'Save'}
+            <Btn onClick={save} disabled={draftModal.busy}>
+              {draftModal.busy ? 'Saving…' : 'Save'}
             </Btn>
           </>
         }
       >
         {draft && (
           <div className="space-y-5">
-            {error && (
-              <p className="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">{error}</p>
+            {draftModal.err && (
+              <p className="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">
+                {draftModal.err}
+              </p>
             )}
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

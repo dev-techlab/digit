@@ -43,11 +43,7 @@ export async function GET(req: Request) {
   const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('pageSize')) || 20));
   const search = url.searchParams.get('search')?.trim();
   const statusFilter = url.searchParams.get('status') as
-    | 'pending'
-    | 'completed'
-    | 'failed'
-    | 'cancelled'
-    | null;
+    'pending' | 'completed' | 'failed' | 'cancelled' | null;
 
   const where = and(
     eq(s.agentTransactions.type, 'deposit'),
@@ -129,21 +125,21 @@ export async function POST(req: Request) {
         .from(s.agents)
         .where(eq(s.agents.id, txRow.agentId))
         .for('update');
-        
+
       const currentBalance = Number(agentRow.balance);
 
       if (action === 'accept') {
         const amount = Number(txRow.amount);
         const balanceAfter = currentBalance + amount;
-        
+
         // Accept: change status, record correct balances, and increase agent balance
         await tx
           .update(s.agentTransactions)
-          .set({ 
-             status: 'completed', 
-             remark, 
-             balanceBefore: String(currentBalance),
-             balanceAfter: String(balanceAfter) 
+          .set({
+            status: 'completed',
+            remark,
+            balanceBefore: String(currentBalance),
+            balanceAfter: String(balanceAfter),
           })
           .where(eq(s.agentTransactions.id, id));
 
@@ -155,11 +151,11 @@ export async function POST(req: Request) {
         // Rejecting: change status, record current balance (no change)
         await tx
           .update(s.agentTransactions)
-          .set({ 
-             status: 'failed', 
-             remark, 
-             balanceBefore: String(currentBalance),
-             balanceAfter: String(currentBalance) 
+          .set({
+            status: 'failed',
+            remark,
+            balanceBefore: String(currentBalance),
+            balanceAfter: String(currentBalance),
           })
           .where(eq(s.agentTransactions.id, id));
       }
