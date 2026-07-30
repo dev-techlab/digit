@@ -75,13 +75,19 @@ export function PostersScreen() {
           {items.map((p) => (
             <Card key={p.id} className="flex flex-col items-center gap-3">
               <div
-                className={`flex w-full items-center justify-center rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 text-slate-500 ${category === 'portrait' ? 'aspect-[9/16]' : 'aspect-[16/10]'
-                  }`}
+                className={`relative flex w-full items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 text-slate-500 ${
+                  category === 'portrait' ? 'aspect-[9/16]' : 'aspect-[16/10]'
+                }`}
               >
-                <div className="flex flex-col items-center gap-2">
-                  <ImageIcon size={32} />
-                  <span className="px-3 text-center text-xs text-slate-400">{p.title}</span>
-                </div>
+                {p.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.imageUrl} alt={p.title || 'Poster'} className="absolute inset-0 h-full w-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    <ImageIcon size={32} />
+                    <span className="px-3 text-center text-xs text-slate-400">{p.title}</span>
+                  </div>
+                )}
               </div>
               <Btn
                 className="w-full justify-center py-1.5 text-xs"
