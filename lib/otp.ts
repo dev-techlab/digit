@@ -2,6 +2,7 @@ import { createHmac, randomInt } from 'node:crypto';
 import { and, eq, gt, desc, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import * as s from '@/lib/db/schema';
+import { sendOtpEmail } from '@/lib/mail';
 
 export type OtpPurpose = (typeof s.otpPurposeEnum.enumValues)[number];
 
@@ -64,6 +65,16 @@ export async function requestOtp(
     purpose,
     expiresAt: new Date(Date.now() + OTP_TTL_S * 1000),
   });
+
+  if (EMAIL_RE.test(destination)) {
+    await sendOtpEmail({
+      to: destination,
+      purpose,
+      code,
+      expiresMinutes: Math.floor(OTP_TTL_S / 60),
+    });
+  }
+
   return { ok: true, code };
 }
 

@@ -6,6 +6,7 @@ import type {
   TicketReplyPayload,
   EmailVerificationPayload,
   AdminAlertPayload,
+  OtpEmailPayload,
 } from './types';
 
 export type {
@@ -14,6 +15,7 @@ export type {
   TicketReplyPayload,
   EmailVerificationPayload,
   AdminAlertPayload,
+  OtpEmailPayload,
   RenderedEmail,
 } from './types';
 export { renderEmail } from './templates';
@@ -50,4 +52,9 @@ export function sendEmailVerification(args: Omit<EmailVerificationPayload, 'temp
 /** Admin alert (new withdrawal, KYC submitted, …). Defaults to MAIL_ADMIN. */
 export function sendAdminAlert(args: Omit<AdminAlertPayload, 'template'>) {
   return sendEmail({ template: 'admin-alert', ...args });
+}
+
+/** OTP code (registration, password reset, etc). */
+export function sendOtpEmail(args: Omit<OtpEmailPayload, 'template'>) {
+  return sendEmail({ template: 'otp-email', ...args });
 }

@@ -59,7 +59,28 @@ export async function getProviders(providerType: 'SC' | 'GC'): Promise<GameProvi
     .from(s.providerDepositTiers)
     .orderBy(asc(s.providerDepositTiers.sort));
 
-  return rows.map((p) => {
+  const userId = await currentUserId();
+  let allowedProviderCodes: string[] | null = null;
+  if (userId) {
+    const user = await db.query.users.findFirst({
+      where: (t, { eq }) => eq(t.id, userId),
+      columns: { agentId: true },
+    });
+    if (user?.agentId) {
+      const allowedPlatforms = await db
+        .select({ providerCode: s.gamePlatforms.providerCode })
+        .from(s.agentPlatforms)
+        .innerJoin(s.gamePlatforms, eq(s.gamePlatforms.id, s.agentPlatforms.platformId))
+        .where(eq(s.agentPlatforms.agentId, user.agentId));
+      allowedProviderCodes = allowedPlatforms.map((p) => p.providerCode).filter(Boolean) as string[];
+    }
+  }
+
+  const finalRows = allowedProviderCodes 
+    ? rows.filter(r => allowedProviderCodes!.includes(r.providerCode))
+    : rows;
+
+  return finalRows.map((p) => {
     const t = tiers
       .filter((x) => x.providerId === p.id)
       .map((x) => ({ amount: x.amount, bonusAmount: x.bonusAmount }));

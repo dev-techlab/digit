@@ -21,6 +21,7 @@ export interface MockUser {
   phoneBound: boolean;
   kycStatus: 'unverified' | 'pending' | 'verified' | 'rejected';
   pwaInstalled: boolean;
+  usedInviteCode: string | null;
 }
 
 interface AuthContextValue {

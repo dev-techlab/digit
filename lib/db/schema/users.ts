@@ -32,6 +32,10 @@ export const users = pgTable('users', {
   pwaInstalled: boolean('pwa_installed').notNull().default(false),
   inviteCode: text('invite_code').notNull().unique(),
   referredByUserId: uuid('referred_by_user_id').references((): AnyPgColumn => users.id),
+  agentId: uuid('agent_id'),
+  usedInviteCode: text('used_invite_code'),
+  emailVerified: timestamp('email_verified', { withTimezone: true }),
+  phoneVerified: timestamp('phone_verified', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

@@ -35,6 +35,14 @@ export interface EmailVerificationPayload {
   expiresMinutes?: number;
 }
 
+export interface OtpEmailPayload {
+  template: 'otp-email';
+  to: string;
+  purpose: 'register' | 'login' | 'bind_phone' | 'reset_password';
+  code: string;
+  expiresMinutes?: number;
+}
+
 export interface AdminAlertPayload {
   template: 'admin-alert';
   /** Defaults to MAIL_ADMIN when omitted. */
@@ -46,7 +54,11 @@ export interface AdminAlertPayload {
 }
 
 export type MailPayload =
-  AdminInvitePayload | TicketReplyPayload | EmailVerificationPayload | AdminAlertPayload;
+  | AdminInvitePayload
+  | TicketReplyPayload
+  | EmailVerificationPayload
+  | AdminAlertPayload
+  | OtpEmailPayload;
 
 export interface RenderedEmail {
   subject: string;

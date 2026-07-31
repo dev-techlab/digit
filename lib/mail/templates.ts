@@ -101,6 +101,52 @@ export function renderEmail(p: MailPayload): RenderedEmail {
       };
     }
 
+    case 'otp-email': {
+      let title = 'Verification Code';
+      let msg = 'Here is your verification code.';
+      let subject = `Your ${APP_NAME} verification code`;
+
+      switch (p.purpose) {
+        case 'register':
+          title = 'Welcome to ' + APP_NAME;
+          msg = 'Please use the following verification code to complete your registration.';
+          subject = `Verify your ${APP_NAME} registration`;
+          break;
+        case 'reset_password':
+          title = 'Reset Your Password';
+          msg = 'We received a request to reset your password. Use the code below to proceed.';
+          subject = `Reset your ${APP_NAME} password`;
+          break;
+        case 'login':
+          title = 'Login Verification';
+          msg = 'Please use the following code to log in to your account.';
+          subject = `Your ${APP_NAME} login code`;
+          break;
+        case 'bind_phone':
+          title = 'Verify Action';
+          msg = 'Please use the following code to complete your action.';
+          break;
+      }
+
+      const expiry = p.expiresMinutes
+        ? `<p style="color:rgba(232,245,238,.6);font-size:13px">This code expires in ${p.expiresMinutes} minutes.</p>`
+        : '';
+
+      return {
+        subject,
+        html: layout(
+          `<h1 style="margin:0 0 16px;font-size:20px;color:#fff">${esc(title)}</h1>
+           <p style="margin:0 0 16px">${esc(msg)}</p>
+           <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:20px;text-align:center;margin:24px 0">
+             <div style="font-size:14px;color:rgba(232,245,238,.6);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Verification Code</div>
+             <div style="font-size:32px;font-weight:800;letter-spacing:.2em;color:#fff">${esc(p.code)}</div>
+           </div>
+           ${expiry}`
+        ),
+        text: `${title}\n\n${msg}\n\nVerification Code: ${p.code}\n${p.expiresMinutes ? `\nThis code expires in ${p.expiresMinutes} minutes.` : ''}`,
+      };
+    }
+
     case 'admin-alert': {
       const action = p.actionUrl
         ? `<div style="text-align:center;margin:22px 0">${button(p.actionUrl, p.actionLabel || 'Open admin panel')}</div>`

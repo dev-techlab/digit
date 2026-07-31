@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
+import { z } from 'zod';
 import { and, desc, eq, ilike, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import * as s from '@/lib/db/schema';
@@ -63,17 +64,24 @@ export async function GET(req: Request) {
   });
 }
 
+const createMemberSchema = z.object({
+  username: z.string().min(8, 'Username must be at least 8 characters'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  remark: z.string().optional(),
+});
+
 /** POST /api/agent/members — create a member under this store. */
 export async function POST(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const username = typeof body.username === 'string' ? body.username.trim() : '';
-  const password = typeof body.password === 'string' ? body.password : '';
-  if (!username || !password) {
-    return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+  const parseResult = createMemberSchema.safeParse(body);
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0].message }, { status: 400 });
   }
+
+  const { username, password, remark } = parseResult.data;
 
   try {
     const [created] = await db
@@ -93,6 +101,13 @@ export async function POST(req: Request) {
   }
 }
 
+const updateMemberSchema = z.object({
+  id: z.string().min(1, 'Member ID is required'),
+  remark: z.string().optional(),
+  scRewardEnabled: z.boolean().optional(),
+  status: z.enum(['active', 'disabled']).optional(),
+});
+
 /** PUT /api/agent/members — update remark / status / SC-reward flag. */
 export async function PUT(req: Request) {
   const agent = await getAgentFromRequest(req);
@@ -104,14 +119,18 @@ export async function PUT(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const id = typeof body.id === 'string' ? body.id : '';
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+  const parseResult = updateMemberSchema.safeParse(body);
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0].message }, { status: 400 });
+  }
+
+  const { id, remark, scRewardEnabled, status } = parseResult.data;
 
   const set: Partial<typeof s.members.$inferInsert> = {};
-  if (typeof body.remark === 'string') set.remark = body.remark;
-  if (typeof body.scRewardEnabled === 'boolean') set.scRewardEnabled = body.scRewardEnabled;
-  if (body.status === 'active' || body.status === 'disabled') set.status = body.status;
+  if (remark !== undefined) set.remark = remark;
+  if (scRewardEnabled !== undefined) set.scRewardEnabled = scRewardEnabled;
+  if (status !== undefined) set.status = status;
 
   await db
     .update(s.members)

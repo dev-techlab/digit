@@ -13,7 +13,7 @@ import { useAuthModal } from '@/lib/auth-modal-context';
 export function RegisterModal() {
   const { mode, close, open } = useAuthModal();
   const { setUser } = useAuth();
-  const [method, setMethod] = useState('quick');
+  const [method, setMethod] = useState<'quick' | 'email' | 'phone'>('quick');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [quickCredentials, setQuickCredentials] = useState<{
@@ -24,15 +24,60 @@ export function RegisterModal() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [inviteCode, setInviteCode] = useState('');
+  
+  const [pendingVerification, setPendingVerification] = useState(false);
+  const [verificationMethod, setVerificationMethod] = useState<'email' | 'phone' | null>(null);
+  const [verificationDestination, setVerificationDestination] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [sendingCode, setSendingCode] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
 
   const reset = () => {
     setUsername('');
     setPassword('');
     setConfirmPassword('');
+    setEmail('');
+    setPhone('');
     setInviteCode('');
     setError(null);
     setQuickCredentials(null);
+    setPendingVerification(false);
+    setVerificationMethod(null);
+    setVerificationDestination('');
+    setOtpCode('');
+    setCooldown(0);
+    setSendingCode(false);
+  };
+
+  const sendCode = async () => {
+    setSendingCode(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/auth/otp/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ destination: verificationDestination, purpose: 'register' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? 'Failed to send code');
+      setCooldown(60);
+      const timer = setInterval(() => {
+        setCooldown((c) => {
+          if (c <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return c - 1;
+        });
+      }, 1000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to send code');
+    } finally {
+      setSendingCode(false);
+    }
   };
 
   const register = async (body: Record<string, unknown>) => {
@@ -43,7 +88,37 @@ export function RegisterModal() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error ?? 'Registration failed');
-    return data as { user: MockUser; credentials?: { username: string; password: string } };
+    return data as { 
+      user: MockUser; 
+      credentials?: { username: string; password: string };
+      pendingVerification?: boolean;
+      verificationMethod?: 'email' | 'phone';
+    };
+  };
+
+  const verifyOtp = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/auth/otp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destination: verificationDestination,
+          purpose: 'register',
+          code: otpCode,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? 'Verification failed');
+      setUser(data.user);
+      reset();
+      close();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Verification failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const quickRegister = async () => {
@@ -67,10 +142,6 @@ export function RegisterModal() {
   };
 
   const manualRegister = async () => {
-    if (username.trim().length < 8) {
-      setError('Username must be at least 8 characters.');
-      return;
-    }
     if (password.length < 6) {
       setError('Password must be at least 6 characters.');
       return;
@@ -79,17 +150,31 @@ export function RegisterModal() {
       setError('Passwords do not match.');
       return;
     }
+    if (!inviteCode.trim()) {
+      setError('Invite Code is required.');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     try {
       const data = await register({
-        username: username.trim(),
+        username: username.trim() || undefined,
         password,
-        inviteCode: inviteCode.trim() || undefined,
+        email: method === 'email' ? email.trim() : undefined,
+        phone: method === 'phone' ? phone.trim() : undefined,
+        inviteCode: inviteCode.trim(),
       });
-      setUser(data.user);
-      reset();
-      close();
+      
+      if (data.pendingVerification) {
+        setPendingVerification(true);
+        setVerificationMethod(data.verificationMethod ?? null);
+        setVerificationDestination(method === 'email' ? email.trim() : phone.trim());
+      } else {
+        setUser(data.user);
+        reset();
+        close();
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Registration failed');
     } finally {
@@ -146,6 +231,50 @@ export function RegisterModal() {
     );
   }
 
+  if (pendingVerification) {
+    return (
+      <AuthModalFrame open={mode === 'register'} onClose={close} tagline="Verify your account">
+        <div className="flex flex-col items-center gap-3 py-4 text-center">
+          <h2 className="text-2xl font-black">Verification Required</h2>
+          <p className="text-sm text-[var(--text-secondary)]">
+            We sent a verification code to <strong>{verificationDestination}</strong>.
+            Please enter it below to complete your registration.
+          </p>
+
+          {error && (
+            <p className="mt-4 w-full rounded-md bg-danger/10 px-3 py-2 text-sm text-danger text-left">
+              {error}
+            </p>
+          )}
+
+          <div className="mt-4 w-full space-y-4 text-left">
+            <IconInput
+              icon={<Lock size={16} />}
+              label="Verification Code"
+              placeholder="Enter 6-digit code"
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value)}
+            />
+            <Button fullWidth onClick={verifyOtp} disabled={loading || !otpCode}>
+              {loading ? 'Verifying…' : 'Verify Account'}
+            </Button>
+            <Button
+              variant="secondary"
+              fullWidth
+              disabled={sendingCode || cooldown > 0}
+              onClick={sendCode}
+            >
+              {cooldown > 0 ? `Resend code (${cooldown}s)` : sendingCode ? 'Sending…' : 'Resend code'}
+            </Button>
+            <Button variant="secondary" fullWidth onClick={() => setPendingVerification(false)}>
+              Back
+            </Button>
+          </div>
+        </div>
+      </AuthModalFrame>
+    );
+  }
+
   return (
     <AuthModalFrame open={mode === 'register'} onClose={close} tagline="Join us and start winning!">
       <h2 className="text-2xl font-black">Create Account</h2>
@@ -154,12 +283,13 @@ export function RegisterModal() {
       <Tabs
         className="mt-6"
         options={[
-          { value: 'quick', label: 'Quick Register' },
-          { value: 'manual', label: 'Manual Register' },
+          { value: 'quick', label: 'Quick' },
+          { value: 'email', label: 'Email' },
+          { value: 'phone', label: 'Phone' },
         ]}
         value={method}
         onChange={(v) => {
-          setMethod(v);
+          setMethod(v as any);
           setError(null);
         }}
       />
@@ -184,9 +314,29 @@ export function RegisterModal() {
         </div>
       ) : (
         <div className="mt-5 space-y-4">
+          {method === 'email' ? (
+            <IconInput
+              icon={<User size={16} />}
+              label="Email Address"
+              placeholder="Enter your email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          ) : (
+            <IconInput
+              icon={<User size={16} />}
+              label="Phone Number"
+              placeholder="Enter your phone"
+              autoComplete="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+          )}
+          
           <IconInput
             icon={<User size={16} />}
-            label="Username"
+            label="Username (Optional)"
             placeholder="Min. 8 characters"
             autoComplete="username"
             value={username}
@@ -212,7 +362,7 @@ export function RegisterModal() {
           />
           <IconInput
             icon={<Gift size={16} />}
-            label="Invite Code (Optional)"
+            label="Invite Code (Required)"
             placeholder="Enter invite code"
             value={inviteCode}
             onChange={(e) => setInviteCode(e.target.value)}

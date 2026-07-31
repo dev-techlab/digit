@@ -15,16 +15,18 @@ export class UserConflictError extends Error {
   }
 }
 
-/** Verify username + password; returns the user id or null. Blocked accounts cannot log in. */
 export async function verifyUserLogin(username: string, password: string): Promise<string | null> {
   const user = await db.query.users.findFirst({ where: (t, { eq }) => eq(t.username, username) });
   if (!user || user.status !== 'active') return null;
+  if (user.email && !user.emailVerified) return null;
+  if (user.phone && !user.phoneVerified) return null;
   return (await bcrypt.compare(password, user.passwordHash)) ? user.id : null;
 }
 
 export interface RegisterUserInput {
   username?: string;
   password?: string;
+  email?: string;
   phone?: string;
   inviteCode?: string;
 }
@@ -46,12 +48,17 @@ export async function registerUser(
   });
   if (existing) throw new UserConflictError('Username already taken');
 
-  const referrer = input.inviteCode?.trim()
-    ? await db.query.users.findFirst({
-        where: (t, { eq }) => eq(t.inviteCode, input.inviteCode!.trim()),
-        columns: { id: true },
-      })
-    : null;
+  let agentId = null;
+  let usedInviteCode = null;
+  if (input.inviteCode?.trim()) {
+    const agent = await db.query.agents.findFirst({
+      where: (t, { eq }) => eq(t.inviteCode, input.inviteCode!.trim()),
+      columns: { id: true, inviteCode: true },
+    });
+    if (!agent) throw new UserConflictError('Invalid invite code');
+    agentId = agent.id;
+    usedInviteCode = agent.inviteCode;
+  }
 
   const passwordHash = await bcrypt.hash(password, 10);
   let user: typeof s.users.$inferSelect;
@@ -62,10 +69,12 @@ export async function registerUser(
         username,
         nickname: username,
         passwordHash,
+        email: input.email ?? null,
         phone: input.phone ?? null,
         phoneBound: !!input.phone,
         inviteCode: `DL${randomBytes(4).toString('hex').toUpperCase()}`,
-        referredByUserId: referrer?.id ?? null,
+        agentId,
+        usedInviteCode,
       })
       .returning();
   } catch (err) {
@@ -76,15 +85,6 @@ export async function registerUser(
     throw err;
   }
   await db.insert(s.wallets).values({ userId: user.id }).onConflictDoNothing();
-
-  if (referrer) {
-    await db.insert(s.referralCommissions).values({
-      referrerUserId: referrer.id,
-      inviteeUserId: user.id,
-      inviteeDisplay: username,
-      joinedAt: new Date(),
-    });
-  }
 
   return { id: user.id, username, password, generated };
 }
@@ -131,6 +131,7 @@ export interface UserProfile {
   phoneBound: boolean;
   kycStatus: string;
   pwaInstalled: boolean;
+  usedInviteCode: string | null;
 }
 
 /** Public-safe profile for the authenticated user (never returns the hash). */
@@ -146,6 +147,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
       phoneBound: true,
       kycStatus: true,
       pwaInstalled: true,
+      usedInviteCode: true,
     },
   });
   return u ?? null;
