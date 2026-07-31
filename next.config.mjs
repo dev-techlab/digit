@@ -4,7 +4,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'static.digitlink.mobi',
+        hostname: 'octanlink.com',
       },
     ],
   },
