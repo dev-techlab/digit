@@ -5,6 +5,8 @@ import { Copy, Eye, RefreshCw } from 'lucide-react';
 import { api, Btn, Field, fmtDateTime, Modal, TextInput, Toggle } from '../ui';
 import { cn } from '@/lib/cn';
 
+import { getLocalImageUrl } from '@/lib/image';
+
 const AVATAR_GRADIENTS = [
   'from-blue-400 to-indigo-500',
   'from-emerald-400 to-green-600',
@@ -21,7 +23,7 @@ function PlatformIcon({ name, iconUrl }: { name: string; iconUrl: string | null 
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={iconUrl}
+        src={getLocalImageUrl(iconUrl)}
         alt=""
         loading="lazy"
         onError={() => setFailed(true)}

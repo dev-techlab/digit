@@ -55,6 +55,8 @@ function downloadPoster(p: Poster, inviteLink: string) {
   a.click();
 }
 
+import { getLocalImageUrl } from '@/lib/image';
+
 export function PostersScreen() {
   const { me } = usePanel();
   const [posters, setPosters] = useState<Poster[]>([]);
@@ -82,7 +84,7 @@ export function PostersScreen() {
                 {p.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img 
-                    src={p.imageUrl} 
+                    src={getLocalImageUrl(p.imageUrl)} 
                     alt={p.title || 'Poster'} 
                     className="absolute inset-0 h-full w-full object-cover" 
                   />

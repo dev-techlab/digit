@@ -68,13 +68,15 @@ const emptyDraft = (): Draft => ({
   canChangePassword: true,
 });
 
+import { getLocalImageUrl } from '@/lib/image';
+
 function ProviderIcon({ name, iconUrl }: { name: string; iconUrl: string }) {
   const [failed, setFailed] = useState(false);
   if (iconUrl && !failed) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={iconUrl}
+        src={getLocalImageUrl(iconUrl)}
         alt=""
         loading="lazy"
         onError={() => setFailed(true)}

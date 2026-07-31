@@ -54,13 +54,15 @@ const emptyDraft = (): Draft => ({
   isActive: true,
 });
 
+import { getLocalImageUrl } from '@/lib/image';
+
 function PlatformIcon({ name, iconUrl }: { name: string; iconUrl: string | null }) {
   const [failed, setFailed] = useState(false);
   if (iconUrl && !failed) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={iconUrl}
+        src={getLocalImageUrl(iconUrl)}
         alt=""
         loading="lazy"
         onError={() => setFailed(true)}
