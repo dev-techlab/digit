@@ -18,6 +18,7 @@ import {
 import { api, Btn, Card, Field, fmtMoney, fmtDateTime, Modal, TextInput } from '../ui';
 import { DataTable } from '@/components/ui/DataTable';
 import { cn } from '@/lib/cn';
+import { env } from '@/lib/env';
 
 interface LogRow {
   id: string;
@@ -174,7 +175,7 @@ export function WalletScreen() {
 
   if (!data) return <p className="p-6 text-sm text-slate-400">Loading…</p>;
 
-  const inviteLink = `${process.env.NEXT_PUBLIC_SITE_URL}?inviteCode=${data.store.inviteCode}`;
+  const inviteLink = `${env.NEXT_PUBLIC_SITE_URL}?inviteCode=${data.store.inviteCode}`;
 
   const saveSettings = async () => {
     try {

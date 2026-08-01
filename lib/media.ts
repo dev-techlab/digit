@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import * as s from '@/lib/db/schema';
 import * as storage from '@/lib/storage';
+import { env } from '@/lib/env';
 
 type MediaKind = (typeof s.mediaKindEnum.enumValues)[number];
 
@@ -26,7 +27,7 @@ function extFor(contentType: string): string {
   return EXT_BY_TYPE[contentType] ?? 'bin';
 }
 
-const BUCKET = process.env.R2_BUCKET ?? 'octanlink-media';
+const BUCKET = env.R2_BUCKET ?? 'octanlink-media';
 
 export interface UploadMediaInput {
   buffer: Buffer;

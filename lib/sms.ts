@@ -1,14 +1,15 @@
 import twilio from 'twilio';
+import { env } from '@/lib/env';
 
 // Use environment variables for Twilio credentials
 // They should be added to .env by the user
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const twilioNumber = process.env.TWILIO_PHONE_NUMBER;
+const accountSid = env.TWILIO_ACCOUNT_SID;
+const authToken = env.TWILIO_AUTH_TOKEN;
+const twilioNumber = env.TWILIO_PHONE_NUMBER;
 
 const client = accountSid && authToken ? twilio(accountSid, authToken) : null;
 
-if (process.env.NODE_ENV === 'production' && !client) {
+if (env.NODE_ENV === 'production' && !client) {
   console.warn(
     '[sms] Twilio credentials are not set in production. SMS will not be sent.'
   );

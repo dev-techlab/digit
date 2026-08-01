@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { env } from '@/lib/env';
 
 /** Session cookie names + lifetimes shared by the admin and user auth flows. */
 export const ADMIN_SESSION_COOKIE = 'admin_session';
@@ -15,7 +16,7 @@ export function newSessionToken(): string {
 export function sessionCookieOptions(maxAge: number) {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: env.NODE_ENV === 'production',
     sameSite: 'lax' as const,
     path: '/',
     maxAge,

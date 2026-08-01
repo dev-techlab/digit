@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requestOtp, type OtpPurpose } from '@/lib/otp';
 import { otpPurposeEnum } from '@/lib/db/schema';
+import { env } from '@/lib/env';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,6 +27,6 @@ export async function POST(req: Request) {
   // echo it only in non-prod so the flow is testable without an SMS gateway.
   return NextResponse.json({
     ok: true,
-    ...(process.env.NODE_ENV !== 'production' ? { devCode: result.code } : {}),
+    ...(env.NODE_ENV !== 'production' ? { devCode: result.code } : {}),
   });
 }

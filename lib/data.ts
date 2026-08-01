@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import * as s from '@/lib/db/schema';
 import { userIdForToken } from '@/lib/user-service';
 import { USER_SESSION_COOKIE } from '@/lib/auth-tokens';
+import { env } from '@/lib/env';
 import type {
   GameProvider,
   WalletBalance,
@@ -26,7 +27,7 @@ async function currentUserId(): Promise<string | null> {
     const uid = await userIdForToken(token);
     if (uid) return uid;
   }
-  if (process.env.NODE_ENV !== 'production') {
+  if (env.NODE_ENV !== 'production') {
     const u = await db.query.users.findFirst({
       where: (t, { eq }) => eq(t.username, 'player_2481'),
       columns: { id: true },
@@ -255,7 +256,7 @@ export async function getReferral(): Promise<ReferralSummary> {
   const pendingCommission = rows
     .filter((r) => r.status === 'pending')
     .reduce((n, r) => n + Number(r.reward), 0);
-  const site = process.env.NEXT_PUBLIC_SITE_URL ?? '';
+  const site = env.NEXT_PUBLIC_SITE_URL || '';
 
   return {
     inviteCode: user?.inviteCode ?? '',

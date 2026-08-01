@@ -5,6 +5,7 @@ import { Download, ImageIcon } from 'lucide-react';
 import { APP_NAME } from '@/lib/constants';
 import { usePanel } from '../AgentShell';
 import { api, Btn, Card } from '../ui';
+import { env } from '@/lib/env';
 
 interface Poster {
   id: string;
@@ -60,7 +61,7 @@ import { getLocalImageUrl } from '@/lib/image';
 export function PostersScreen() {
   const { me } = usePanel();
   const [posters, setPosters] = useState<Poster[]>([]);
-  const inviteLink = `${process.env.NEXT_PUBLIC_SITE_URL}?inviteCode=${me.store?.inviteCode ?? ''}`;
+  const inviteLink = `${env.NEXT_PUBLIC_SITE_URL}?inviteCode=${me.store?.inviteCode ?? ''}`;
 
   useEffect(() => {
     api<{ posters: Poster[] }>('/api/agent/posters').then((d) => setPosters(d.posters));

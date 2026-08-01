@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Plus, ClipboardList, Info } from 'lucide-react';
+import { env } from '@/lib/env';
 import {
   api,
   Btn,
@@ -208,7 +209,7 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
               accessorKey: 'inviteCode',
               cell: (r) => (
                 <div className="max-w-56 truncate text-blue-500">
-                  {process.env.NEXT_PUBLIC_SITE_URL}?inviteCode={r.inviteCode}
+                  {env.NEXT_PUBLIC_SITE_URL}?inviteCode={r.inviteCode}
                 </div>
               ),
             },

@@ -3,6 +3,7 @@ import { and, eq, gt, desc, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import * as s from '@/lib/db/schema';
 import { sendOtpEmail } from '@/lib/mail';
+import { env } from '@/lib/env';
 
 export type OtpPurpose = (typeof s.otpPurposeEnum.enumValues)[number];
 
@@ -14,8 +15,8 @@ const RESEND_WINDOW_S = 60; // min seconds between codes to one destination
 // reversible via a precomputed table if `otp_codes` is ever exposed. HMAC
 // with a server-side secret defeats that; falls back to a well-known dev
 // value outside production (warns instead of failing so `pnpm dev` keeps working).
-const OTP_HASH_SECRET = process.env.OTP_HASH_SECRET ?? 'dev-only-otp-secret-change-me';
-if (process.env.NODE_ENV === 'production' && !process.env.OTP_HASH_SECRET) {
+const OTP_HASH_SECRET = env.OTP_HASH_SECRET ?? 'dev-only-otp-secret-change-me';
+if (env.NODE_ENV === 'production' && !env.OTP_HASH_SECRET) {
   console.warn(
     '[otp] OTP_HASH_SECRET is not set in production — codes are hashed with a well-known dev secret. Set OTP_HASH_SECRET.'
   );
