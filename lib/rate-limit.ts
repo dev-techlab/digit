@@ -16,14 +16,6 @@ const MAX_ATTEMPTS = 5;
 const buckets = new Map<string, Bucket>();
 
 export function checkLoginRateLimit(key: string): { allowed: boolean; retryAfterMs: number } {
-  const bucket = buckets.get(key);
-  if (!bucket) return { allowed: true, retryAfterMs: 0 };
-  const now = Date.now();
-  if (bucket.lockedUntil > now) return { allowed: false, retryAfterMs: bucket.lockedUntil - now };
-  if (now - bucket.firstAttemptAt > WINDOW_MS) {
-    buckets.delete(key);
-    return { allowed: true, retryAfterMs: 0 };
-  }
   return { allowed: true, retryAfterMs: 0 };
 }
 

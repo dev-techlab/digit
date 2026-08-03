@@ -1,8 +1,14 @@
 import { useState, useCallback } from 'react';
+import useSWR from 'swr';
+
+const fetcher = (url: string) => fetch(url).then(r => {
+  if (!r.ok) throw new Error('Fetch error');
+  return r.json();
+});
 
 interface DataTableResult<T> {
   rows: T[];
-  setRows: React.Dispatch<React.SetStateAction<T[]>>;
+  setRows: (updater: React.SetStateAction<T[]>) => void;
   total: number;
   page: number;
   setPage: React.Dispatch<React.SetStateAction<number>>;
@@ -16,61 +22,65 @@ interface DataTableResult<T> {
 export function useDataTable<T>(
   endpoint: string,
   dataKey: string,
-  defaultPageSize: number = 20
+  defaultPageSize: number = 20,
+  initialExtraParams: Record<string, string> = {}
 ): DataTableResult<T> {
-  const [rows, setRows] = useState<T[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [extraParams, setExtraParams] = useState<Record<string, string>>(initialExtraParams);
 
-  // Keep track of the latest extra parameters for reload()
-  const [currentExtraParams, setCurrentExtraParams] = useState<Record<string, string>>({});
+  const q = new URLSearchParams({
+    page: String(page),
+    pageSize: String(defaultPageSize),
+  });
+  if (search) q.append('search', search);
+  Object.entries(extraParams).forEach(([k, v]) => {
+    if (v) q.append(k, v);
+  });
+
+  const url = `${endpoint}?${q.toString()}`;
+  
+  const { data, error, isLoading, mutate } = useSWR(url, fetcher, {
+    keepPreviousData: true,
+  });
 
   const load = useCallback(
-    async (p = page, s = search, extraParams = currentExtraParams) => {
-      setLoading(true);
-      setCurrentExtraParams(extraParams);
-      try {
-        const q = new URLSearchParams({
-          page: String(p),
-          pageSize: String(defaultPageSize),
-        });
-        if (s) q.append('search', s);
-
-        Object.entries(extraParams).forEach(([k, v]) => {
-          if (v) q.append(k, v);
-        });
-
-        const res = await fetch(`${endpoint}?${q.toString()}`);
-        if (!res.ok) throw new Error('Fetch error');
-
-        const data = await res.json();
-        setRows(data[dataKey] || []);
-        setTotal(data.total || 0);
-      } catch (err) {
-        console.error(`Failed to load ${endpoint}`, err);
-      } finally {
-        setLoading(false);
+    async (p = page, s = search, extra = extraParams) => {
+      let changed = false;
+      if (p !== page) { setPage(p); changed = true; }
+      if (s !== search) { setSearch(s); changed = true; }
+      
+      const extraChanged = JSON.stringify(extra) !== JSON.stringify(extraParams);
+      if (extraChanged) { setExtraParams(extra); changed = true; }
+      
+      if (!changed) {
+        await mutate(); // Force re-fetch if params didn't change but load was called
       }
     },
-    [endpoint, dataKey, defaultPageSize]
+    [page, search, extraParams, mutate]
   );
 
-  const reload = useCallback(
-    () => load(page, search, currentExtraParams),
-    [load, page, search, currentExtraParams]
-  );
+  const reload = useCallback(async () => {
+    await mutate();
+  }, [mutate]);
+
+  const setRowsOptimistic = useCallback((updater: React.SetStateAction<T[]>) => {
+    mutate((current: any) => {
+      if (!current) return current;
+      const newRows = typeof updater === 'function' ? (updater as any)(current[dataKey] || []) : updater;
+      return { ...current, [dataKey]: newRows };
+    }, false);
+  }, [mutate, dataKey]);
 
   return {
-    rows,
-    setRows,
-    total,
+    rows: (data?.[dataKey] || []) as T[],
+    setRows: setRowsOptimistic,
+    total: (data?.total || 0) as number,
     page,
     setPage,
     search,
     setSearch,
-    loading,
+    loading: isLoading || (!data && !error),
     load,
     reload,
   };

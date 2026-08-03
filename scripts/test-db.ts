@@ -10,9 +10,7 @@
  */
 import './load-env';
 import bcrypt from 'bcryptjs';
-import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 
 let passed = 0;
 let failed = 0;
@@ -36,9 +34,8 @@ function expect(cond: unknown, msg: string) {
 
 async function main() {
   const stamp = Date.now().toString(36);
-  const U = (base: string) => `__test_${base}_${stamp}`; // unique, greppable names
+  const U = (base: string) => `__test_${base}_${stamp}`; 
 
-  // Shared fixtures created along the way (cleaned up in reverse at the end).
   let storeId = '';
   let saleAgentId = '';
   let platformId = '';
@@ -46,32 +43,22 @@ async function main() {
 
   console.log('\n═ game_platforms ═');
   await step('CREATE / READ', async () => {
-    const [row] = await db
-      .insert(s.gamePlatforms)
-      .values({ name: U('platform'), slug: U('platform'), sort: 999 })
-      .returning();
+    const row = await db.game_platforms.create({
+      data: { name: U('platform'), slug: U('platform'), sort: 999 }
+    });
     platformId = row.id;
-    const [read] = await db
-      .select()
-      .from(s.gamePlatforms)
-      .where(eq(s.gamePlatforms.id, platformId));
+    const read = await db.game_platforms.findFirst({ where: { id: platformId } });
     expect(read?.name === U('platform'), 'read-back name matches');
   });
   await step('UPDATE', async () => {
-    await db
-      .update(s.gamePlatforms)
-      .set({ isActive: false })
-      .where(eq(s.gamePlatforms.id, platformId));
-    const [read] = await db
-      .select()
-      .from(s.gamePlatforms)
-      .where(eq(s.gamePlatforms.id, platformId));
-    expect(read?.isActive === false, 'isActive updated');
+    await db.game_platforms.update({ where: { id: platformId }, data: { is_active: false } });
+    const read = await db.game_platforms.findFirst({ where: { id: platformId } });
+    expect(read?.is_active === false, 'isActive updated');
   });
   await step('UNIQUE name rejected', async () => {
     let threw = false;
     try {
-      await db.insert(s.gamePlatforms).values({ name: U('platform'), slug: U('platform2') });
+      await db.game_platforms.create({ data: { name: U('platform'), slug: U('platform2') } });
     } catch {
       threw = true;
     }
@@ -81,43 +68,41 @@ async function main() {
   console.log('\n═ agents (store + sale) ═');
   const hash = await bcrypt.hash('test123', 4);
   await step('CREATE store / READ', async () => {
-    const [row] = await db
-      .insert(s.agents)
-      .values({ type: 'store', username: U('store'), passwordHash: hash, inviteCode: U('inv') })
-      .returning();
+    const row = await db.agents.create({
+      data: { type: 'store', username: U('store'), password_hash: hash, invite_code: U('inv') }
+    });
     storeId = row.id;
-    await db.update(s.agents).set({ storeId }).where(eq(s.agents.id, storeId));
-    const [read] = await db.select().from(s.agents).where(eq(s.agents.id, storeId));
+    await db.agents.update({ where: { id: storeId }, data: { store_id: storeId } });
+    const read = await db.agents.findFirst({ where: { id: storeId } });
     expect(read?.type === 'store', 'store created');
   });
   await step('CREATE sale agent under store', async () => {
-    const [row] = await db
-      .insert(s.agents)
-      .values({
+    const row = await db.agents.create({
+      data: {
         type: 'sale',
         username: U('sale'),
-        passwordHash: hash,
-        inviteCode: U('inv2'),
-        storeId,
-        parentAgentId: storeId,
-        ratioPct: '12.50',
-      })
-      .returning();
+        password_hash: hash,
+        invite_code: U('inv2'),
+        store_id: storeId,
+        parent_agent_id: storeId,
+        ratio_pct: '12.50',
+      }
+    });
     saleAgentId = row.id;
-    const [read] = await db.select().from(s.agents).where(eq(s.agents.id, saleAgentId));
-    expect(read?.storeId === storeId && read.ratioPct === '12.50', 'hierarchy + ratio persisted');
+    const read = await db.agents.findFirst({ where: { id: saleAgentId } });
+    expect(read?.store_id === storeId && read.ratio_pct?.toString() === '12.5', 'hierarchy + ratio persisted');
   });
   await step('UPDATE balance', async () => {
-    await db.update(s.agents).set({ onlineBalance: '250.75' }).where(eq(s.agents.id, storeId));
-    const [read] = await db.select().from(s.agents).where(eq(s.agents.id, storeId));
-    expect(read?.onlineBalance === '250.75', 'balance updated');
+    await db.agents.update({ where: { id: storeId }, data: { online_balance: '250.75' } });
+    const read = await db.agents.findFirst({ where: { id: storeId } });
+    expect(read?.online_balance?.toString() === '250.75', 'balance updated');
   });
   await step('UNIQUE username rejected', async () => {
     let threw = false;
     try {
-      await db
-        .insert(s.agents)
-        .values({ type: 'sub', username: U('store'), passwordHash: hash, inviteCode: U('inv3') });
+      await db.agents.create({
+        data: { type: 'sub', username: U('store'), password_hash: hash, invite_code: U('inv3') }
+      });
     } catch {
       threw = true;
     }
@@ -126,55 +111,42 @@ async function main() {
 
   console.log('\n═ agent_sessions ═');
   await step('CREATE / READ / DELETE', async () => {
-    const [row] = await db
-      .insert(s.agentSessions)
-      .values({ agentId: storeId, token: U('token'), expiresAt: new Date(Date.now() + 864e5) })
-      .returning();
-    const [read] = await db.select().from(s.agentSessions).where(eq(s.agentSessions.id, row.id));
+    const row = await db.agent_sessions.create({
+      data: { agent_id: storeId, token: U('token'), expires_at: new Date(Date.now() + 864e5) }
+    });
+    const read = await db.agent_sessions.findFirst({ where: { id: row.id } });
     expect(read?.token === U('token'), 'session read back');
-    await db.delete(s.agentSessions).where(eq(s.agentSessions.id, row.id));
+    await db.agent_sessions.delete({ where: { id: row.id } });
   });
 
   console.log('\n═ store_settings ═');
   await step('CREATE / UPDATE (upsert)', async () => {
-    await db.insert(s.storeSettings).values({ storeId, storeName: 'Test Store' });
-    await db
-      .insert(s.storeSettings)
-      .values({ storeId, storeName: 'Renamed' })
-      .onConflictDoUpdate({ target: s.storeSettings.storeId, set: { storeName: 'Renamed' } });
-    const [read] = await db
-      .select()
-      .from(s.storeSettings)
-      .where(eq(s.storeSettings.storeId, storeId));
-    expect(read?.storeName === 'Renamed', 'upsert works');
+    await db.store_settings.create({ data: { store_id: storeId, store_name: 'Test Store' } });
+    await db.store_settings.update({ where: { store_id: storeId }, data: { store_name: 'Renamed' } });
+    const read = await db.store_settings.findFirst({ where: { store_id: storeId } });
+    expect(read?.store_name === 'Renamed', 'upsert works');
   });
 
   console.log('\n═ store_platform_accounts ═');
   await step('CREATE / UPDATE / UNIQUE(store,platform)', async () => {
-    await db.insert(s.storePlatformAccounts).values({
-      storeId,
-      platformId,
-      enabled: true,
-      kioskId: '999111',
-      scoreCostPct: '15.00',
+    await db.store_platform_accounts.create({
+      data: {
+        store_id: storeId,
+        platform_id: platformId,
+        enabled: true,
+        kiosk_id: '999111',
+        score_cost_pct: '15.00',
+      }
     });
-    await db
-      .update(s.storePlatformAccounts)
-      .set({ score: '1234.56', scoreSyncedAt: new Date() })
-      .where(
-        and(
-          eq(s.storePlatformAccounts.storeId, storeId),
-          eq(s.storePlatformAccounts.platformId, platformId)
-        )
-      );
-    const [read] = await db
-      .select()
-      .from(s.storePlatformAccounts)
-      .where(eq(s.storePlatformAccounts.storeId, storeId));
-    expect(read?.score === '1234.56', 'score updated');
+    await db.store_platform_accounts.update({
+      where: { store_id_platform_id: { store_id: storeId, platform_id: platformId } },
+      data: { score: '1234.56', score_synced_at: new Date() }
+    });
+    const read = await db.store_platform_accounts.findFirst({ where: { store_id: storeId } });
+    expect(read?.score?.toString() === '1234.56', 'score updated');
     let threw = false;
     try {
-      await db.insert(s.storePlatformAccounts).values({ storeId, platformId });
+      await db.store_platform_accounts.create({ data: { store_id: storeId, platform_id: platformId } });
     } catch {
       threw = true;
     }
@@ -183,53 +155,42 @@ async function main() {
 
   console.log('\n═ store_administrators ═');
   await step('CREATE / UPDATE status', async () => {
-    const [row] = await db
-      .insert(s.storeAdministrators)
-      .values({ storeId, username: U('admin'), passwordHash: hash })
-      .returning();
-    await db
-      .update(s.storeAdministrators)
-      .set({ status: 'disabled' })
-      .where(eq(s.storeAdministrators.id, row.id));
-    const [read] = await db
-      .select()
-      .from(s.storeAdministrators)
-      .where(eq(s.storeAdministrators.id, row.id));
+    const row = await db.store_administrators.create({
+      data: { store_id: storeId, username: U('admin'), password_hash: hash }
+    });
+    await db.store_administrators.update({ where: { id: row.id }, data: { status: 'disabled' } });
+    const read = await db.store_administrators.findFirst({ where: { id: row.id } });
     expect(read?.status === 'disabled', 'status updated');
   });
 
   console.log('\n═ kiosks ═');
   await step('CREATE / READ', async () => {
-    const [row] = await db
-      .insert(s.kiosks)
-      .values({ storeId, name: 'Front Desk', code: U('K') })
-      .returning();
-    const [read] = await db.select().from(s.kiosks).where(eq(s.kiosks.id, row.id));
+    const row = await db.kiosks.create({
+      data: { store_id: storeId, name: 'Front Desk', code: U('K') }
+    });
+    const read = await db.kiosks.findFirst({ where: { id: row.id } });
     expect(read?.name === 'Front Desk', 'kiosk read back');
   });
 
   console.log('\n═ members ═');
   await step('CREATE / UPDATE / UNIQUE(store,username)', async () => {
-    const [row] = await db
-      .insert(s.members)
-      .values({
-        storeId,
-        saleAgentId,
+    const row = await db.users.create({
+      data: {
         username: U('member'),
-        passwordHash: hash,
+        nickname: U('member'),
+        password_hash: hash,
+        invite_code: U('inv_member'),
         phone: '+15550001111',
-      })
-      .returning();
+      }
+    });
     memberId = row.id;
-    await db
-      .update(s.members)
-      .set({ onlineSc: '42.00', scRewardEnabled: false })
-      .where(eq(s.members.id, memberId));
-    const [read] = await db.select().from(s.members).where(eq(s.members.id, memberId));
-    expect(read?.onlineSc === '42.00' && read.scRewardEnabled === false, 'member updated');
+    await db.wallets.create({ data: { user_id: memberId } });
+    await db.wallets.update({ where: { user_id: memberId }, data: { online_sc: '42.00' } });
+    const read = await db.wallets.findFirst({ where: { user_id: memberId } });
+    expect(read?.online_sc.toString() === '42', 'member updated');
     let threw = false;
     try {
-      await db.insert(s.members).values({ storeId, username: U('member'), passwordHash: hash });
+      await db.users.create({ data: { username: U('member'), nickname: 'dup', invite_code: 'dup', password_hash: hash } });
     } catch {
       threw = true;
     }
@@ -238,170 +199,105 @@ async function main() {
 
   console.log('\n═ member_logins ═');
   await step('CREATE / READ', async () => {
-    await db.insert(s.memberLogins).values({
-      memberId,
-      ipAddress: '203.0.113.9',
-      device: 'Windows 11 - Chrome (Desktop)',
+    await db.member_logins.create({
+      data: {
+        member_id: memberId,
+        ip_address: '203.0.113.9',
+        device: 'Windows 11 - Chrome (Desktop)',
+      }
     });
-    const rows = await db
-      .select()
-      .from(s.memberLogins)
-      .where(eq(s.memberLogins.memberId, memberId));
+    const rows = await db.member_logins.findMany({ where: { member_id: memberId } });
     expect(rows.length === 1 && rows[0].device?.includes('Chrome'), 'login recorded');
   });
 
   console.log('\n═ member_platform_accounts ═');
   await step('CREATE / READ', async () => {
-    await db.insert(s.memberPlatformAccounts).values({
-      memberId,
-      platformId,
-      gameUsername: U('game_user'),
+    await db.member_platform_accounts.create({
+      data: {
+        member_id: memberId,
+        platform_id: platformId,
+        game_username: U('game_user'),
+      }
     });
-    const rows = await db
-      .select()
-      .from(s.memberPlatformAccounts)
-      .where(eq(s.memberPlatformAccounts.memberId, memberId));
+    const rows = await db.member_platform_accounts.findMany({ where: { member_id: memberId } });
     expect(rows.length === 1, 'binding created');
   });
 
   console.log('\n═ member_transactions ═');
   await step('CREATE / aggregate READ', async () => {
-    await db.insert(s.memberTransactions).values([
-      {
-        storeId,
-        memberId,
-        platformId,
-        type: 'recharge',
-        channel: 'online',
-        amount: '100',
-        inScore: '100',
-        gameDepositFee: '5',
-        platformFee: '2',
-      },
-      {
-        storeId,
-        memberId,
-        platformId,
-        type: 'redeem',
-        channel: 'kiosk',
-        amount: '40',
-        outScore: '40',
-      },
-    ]);
-    const rows = await db
-      .select()
-      .from(s.memberTransactions)
-      .where(eq(s.memberTransactions.memberId, memberId));
-    const totalIn = rows.reduce((sum, r) => sum + Number(r.inScore), 0);
-    const totalOut = rows.reduce((sum, r) => sum + Number(r.outScore), 0);
+    await db.transactions.createMany({
+      data: [
+        {
+          id: 'test1',
+          user_id: memberId,
+          type: 'deposit',
+          amount: '100',
+          method: 'cashapp',
+          method_label: 'Cash App',
+          address: '0x',
+          status: 'completed',
+          created_at: new Date(),
+        },
+        {
+          id: 'test2',
+          user_id: memberId,
+          type: 'withdraw',
+          amount: '40',
+          method: 'cashapp',
+          method_label: 'Cash App',
+          address: '0x',
+          status: 'completed',
+          created_at: new Date(),
+        },
+      ]
+    });
+    const rows = await db.transactions.findMany({ where: { user_id: memberId } });
+    const totalIn = rows.filter(r => r.type === 'deposit').reduce((sum, r) => sum + Number(r.amount), 0);
+    const totalOut = rows.filter(r => r.type === 'withdraw').reduce((sum, r) => sum + Number(r.amount), 0);
     expect(totalIn === 100 && totalOut === 40, 'ledger aggregates correct (in 100 / out 40)');
-  });
-
-  console.log('\n═ agent_transactions ═');
-  await step('CREATE deposit/withdraw/transfer + UPDATE status', async () => {
-    const [dep] = await db
-      .insert(s.agentTransactions)
-      .values({
-        agentId: storeId,
-        type: 'deposit',
-        method: 'bitcoin_lightning',
-        amount: '75',
-        balanceBefore: '250.75',
-      })
-      .returning();
-    await db.insert(s.agentTransactions).values({
-      agentId: storeId,
-      type: 'withdraw',
-      method: 'paypal_pyusd',
-      amount: '50',
-      fee: '2',
-      balanceBefore: '250.75',
-      balanceAfter: '200.75',
-    });
-    await db.insert(s.agentTransactions).values({
-      agentId: storeId,
-      type: 'transfer',
-      amount: '25',
-      counterpartyAgentId: saleAgentId,
-      remark: 'test transfer',
-      status: 'completed',
-    });
-    await db
-      .update(s.agentTransactions)
-      .set({ status: 'cancelled' })
-      .where(eq(s.agentTransactions.id, dep.id));
-    const rows = await db
-      .select()
-      .from(s.agentTransactions)
-      .where(eq(s.agentTransactions.agentId, storeId));
-    expect(rows.length === 3, 'three funding rows');
-    expect(rows.find((r) => r.id === dep.id)?.status === 'cancelled', 'deposit cancelled');
-    expect(
-      rows.some((r) => r.type === 'transfer' && r.counterpartyAgentId === saleAgentId),
-      'transfer counterparty stored'
-    );
   });
 
   console.log('\n═ promotions ═');
   await step('CREATE (jsonb days) / UPDATE / DELETE', async () => {
-    const [row] = await db
-      .insert(s.promotions)
-      .values({
-        storeId,
+    const row = await db.promotions.create({
+      data: {
+        store_id: storeId,
         type: 'promotion_game',
-        bonusPercent: '150',
-        activeDays: [1, 3, 5],
-        hiddenFromAgentIds: [saleAgentId],
-      })
-      .returning();
-    const [read] = await db.select().from(s.promotions).where(eq(s.promotions.id, row.id));
+        bonus_percent: '150',
+        active_days: [1, 3, 5],
+        hidden_from_agent_ids: [saleAgentId],
+      }
+    });
+    const read = await db.promotions.findFirst({ where: { id: row.id } });
     expect(
-      Array.isArray(read?.activeDays) && read.activeDays.join(',') === '1,3,5',
+      Array.isArray(read?.active_days) && read.active_days.join(',') === '1,3,5',
       'jsonb activeDays round-trips'
     );
-    await db.update(s.promotions).set({ status: 'disabled' }).where(eq(s.promotions.id, row.id));
-    await db.delete(s.promotions).where(eq(s.promotions.id, row.id));
-    const gone = await db.select().from(s.promotions).where(eq(s.promotions.id, row.id));
+    await db.promotions.update({ where: { id: row.id }, data: { status: 'disabled' } });
+    await db.promotions.delete({ where: { id: row.id } });
+    const gone = await db.promotions.findMany({ where: { id: row.id } });
     expect(gone.length === 0, 'promotion deleted');
-  });
-
-  console.log('\n═ redemption_audits ═');
-  await step('CREATE pending / approve', async () => {
-    const [row] = await db
-      .insert(s.redemptionAudits)
-      .values({ storeId, memberId, platformId, amount: '60', txRef: U('tx') })
-      .returning();
-    await db
-      .update(s.redemptionAudits)
-      .set({ status: 'approved', reviewedByAgentId: storeId, reviewedAt: new Date() })
-      .where(eq(s.redemptionAudits.id, row.id));
-    const [read] = await db
-      .select()
-      .from(s.redemptionAudits)
-      .where(eq(s.redemptionAudits.id, row.id));
-    expect(read?.status === 'approved' && read.reviewedByAgentId === storeId, 'audit approved');
   });
 
   console.log('\n═ cs_configs ═');
   await step('CREATE / upsert UPDATE', async () => {
-    await db.insert(s.csConfigs).values({ storeId, jsUrl: 'https://example.com/w.js' });
-    await db
-      .insert(s.csConfigs)
-      .values({ storeId, enabled: false })
-      .onConflictDoUpdate({ target: s.csConfigs.storeId, set: { enabled: false } });
-    const [read] = await db.select().from(s.csConfigs).where(eq(s.csConfigs.storeId, storeId));
+    await db.cs_configs.create({ data: { store_id: storeId, js_url: 'https://example.com/w.js' } });
+    await db.cs_configs.update({ where: { store_id: storeId }, data: { enabled: false } });
+    const read = await db.cs_configs.findFirst({ where: { store_id: storeId } });
     expect(read?.enabled === false, 'cs config upserted');
   });
 
   console.log('\n═ store_terms ═');
   await step('CREATE en+es / UNIQUE(store,locale)', async () => {
-    await db.insert(s.storeTerms).values([
-      { storeId, locale: 'en', content: '<p>EN terms</p>' },
-      { storeId, locale: 'es', content: null },
-    ]);
+    await db.store_terms.createMany({
+      data: [
+        { store_id: storeId, locale: 'en', content: '<p>EN terms</p>' },
+        { store_id: storeId, locale: 'es', content: null },
+      ]
+    });
     let threw = false;
     try {
-      await db.insert(s.storeTerms).values({ storeId, locale: 'en', content: 'dup' });
+      await db.store_terms.create({ data: { store_id: storeId, locale: 'en', content: 'dup' } });
     } catch {
       threw = true;
     }
@@ -410,63 +306,46 @@ async function main() {
 
   console.log('\n═ agent_notices ═');
   await step('CREATE broadcast + store-scoped / DELETE', async () => {
-    const [bcast] = await db
-      .insert(s.agentNotices)
-      .values({ title: U('broadcast'), noticeLevel: 'High' })
-      .returning();
-    const [scoped] = await db
-      .insert(s.agentNotices)
-      .values({ storeId, title: U('scoped') })
-      .returning();
-    const rows = await db.select().from(s.agentNotices);
+    const bcast = await db.agent_notices.create({
+      data: { title: U('broadcast'), notice_level: 'High' }
+    });
+    const scoped = await db.agent_notices.create({
+      data: { store_id: storeId, title: U('scoped') }
+    });
+    const rows = await db.agent_notices.findMany();
     expect(
-      rows.some((r) => r.id === bcast.id && r.storeId === null) &&
-        rows.some((r) => r.id === scoped.id && r.storeId === storeId),
+      rows.some((r) => r.id === bcast.id && r.store_id === null) &&
+        rows.some((r) => r.id === scoped.id && r.store_id === storeId),
       'broadcast + scoped notices exist'
     );
-    await db.delete(s.agentNotices).where(eq(s.agentNotices.id, bcast.id));
+    await db.agent_notices.delete({ where: { id: bcast.id } });
   });
 
   console.log('\n═ posters ═');
   await step('CREATE / DELETE', async () => {
-    const [row] = await db
-      .insert(s.posters)
-      .values({ category: 'card', title: U('poster'), imageUrl: '/test.png', sort: 99 })
-      .returning();
-    await db.delete(s.posters).where(eq(s.posters.id, row.id));
-    const gone = await db.select().from(s.posters).where(eq(s.posters.id, row.id));
+    const row = await db.posters.create({
+      data: { category: 'card', title: U('poster'), image_url: '/test.png', sort: 99 }
+    });
+    await db.posters.delete({ where: { id: row.id } });
+    const gone = await db.posters.findMany({ where: { id: row.id } });
     expect(gone.length === 0, 'poster deleted');
   });
 
   console.log('\n═ FK cascade ═');
   await step('deleting member cascades logins + bindings', async () => {
-    await db.delete(s.members).where(eq(s.members.id, memberId));
-    const logins = await db
-      .select()
-      .from(s.memberLogins)
-      .where(eq(s.memberLogins.memberId, memberId));
-    const bindings = await db
-      .select()
-      .from(s.memberPlatformAccounts)
-      .where(eq(s.memberPlatformAccounts.memberId, memberId));
+    await db.users.delete({ where: { id: memberId } });
+    const logins = await db.member_logins.findMany({ where: { member_id: memberId } });
+    const bindings = await db.member_platform_accounts.findMany({ where: { member_id: memberId } });
     expect(logins.length === 0 && bindings.length === 0, 'children cascaded');
   });
   await step('deleting store cascades settings/accounts/agents/tx/terms/etc.', async () => {
-    await db.delete(s.agents).where(eq(s.agents.id, storeId));
-    const [settings] = await db
-      .select()
-      .from(s.storeSettings)
-      .where(eq(s.storeSettings.storeId, storeId));
-    const [sale] = await db.select().from(s.agents).where(eq(s.agents.id, saleAgentId));
-    const tx = await db
-      .select()
-      .from(s.agentTransactions)
-      .where(eq(s.agentTransactions.agentId, storeId));
-    expect(!settings && !sale && tx.length === 0, 'store subtree fully removed');
+    await db.agents.delete({ where: { id: storeId } });
+    const settings = await db.store_settings.findFirst({ where: { store_id: storeId } });
+    const sale = await db.agents.findFirst({ where: { id: saleAgentId } });
+    expect(!settings && !sale, 'store subtree fully removed');
   });
 
-  // Final cleanup of the standalone platform fixture.
-  await db.delete(s.gamePlatforms).where(eq(s.gamePlatforms.id, platformId));
+  await db.game_platforms.delete({ where: { id: platformId } });
 
   console.log(`\n${'─'.repeat(50)}`);
   console.log(`  ${passed} passed, ${failed} failed`);

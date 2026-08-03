@@ -2,13 +2,13 @@ import { NextResponse } from 'next/server';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission, PermissionError } from '@/lib/rbac';
 import { uploadMedia, ALLOWED_UPLOAD_TYPES } from '@/lib/media';
-import { mediaKindEnum } from '@/lib/db/schema';
+import { media_kind } from '@/lib/generated/prisma/client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB
-const KINDS = new Set(mediaKindEnum.enumValues);
+const KINDS = new Set(Object.values(media_kind));
 
 /** POST /api/media — multipart upload (field `file`, `kind`, optional `private`). */
 export async function POST(req: Request) {

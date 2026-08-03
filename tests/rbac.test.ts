@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
+
 import { can, effectivePermissions, isSuperAdmin } from '@/lib/rbac-core';
 import { createAdmin, assignRole, removeRole } from '@/lib/admin-service';
 import { cleanupTestAdmins, permIdByKey, allPermissionKeys } from './helpers';
@@ -113,15 +113,19 @@ describe('direct per-admin overrides (allow adds, deny wins)', () => {
       roleSlugs: ['support'],
     });
     ovId = adminId;
-    await db.insert(s.adminPermissions).values({
-      adminId: ovId,
-      permissionId: await permIdByKey('bonuses.write'),
-      effect: 'allow',
+    await db.admin_permissions.create({
+      data: {
+        admin_id: ovId,
+        permission_id: await permIdByKey('bonuses.write'),
+        effect: 'allow',
+      }
     });
-    await db.insert(s.adminPermissions).values({
-      adminId: ovId,
-      permissionId: await permIdByKey('users.read'), // support HAS this via role
-      effect: 'deny',
+    await db.admin_permissions.create({
+      data: {
+        admin_id: ovId,
+        permission_id: await permIdByKey('users.read'), // support HAS this via role
+        effect: 'deny',
+      }
     });
   });
 

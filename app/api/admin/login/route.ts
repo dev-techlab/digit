@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 /** POST /api/admin/login — { email, password } → sets the admin_session cookie. */
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const email = typeof body.email === 'string' ? body.email : '';
+  const email = typeof body.email === 'string' ? body.email.toLowerCase().trim() : '';
   const password = typeof body.password === 'string' ? body.password : '';
   if (!email || !password) {
     return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });

@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
-import { eq, like, or } from 'drizzle-orm';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission } from '@/lib/rbac-core';
 
@@ -22,28 +20,37 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   const url = new URL(req.url);
   const search = url.searchParams.get('search') || '';
 
-  let agentQuery = db
-    .select({
-      id: s.agents.id,
-      username: s.agents.username,
-      nickname: s.agents.nickname,
-      email: s.agents.email,
-      status: s.agents.status,
-      assignedAt: s.storePlatformAccounts.updatedAt,
-    })
-    .from(s.storePlatformAccounts)
-    .innerJoin(s.agents, eq(s.storePlatformAccounts.storeId, s.agents.id))
-    .where(eq(s.storePlatformAccounts.platformId, platformId));
+  const connectedAgents = await db.store_platform_accounts.findMany({
+    where: { platform_id: platformId },
+    select: {
+      updated_at: true,
+      agents: {
+        select: {
+          id: true,
+          username: true,
+          nickname: true,
+          email: true,
+          status: true,
+        }
+      }
+    }
+  });
 
-  const connectedAgents = await agentQuery;
+  const formattedAgents = connectedAgents.map(a => ({
+    id: a.agents?.id,
+    username: a.agents?.username,
+    nickname: a.agents?.nickname,
+    email: a.agents?.email,
+    status: a.agents?.status,
+    assignedAt: a.updated_at,
+  }));
 
-  // Filter in memory for simplicity or add where clause
-  let filteredAgents = connectedAgents;
+  let filteredAgents = formattedAgents;
   if (search) {
     const q = search.toLowerCase();
-    filteredAgents = connectedAgents.filter(
+    filteredAgents = formattedAgents.filter(
       (a) =>
-        a.username.toLowerCase().includes(q) ||
+        a.username?.toLowerCase().includes(q) ||
         (a.nickname && a.nickname.toLowerCase().includes(q)) ||
         (a.email && a.email.toLowerCase().includes(q))
     );

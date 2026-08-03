@@ -1,18 +1,14 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'node:crypto';
-import { and, desc, eq, ilike, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission, PermissionError } from '@/lib/rbac-core';
 import { clientIp, logAdminAction } from '@/lib/audit-log';
-import { isUniqueViolation } from '@/lib/db-errors';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/** Resolve + permission-check the caller; returns the adminId or a ready-to-return error response. */
 async function authorize(
   req: Request,
   permKey: string
@@ -37,13 +33,6 @@ async function authorize(
   return { adminId, error: undefined };
 }
 
-/**
- * GET /api/admin/agents?page=&pageSize=&search= — top-level store/agent
- * accounts (the B2B side that resells game credits to members). Only
- * `type = 'store'` root accounts that have logged in are managed here;
- * each store then creates its own sale/sub agents and store administrators
- * from its own panel.
- */
 export async function GET(req: Request) {
   const { error } = await authorize(req, 'agents.read');
   if (error) return error;
@@ -53,53 +42,55 @@ export async function GET(req: Request) {
   const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('pageSize')) || 20));
   const search = url.searchParams.get('search')?.trim();
 
-  const where = and(
-    eq(s.agents.type, 'store'),
-    isNotNull(s.agents.lastLoginAt),
-    search
-      ? or(
-          ilike(s.agents.username, `%${search}%`),
-          ilike(s.agents.nickname, `%${search}%`),
-          ilike(s.agents.email, `%${search}%`)
-        )
-      : undefined
-  );
+  const where: any = { type: 'store', last_login_at: { not: null } };
+  if (search) {
+    where.OR = [
+      { username: { contains: search, mode: 'insensitive' } },
+      { nickname: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } },
+    ];
+  }
 
-  const [rows, [{ count }]] = await Promise.all([
-    db
-      .select({
-        id: s.agents.id,
-        username: s.agents.username,
-        nickname: s.agents.nickname,
-        email: s.agents.email,
-        inviteCode: s.agents.inviteCode,
-        commissionPer: s.agents.commissionPer,
-        onlineBalance: s.agents.onlineBalance,
-        status: s.agents.status,
-        remark: s.agents.remark,
-        lastLoginAt: s.agents.lastLoginAt,
-        createdAt: s.agents.createdAt,
-      })
-      .from(s.agents)
-      .where(where)
-      .orderBy(desc(s.agents.createdAt))
-      .limit(pageSize)
-      .offset((page - 1) * pageSize),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(s.agents)
-      .where(where),
+  const [rows, count] = await Promise.all([
+    db.agents.findMany({
+      where,
+      select: {
+        id: true,
+        username: true,
+        nickname: true,
+        email: true,
+        invite_code: true,
+        commission_per: true,
+        online_balance: true,
+        status: true,
+        remark: true,
+        last_login_at: true,
+        created_at: true,
+      },
+      orderBy: { created_at: 'desc' },
+      take: pageSize,
+      skip: (page - 1) * pageSize,
+    }),
+    db.agents.count({ where }),
   ]);
 
-  return NextResponse.json({ agents: rows, total: count });
+  const formattedRows = rows.map(r => ({
+    id: r.id,
+    username: r.username,
+    nickname: r.nickname,
+    email: r.email,
+    inviteCode: r.invite_code,
+    commissionPer: r.commission_per,
+    onlineBalance: r.online_balance,
+    status: r.status,
+    remark: r.remark,
+    lastLoginAt: r.last_login_at,
+    createdAt: r.created_at,
+  }));
+
+  return NextResponse.json({ agents: formattedRows, total: count });
 }
 
-/**
- * POST /api/admin/agents — create a new store (root agent) account. The
- * password is only ever returned here, at creation time — same "shown once"
- * convention as the player Quick Register flow — so keep it visible in the
- * UI until the operator has copied it.
- */
 export async function POST(req: Request) {
   const { error, adminId } = await authorize(req, 'agents.write');
   if (error) return error;
@@ -119,32 +110,35 @@ export async function POST(req: Request) {
   }
 
   try {
-    const [created] = await db
-      .insert(s.agents)
-      .values({
+    const created = await db.agents.create({
+      data: {
         type: 'store',
         username,
-        passwordHash: await bcrypt.hash(password, 10),
+        password_hash: await bcrypt.hash(password, 10),
         nickname: nickname || username,
         email: email || null,
-        commissionPer: Number.isFinite(Number(body.commissionPer))
+        commission_per: Number.isFinite(Number(body.commissionPer))
           ? String(body.commissionPer)
           : '0',
-        inviteCode: `MC${randomBytes(8).toString('hex').toUpperCase()}`,
+        invite_code: `MC${randomBytes(8).toString('hex').toUpperCase()}`,
         remark,
-      })
-      .returning();
-    // A store's storeId is itself — the root of its own agent hierarchy.
-    await db.update(s.agents).set({ storeId: created.id }).where(eq(s.agents.id, created.id));
-    await db.insert(s.storeSettings).values({ storeId: created.id }).onConflictDoNothing();
+      }
+    });
+
+    await db.agents.update({
+      where: { id: created.id },
+      data: { store_id: created.id }
+    });
+
+    await db.store_settings.create({ data: { store_id: created.id } });
 
     const platformIds = Array.isArray(body.platformIds)
       ? body.platformIds.filter((id: unknown): id is string => typeof id === 'string')
       : [];
     if (platformIds.length > 0) {
-      await db
-        .insert(s.agentPlatformMappings)
-        .values(platformIds.map((platformId: string) => ({ agentId: created.id, platformId })));
+      await db.agent_platform_mappings.createMany({
+        data: platformIds.map((platformId: string) => ({ agent_id: created.id, platform_id: platformId }))
+      });
     }
 
     await logAdminAction({
@@ -159,8 +153,8 @@ export async function POST(req: Request) {
       { agent: { id: created.id, username, password }, ok: true },
       { status: 201 }
     );
-  } catch (err) {
-    if (isUniqueViolation(err)) {
+  } catch (err: any) {
+    if (err.code === 'P2002') {
       return NextResponse.json({ error: 'Username already exists' }, { status: 409 });
     }
     console.error('POST /api/admin/agents', err);
@@ -168,7 +162,6 @@ export async function POST(req: Request) {
   }
 }
 
-/** PUT /api/admin/agents — { id, status?, commissionPer?, password?, nickname?, email?, remark? } update any store agent field. */
 export async function PUT(req: Request) {
   const { error, adminId } = await authorize(req, 'agents.write');
   if (error) return error;
@@ -177,12 +170,12 @@ export async function PUT(req: Request) {
   const id = typeof body.id === 'string' ? body.id : '';
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
-  const set: Partial<typeof s.agents.$inferInsert> = {};
+  const set: any = {};
   if (body.status === 'active' || body.status === 'disabled') set.status = body.status;
   if (body.commissionPer != null && Number.isFinite(Number(body.commissionPer)))
-    set.commissionPer = String(body.commissionPer);
+    set.commission_per = String(body.commissionPer);
   if (typeof body.password === 'string' && body.password.length >= 6) {
-    set.passwordHash = await bcrypt.hash(body.password, 10);
+    set.password_hash = await bcrypt.hash(body.password, 10);
   }
   if (typeof body.nickname === 'string') set.nickname = body.nickname.trim() || null;
   if (typeof body.email === 'string') set.email = body.email.trim() || null;
@@ -192,27 +185,31 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
   }
 
-  const [row] = await db
-    .update(s.agents)
-    .set(set)
-    .where(and(eq(s.agents.id, id), eq(s.agents.type, 'store')))
-    .returning({ id: s.agents.id });
+  const existing = await db.agents.findFirst({
+    where: { id, type: 'store' }
+  });
 
-  if (!row) return NextResponse.json({ error: 'not found' }, { status: 404 });
+  if (!existing) return NextResponse.json({ error: 'not found' }, { status: 404 });
+
+  const row = await db.agents.update({
+    where: { id: existing.id },
+    data: set,
+    select: { id: true }
+  });
 
   if (set.status) {
-    await db
-      .update(s.agentSessions)
-      .set({ revokedAt: new Date() })
-      .where(and(eq(s.agentSessions.agentId, id), isNull(s.agentSessions.revokedAt)));
+    await db.agent_sessions.updateMany({
+      where: { agent_id: id, revoked_at: null },
+      data: { revoked_at: new Date() }
+    });
   }
 
   const changes: Record<string, unknown> = {};
   if (set.nickname !== undefined) changes.nickname = set.nickname;
   if (set.email !== undefined) changes.email = set.email;
   if (set.remark !== undefined) changes.remark = set.remark;
-  if (set.commissionPer !== undefined) changes.commissionPer = set.commissionPer;
-  if (set.passwordHash !== undefined) changes.password = '[redacted]';
+  if (set.commission_per !== undefined) changes.commissionPer = set.commission_per;
+  if (set.password_hash !== undefined) changes.password = '[redacted]';
   if (set.status !== undefined) changes.status = set.status;
 
   await logAdminAction({

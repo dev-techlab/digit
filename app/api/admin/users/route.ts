@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission, PermissionError } from '@/lib/rbac-core';
 import { clientIp, logAdminAction } from '@/lib/audit-log';
@@ -10,7 +8,6 @@ import { blockUser, unblockUser } from '@/lib/user-service';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/** Resolve + permission-check the caller; returns the adminId or a ready-to-return error response. */
 async function authorize(
   req: Request,
   permKey: string
@@ -35,11 +32,6 @@ async function authorize(
   return { adminId, error: undefined };
 }
 
-/**
- * GET /api/admin/users?page=&pageSize=&search=&status= — every player who
- * self-registered on the site (home page / game lobby "Quick Register" or
- * manual sign-up), with their wallet balances.
- */
 export async function GET(req: Request) {
   const { error } = await authorize(req, 'users.read');
   if (error) return error;
@@ -50,50 +42,66 @@ export async function GET(req: Request) {
   const search = url.searchParams.get('search')?.trim();
   const status = url.searchParams.get('status');
 
-  const where = and(
-    search
-      ? or(
-          ilike(s.users.username, `%${search}%`),
-          ilike(s.users.nickname, `%${search}%`),
-          ilike(s.users.email, `%${search}%`),
-          ilike(s.users.phone, `%${search}%`)
-        )
-      : undefined,
-    status === 'active' || status === 'blocked' ? eq(s.users.status, status) : undefined
-  );
+  const where: any = {};
+  if (status === 'active' || status === 'blocked') {
+    where.status = status;
+  }
 
-  const [rows, [{ count }]] = await Promise.all([
-    db
-      .select({
-        id: s.users.id,
-        username: s.users.username,
-        nickname: s.users.nickname,
-        email: s.users.email,
-        phone: s.users.phone,
-        phoneBound: s.users.phoneBound,
-        kycStatus: s.users.kycStatus,
-        status: s.users.status,
-        inviteCode: s.users.inviteCode,
-        createdAt: s.users.createdAt,
-        goldCoin: s.wallets.goldCoin,
-        onlineSc: s.wallets.onlineSc,
-      })
-      .from(s.users)
-      .leftJoin(s.wallets, eq(s.wallets.userId, s.users.id))
-      .where(where)
-      .orderBy(desc(s.users.createdAt))
-      .limit(pageSize)
-      .offset((page - 1) * pageSize),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(s.users)
-      .where(where),
+  if (search) {
+    where.OR = [
+      { username: { contains: search, mode: 'insensitive' } },
+      { nickname: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } },
+      { phone: { contains: search, mode: 'insensitive' } },
+    ];
+  }
+
+  const [rows, count] = await Promise.all([
+    db.users.findMany({
+      where,
+      select: {
+        id: true,
+        username: true,
+        nickname: true,
+        email: true,
+        phone: true,
+        phone_bound: true,
+        kyc_status: true,
+        status: true,
+        invite_code: true,
+        created_at: true,
+        wallets: {
+          select: {
+            gold_coin: true,
+            online_sc: true,
+          }
+        }
+      },
+      orderBy: { created_at: 'desc' },
+      take: pageSize,
+      skip: (page - 1) * pageSize,
+    }),
+    db.users.count({ where }),
   ]);
 
-  return NextResponse.json({ users: rows, total: count });
+  const formattedRows = rows.map(r => ({
+    id: r.id,
+    username: r.username,
+    nickname: r.nickname,
+    email: r.email,
+    phone: r.phone,
+    phoneBound: r.phone_bound,
+    kycStatus: r.kyc_status,
+    status: r.status,
+    inviteCode: r.invite_code,
+    createdAt: r.created_at,
+    goldCoin: r.wallets?.gold_coin,
+    onlineSc: r.wallets?.online_sc,
+  }));
+
+  return NextResponse.json({ users: formattedRows, total: count });
 }
 
-/** PUT /api/admin/users — { id, status: 'active'|'blocked' } toggle a player's access. */
 export async function PUT(req: Request) {
   const { error, adminId } = await authorize(req, 'users.write');
   if (error) return error;
@@ -105,7 +113,7 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: 'status must be "active" or "blocked"' }, { status: 400 });
   }
 
-  const [existing] = await db.select({ id: s.users.id }).from(s.users).where(eq(s.users.id, id));
+  const existing = await db.users.findUnique({ where: { id }, select: { id: true } });
   if (!existing) return NextResponse.json({ error: 'not found' }, { status: 404 });
 
   if (body.status === 'blocked') await blockUser(id);

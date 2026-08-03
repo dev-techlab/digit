@@ -1,11 +1,9 @@
 import type { Job } from 'pg-boss';
-import { and, eq, isNotNull, lt, lte, or } from 'drizzle-orm';
 import { getBoss } from './boss';
 import { deliver } from '@/lib/mail/deliver';
 import type { MailPayload } from '@/lib/mail/types';
 import { syncGamePlatforms } from '@/lib/provider-api';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 
 // Referral commissions mature this long after signup before they're settled
 // (pending -> claimed) — gives a window to reverse fraudulent signups.
@@ -37,25 +35,27 @@ export const JOBS: JobDef[] = [
     name: 'bonus.daily-reset',
     cron: '0 0 * * *',
     handler: async () => {
-      await db
-        .update(s.userBonusClaims)
-        .set({ status: 'claimable', nextAvailableAt: null })
-        .where(
-          and(
-            eq(s.userBonusClaims.status, 'claimed'),
-            isNotNull(s.userBonusClaims.nextAvailableAt),
-            lte(s.userBonusClaims.nextAvailableAt, new Date())
-          )
-        );
+      await db.user_bonus_claims.updateMany({
+        where: {
+          status: 'claimed',
+          next_available_at: { not: null, lte: new Date() },
+        },
+        data: { status: 'claimable', next_available_at: null },
+      });
     },
   },
   {
     name: 'otp.purge',
     cron: '*/15 * * * *',
     handler: async () => {
-      await db
-        .delete(s.otpCodes)
-        .where(or(lt(s.otpCodes.expiresAt, new Date()), eq(s.otpCodes.consumed, true)));
+      await db.otp_codes.deleteMany({
+        where: {
+          OR: [
+            { expires_at: { lt: new Date() } },
+            { consumed: true }
+          ]
+        },
+      });
     },
   },
   {
@@ -63,12 +63,22 @@ export const JOBS: JobDef[] = [
     cron: '0 * * * *',
     handler: async () => {
       const now = new Date();
-      await db
-        .delete(s.sessions)
-        .where(or(lt(s.sessions.expiresAt, now), isNotNull(s.sessions.revokedAt)));
-      await db
-        .delete(s.adminSessions)
-        .where(or(lt(s.adminSessions.expiresAt, now), isNotNull(s.adminSessions.revokedAt)));
+      await db.sessions.deleteMany({
+        where: {
+          OR: [
+            { expires_at: { lt: now } },
+            { revoked_at: { not: null } }
+          ]
+        },
+      });
+      await db.admin_sessions.deleteMany({
+        where: {
+          OR: [
+            { expires_at: { lt: now } },
+            { revoked_at: { not: null } }
+          ]
+        },
+      });
     },
   },
   {
@@ -76,15 +86,13 @@ export const JOBS: JobDef[] = [
     cron: '0 1 * * *',
     handler: async () => {
       const cutoff = new Date(Date.now() - REFERRAL_SETTLE_DELAY_MS);
-      await db
-        .update(s.referralCommissions)
-        .set({ status: 'claimed' })
-        .where(
-          and(
-            eq(s.referralCommissions.status, 'pending'),
-            lte(s.referralCommissions.joinedAt, cutoff)
-          )
-        );
+      await db.referral_commissions.updateMany({
+        where: {
+          status: 'pending',
+          joined_at: { lte: cutoff },
+        },
+        data: { status: 'claimed' },
+      });
     },
   },
   {

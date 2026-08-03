@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { and, desc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission } from '@/lib/rbac-core';
 
@@ -20,32 +18,47 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
   const agentId = params.id;
   const url = new URL(req.url);
-  const type = url.searchParams.get('type');
+  const type = url.searchParams.get('type') as any;
 
-  let where = eq(s.agentTransactions.agentId, agentId);
+  const where: any = { agent_id: agentId };
   if (type) {
-    where = and(where, eq(s.agentTransactions.type, type as any)) as any;
+    where.type = type;
   }
 
-  const logs = await db
-    .select({
-      id: s.agentTransactions.id,
-      type: s.agentTransactions.type,
-      method: s.agentTransactions.method,
-      amount: s.agentTransactions.amount,
-      fee: s.agentTransactions.fee,
-      commissionPer: s.agentTransactions.commissionPer,
-      netAmount: s.agentTransactions.netAmount,
-      balanceBefore: s.agentTransactions.balanceBefore,
-      balanceAfter: s.agentTransactions.balanceAfter,
-      remark: s.agentTransactions.remark,
-      status: s.agentTransactions.status,
-      createdAt: s.agentTransactions.createdAt,
-    })
-    .from(s.agentTransactions)
-    .where(where)
-    .orderBy(desc(s.agentTransactions.createdAt))
-    .limit(100);
+  const logs = await db.agent_transactions.findMany({
+    where,
+    select: {
+      id: true,
+      type: true,
+      method: true,
+      amount: true,
+      fee: true,
+      commission_per: true,
+      net_amount: true,
+      balance_before: true,
+      balance_after: true,
+      remark: true,
+      status: true,
+      created_at: true,
+    },
+    orderBy: { created_at: 'desc' },
+    take: 100,
+  });
 
-  return NextResponse.json({ transactions: logs });
+  const formattedLogs = logs.map(l => ({
+    id: l.id,
+    type: l.type,
+    method: l.method,
+    amount: l.amount,
+    fee: l.fee,
+    commissionPer: l.commission_per,
+    netAmount: l.net_amount,
+    balanceBefore: l.balance_before,
+    balanceAfter: l.balance_after,
+    remark: l.remark,
+    status: l.status,
+    createdAt: l.created_at,
+  }));
+
+  return NextResponse.json({ transactions: formattedLogs });
 }

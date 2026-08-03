@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
+
 import { getUserIdFromRequest } from '@/lib/user-auth';
 
 export const runtime = 'nodejs';
@@ -19,10 +19,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'A postal request code is required' }, { status: 400 });
 
   const userId = await getUserIdFromRequest(req);
-  const [row] = await db
-    .insert(s.postalRequests)
-    .values({ userId, code })
-    .returning({ id: s.postalRequests.id });
+  const row = await db.postal_requests.create({
+    data: {
+      user_id: userId || null,
+      code
+    },
+    select: { id: true }
+  });
 
   return NextResponse.json({ ok: true, id: row.id }, { status: 201 });
 }

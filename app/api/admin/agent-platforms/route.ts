@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission, PermissionError } from '@/lib/rbac-core';
 
@@ -38,27 +36,29 @@ export async function GET(req: Request) {
   const agentId = url.searchParams.get('agentId') || '';
   if (!agentId) return NextResponse.json({ platforms: [] });
 
-  const rows = await db
-    .select({
-      id: s.gamePlatforms.id,
-      name: s.gamePlatforms.name,
-      slug: s.gamePlatforms.slug,
-      iconUrl: s.gamePlatforms.iconUrl,
-      isActive: s.gamePlatforms.isActive,
-      assigned: sql<boolean>`${s.agentPlatformMappings.id} is not null`,
-      availableFromTime: s.agentPlatformMappings.availableFromTime,
-      availableToTime: s.agentPlatformMappings.availableToTime,
-    })
-    .from(s.gamePlatforms)
-    .leftJoin(
-      s.agentPlatformMappings,
-      and(
-        eq(s.agentPlatformMappings.agentId, agentId),
-        eq(s.agentPlatformMappings.platformId, s.gamePlatforms.id)
-      )
-    )
-    .where(and(eq(s.gamePlatforms.isActive, true), isNull(s.gamePlatforms.deletedAt)))
-    .orderBy(desc(s.gamePlatforms.sort), s.gamePlatforms.name);
+  const platforms = await db.game_platforms.findMany({
+    where: { is_active: true, deleted_at: null },
+    orderBy: [{ sort: 'desc' }, { name: 'asc' }],
+    include: {
+      agent_platform_mappings: {
+        where: { agent_id: agentId }
+      }
+    }
+  });
+
+  const rows = platforms.map(p => {
+    const mapping = p.agent_platform_mappings[0];
+    return {
+      id: p.id,
+      name: p.name,
+      slug: p.slug,
+      iconUrl: p.icon_url,
+      isActive: p.is_active,
+      assigned: !!mapping,
+      availableFromTime: mapping?.available_from_time ?? null,
+      availableToTime: mapping?.available_to_time ?? null,
+    };
+  });
 
   return NextResponse.json({ platforms: rows });
 }
@@ -98,44 +98,30 @@ export async function PUT(req: Request) {
   }
 
   if (assignments.length === 0) {
-    const existing = await db
-      .select({ platformId: s.agentPlatformMappings.platformId })
-      .from(s.agentPlatformMappings)
-      .where(eq(s.agentPlatformMappings.agentId, agentId));
-    if (existing.length > 0) {
-      await db.delete(s.agentPlatformMappings).where(
-        and(
-          eq(s.agentPlatformMappings.agentId, agentId),
-          inArray(
-            s.agentPlatformMappings.platformId,
-            existing.map((r) => r.platformId)
-          )
-        )
-      );
-    }
+    await db.agent_platform_mappings.deleteMany({
+      where: { agent_id: agentId }
+    });
     return NextResponse.json({ ok: true });
   }
 
   const desiredIds = new Set(assignments.map((a) => a.platformId));
 
-  const existing = await db
-    .select({ id: s.agentPlatformMappings.id, platformId: s.agentPlatformMappings.platformId })
-    .from(s.agentPlatformMappings)
-    .where(eq(s.agentPlatformMappings.agentId, agentId));
+  const existing = await db.agent_platform_mappings.findMany({
+    where: { agent_id: agentId },
+    select: { id: true, platform_id: true }
+  });
 
-  const existingById = new Map(existing.map((row) => [row.platformId, row.id]));
-  const existingIds = new Set(existing.map((row) => row.platformId));
+  const existingById = new Map(existing.map((row) => [row.platform_id, row.id]));
+  const existingIds = new Set(existing.map((row) => row.platform_id));
   const toDelete = [...existingIds].filter((id) => !desiredIds.has(id));
 
   if (toDelete.length) {
-    await db
-      .delete(s.agentPlatformMappings)
-      .where(
-        and(
-          eq(s.agentPlatformMappings.agentId, agentId),
-          inArray(s.agentPlatformMappings.platformId, toDelete)
-        )
-      );
+    await db.agent_platform_mappings.deleteMany({
+      where: {
+        agent_id: agentId,
+        platform_id: { in: toDelete }
+      }
+    });
   }
 
   for (const assignment of assignments) {
@@ -143,24 +129,27 @@ export async function PUT(req: Request) {
     if (existingId) {
       const updateData: Record<string, string> = {};
       if (assignment.availableFromTime !== undefined)
-        updateData.availableFromTime = assignment.availableFromTime;
+        updateData.available_from_time = assignment.availableFromTime;
       if (assignment.availableToTime !== undefined)
-        updateData.availableToTime = assignment.availableToTime;
+        updateData.available_to_time = assignment.availableToTime;
       if (Object.keys(updateData).length > 0) {
-        await db
-          .update(s.agentPlatformMappings)
-          .set(updateData)
-          .where(eq(s.agentPlatformMappings.id, existingId));
+        await db.agent_platform_mappings.update({
+          where: { id: existingId },
+          data: updateData
+        });
       }
     } else {
-      await db.insert(s.agentPlatformMappings).values({
-        agentId,
-        platformId: assignment.platformId,
-        availableFromTime: assignment.availableFromTime || null,
-        availableToTime: assignment.availableToTime || null,
+      await db.agent_platform_mappings.create({
+        data: {
+          agent_id: agentId,
+          platform_id: assignment.platformId,
+          available_from_time: assignment.availableFromTime || null,
+          available_to_time: assignment.availableToTime || null,
+        }
       });
     }
   }
 
   return NextResponse.json({ ok: true });
 }
+

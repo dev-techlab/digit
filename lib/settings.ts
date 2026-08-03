@@ -1,13 +1,12 @@
 import 'server-only';
-import { asc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
+import { social_platform } from '../lib/generated/prisma/client';
 
 export type ParsedSettingValue = string | number | boolean | unknown;
 
 /** Public site settings as a parsed key→value map (is_public rows only). */
 export async function getSettings(): Promise<Record<string, ParsedSettingValue>> {
-  const rows = await db.select().from(s.siteSettings).where(eq(s.siteSettings.isPublic, true));
+  const rows = await db.site_settings.findMany({ where: { is_public: true } });
   const out: Record<string, ParsedSettingValue> = {};
   for (const r of rows) {
     out[r.key] =
@@ -36,7 +35,7 @@ function safeJson(v: string): unknown {
 }
 
 export interface SocialLink {
-  platform: (typeof s.socialPlatformEnum.enumValues)[number];
+  platform: social_platform;
   label: string;
   url: string;
   icon: string | null;
@@ -44,12 +43,11 @@ export interface SocialLink {
 
 /** Active social links, ordered — for the footer & Contact Us page. */
 export async function getSocialLinks(): Promise<SocialLink[]> {
-  const rows = await db
-    .select()
-    .from(s.socialLinks)
-    .where(eq(s.socialLinks.active, true))
-    .orderBy(asc(s.socialLinks.sort));
-  return rows.map((r) => ({
+  const rows = await db.social_links.findMany({
+    where: { active: true },
+    orderBy: { sort: 'asc' },
+  });
+  return rows.map((r: any) => ({
     platform: r.platform,
     label: r.label,
     url: r.url,

@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
 import { requestOtp, type OtpPurpose } from '@/lib/otp';
-import { otpPurposeEnum } from '@/lib/db/schema';
 import { env } from '@/lib/env';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const PURPOSES = new Set<string>(otpPurposeEnum.enumValues);
+const PURPOSES = new Set<string>(['login', 'register', 'reset_password']);
 
 /** POST /api/auth/otp/request — { destination, purpose } → issues a code. */
 export async function POST(req: Request) {

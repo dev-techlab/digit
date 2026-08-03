@@ -5,9 +5,8 @@ import {
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import type { mediaKindEnum } from '@/lib/db/schema';
-
-type MediaKind = (typeof mediaKindEnum.enumValues)[number];
+import { media_kind } from '@/lib/generated/prisma/client';
+type MediaKind = media_kind;
 
 import { env } from '@/lib/env';
 

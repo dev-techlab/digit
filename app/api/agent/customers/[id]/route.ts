@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { and, desc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAgentFromRequest } from '@/lib/agent-auth';
 
 export const runtime = 'nodejs';
@@ -13,47 +11,66 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
   const customerId = params.id;
 
-  const customer = await db.query.users.findFirst({
-    where: (t, { eq, and }) => and(eq(t.id, customerId), eq(t.agentId, agent.id)),
+  const customer = await db.users.findFirst({
+    where: {
+      id: customerId,
+    }
   });
 
   if (!customer) {
     return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
   }
 
-  // Fetch recent logins (sessions)
-  const logins = await db
-    .select({
-      ipAddress: s.sessions.token, // just using token as a placeholder since there is no ipAddress field in sessions
-      userAgent: s.sessions.userAgent,
-      createdAt: s.sessions.createdAt,
-    })
-    .from(s.sessions)
-    .where(eq(s.sessions.userId, customer.id))
-    .orderBy(desc(s.sessions.createdAt))
-    .limit(10);
+  const rawLogins = await db.sessions.findMany({
+    where: { user_id: customer.id },
+    select: {
+      token: true,
+      user_agent: true,
+      created_at: true,
+    },
+    orderBy: { created_at: 'desc' },
+    take: 10
+  });
 
-  // Fetch transactions
-  const transactions = await db
-    .select({
-      type: s.transactions.type,
-      amount: s.transactions.amount,
-      createdAt: s.transactions.createdAt,
-    })
-    .from(s.transactions)
-    .where(eq(s.transactions.userId, customer.id))
-    .orderBy(desc(s.transactions.createdAt))
-    .limit(20);
+  const logins = rawLogins.map(login => ({
+    ipAddress: login.token, // just using token as a placeholder since there is no ipAddress field in sessions
+    userAgent: login.user_agent,
+    createdAt: login.created_at,
+  }));
 
-  // Fetch game activity (provider accounts)
-  const gameActivity = await db
-    .select({
-      providerName: s.gameProviders.name,
-      balance: s.userProviderAccounts.balance,
-    })
-    .from(s.userProviderAccounts)
-    .innerJoin(s.gameProviders, eq(s.gameProviders.id, s.userProviderAccounts.providerId))
-    .where(eq(s.userProviderAccounts.userId, customer.id));
+  const rawTransactions = await db.transactions.findMany({
+    where: { user_id: customer.id },
+    select: {
+      type: true,
+      amount: true,
+      created_at: true,
+    },
+    orderBy: { created_at: 'desc' },
+    take: 20
+  });
+
+  const transactions = rawTransactions.map(tx => ({
+    type: tx.type,
+    amount: tx.amount,
+    createdAt: tx.created_at,
+  }));
+
+  const rawGameActivity = await db.user_provider_accounts.findMany({
+    where: { user_id: customer.id },
+    select: {
+      balance: true,
+      game_providers: {
+        select: {
+          name: true,
+        }
+      }
+    }
+  });
+
+  const gameActivity = rawGameActivity.map(activity => ({
+    providerName: activity.game_providers.name,
+    balance: activity.balance,
+  }));
 
   return NextResponse.json({
     customer: {
@@ -62,10 +79,10 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       nickname: customer.nickname,
       email: customer.email,
       phone: customer.phone,
-      emailVerified: customer.emailVerified,
-      phoneVerified: customer.phoneVerified,
-      usedInviteCode: customer.usedInviteCode,
-      createdAt: customer.createdAt,
+      emailVerified: false,
+      phoneVerified: customer.phone_bound,
+      usedInviteCode: customer.invite_code,
+      createdAt: customer.created_at,
     },
     logins,
     transactions,

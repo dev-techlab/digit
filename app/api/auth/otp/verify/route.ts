@@ -2,16 +2,13 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { verifyOtp, type OtpPurpose, isValidOtpDestination } from '@/lib/otp';
 import { createUserSession, getUserProfile, userIdByPhone } from '@/lib/user-service';
-import { otpPurposeEnum } from '@/lib/db/schema';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
 import { USER_SESSION_COOKIE, USER_SESSION_TTL_S, sessionCookieOptions } from '@/lib/auth-tokens';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const PURPOSES = new Set<string>(otpPurposeEnum.enumValues);
+const PURPOSES = new Set<string>(['login', 'register', 'reset_password']);
 
 const verifySchema = z.object({
   destination: z.string().min(1, 'Destination (email/phone) is required').trim(),
@@ -19,11 +16,6 @@ const verifySchema = z.object({
   code: z.string().min(6, 'Verification code must be exactly 6 digits').max(6, 'Verification code must be exactly 6 digits'),
 });
 
-/**
- * POST /api/auth/otp/verify — { destination, purpose, code }.
- * For a `login` purpose that resolves to a phone-bound user, also starts a
- * session and sets the cookie.
- */
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   
@@ -37,7 +29,6 @@ export async function POST(req: Request) {
   const result = await verifyOtp(destination, purpose as OtpPurpose, code);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
 
-  // Phone-OTP login: resolve the phone to a user and start a session.
   if (purpose === 'login') {
     const userId = result.userId ?? (await userIdByPhone(destination));
     if (userId) {
@@ -49,16 +40,16 @@ export async function POST(req: Request) {
       return res;
     }
   } else if (purpose === 'register' && result.userId) {
-    const user = await db.query.users.findFirst({
-      where: (t, { eq }) => eq(t.id, result.userId!),
+    const user = await db.users.findUnique({
+      where: { id: result.userId! }
     });
     if (user) {
-      if (user.email === destination) {
-        await db.update(s.users).set({ emailVerified: new Date() }).where(eq(s.users.id, user.id));
-      } else if (user.phone === destination) {
-        await db.update(s.users).set({ phoneVerified: new Date() }).where(eq(s.users.id, user.id));
+      if (user.phone === destination) {
+        await db.users.update({
+          where: { id: user.id },
+          data: { phone_bound: true }
+        });
       }
-      
       const { token } = await createUserSession(user.id, {
         userAgent: req.headers.get('user-agent') ?? undefined,
       });

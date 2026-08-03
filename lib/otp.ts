@@ -1,11 +1,10 @@
 import { createHmac, randomInt } from 'node:crypto';
-import { and, eq, gt, desc, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { sendOtpEmail } from '@/lib/mail';
 import { env } from '@/lib/env';
+import { otp_purpose } from '../lib/generated/prisma/client';
 
-export type OtpPurpose = (typeof s.otpPurposeEnum.enumValues)[number];
+export type OtpPurpose = otp_purpose;
 
 const OTP_TTL_S = 5 * 60; // 5 minutes
 const MAX_ATTEMPTS = 5; // lock a code after this many wrong guesses
@@ -50,21 +49,25 @@ export async function requestOtp(
   }
 
   const since = new Date(Date.now() - RESEND_WINDOW_S * 1000);
-  const recent = await db
-    .select({ c: sql<number>`count(*)::int` })
-    .from(s.otpCodes)
-    .where(and(eq(s.otpCodes.destination, destination), gt(s.otpCodes.createdAt, since)));
-  if ((recent[0]?.c ?? 0) >= 1) {
+  const recentCount = await db.otp_codes.count({
+    where: {
+      destination,
+      created_at: { gt: since },
+    }
+  });
+  if (recentCount >= 1) {
     return { ok: false, error: 'Please wait before requesting another code' };
   }
 
   const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
-  await db.insert(s.otpCodes).values({
-    userId: userId ?? null,
-    destination,
-    code: hashCode(code, destination),
-    purpose,
-    expiresAt: new Date(Date.now() + OTP_TTL_S * 1000),
+  await db.otp_codes.create({
+    data: {
+      user_id: userId ?? null,
+      destination,
+      code: hashCode(code, destination),
+      purpose,
+      expires_at: new Date(Date.now() + OTP_TTL_S * 1000),
+    }
   });
 
   if (EMAIL_RE.test(destination)) {
@@ -90,35 +93,34 @@ export async function verifyOtp(
   purpose: OtpPurpose,
   code: string
 ): Promise<{ ok: true; userId: string | null } | { ok: false; error: string }> {
-  return db.transaction(async (tx) => {
-    const rows = await tx
-      .select()
-      .from(s.otpCodes)
-      .where(
-        and(
-          eq(s.otpCodes.destination, destination),
-          eq(s.otpCodes.purpose, purpose),
-          eq(s.otpCodes.consumed, false)
-        )
-      )
-      .orderBy(desc(s.otpCodes.createdAt))
-      .limit(1)
-      .for('update');
+  return db.$transaction(async (tx: any) => {
+    const row = await tx.otp_codes.findFirst({
+      where: {
+        destination,
+        purpose,
+        consumed: false,
+      },
+      orderBy: { created_at: 'desc' },
+    });
 
-    const row = rows[0];
     if (!row) return { ok: false, error: 'No code requested' };
-    if (row.expiresAt < new Date()) return { ok: false, error: 'Code expired' };
+    if (row.expires_at < new Date()) return { ok: false, error: 'Code expired' };
     if (row.attempts >= MAX_ATTEMPTS) return { ok: false, error: 'Too many attempts' };
 
     // Count this attempt before checking, so brute force is bounded.
-    await tx
-      .update(s.otpCodes)
-      .set({ attempts: row.attempts + 1 })
-      .where(eq(s.otpCodes.id, row.id));
+    await tx.otp_codes.update({
+      where: { id: row.id },
+      data: { attempts: row.attempts + 1 },
+    });
 
     if (row.code !== hashCode(code, destination)) return { ok: false, error: 'Invalid code' };
 
-    await tx.update(s.otpCodes).set({ consumed: true }).where(eq(s.otpCodes.id, row.id));
-    return { ok: true, userId: row.userId };
-  });
+    const updated = await tx.otp_codes.updateMany({
+      where: { id: row.id, consumed: false },
+      data: { consumed: true },
+    });
+    if (updated.count === 0) return { ok: false, error: 'Code already consumed' };
+    
+    return { ok: true, userId: row.user_id };
+  }) as Promise<{ ok: true; userId: string | null } | { ok: false; error: string }>;
 }

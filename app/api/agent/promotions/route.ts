@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { and, desc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAgentFromRequest } from '@/lib/agent-auth';
 
 export const runtime = 'nodejs';
@@ -9,37 +7,55 @@ export const dynamic = 'force-dynamic';
 
 const TYPES = ['promotion_game', 'double_game', 'loyalty_drop'] as const;
 
-/** GET /api/agent/promotions — list this store's promotions. */
 export async function GET(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const rows = await db
-    .select({
-      id: s.promotions.id,
-      type: s.promotions.type,
-      assignAgentId: s.promotions.assignAgentId,
-      assignUsername: s.agents.username,
-      bonusPercent: s.promotions.bonusPercent,
-      minDeposit: s.promotions.minDeposit,
-      maxBonus: s.promotions.maxBonus,
-      redemptionMultiplier: s.promotions.redemptionMultiplier,
-      activeDays: s.promotions.activeDays,
-      timezone: s.promotions.timezone,
-      hiddenFromPlayers: s.promotions.hiddenFromPlayers,
-      onlineOnly: s.promotions.onlineOnly,
-      status: s.promotions.status,
-      remark: s.promotions.remark,
-      createdAt: s.promotions.createdAt,
-    })
-    .from(s.promotions)
-    .leftJoin(s.agents, eq(s.agents.id, s.promotions.assignAgentId))
-    .where(eq(s.promotions.storeId, agent.storeId))
-    .orderBy(desc(s.promotions.createdAt));
-  return NextResponse.json({ promotions: rows });
+  const rows = await db.promotions.findMany({
+    where: { store_id: agent.storeId },
+    select: {
+      id: true,
+      type: true,
+      assign_agent_id: true,
+      agents_promotions_assign_agent_idToagents: {
+        select: { username: true }
+      },
+      bonus_percent: true,
+      min_deposit: true,
+      max_bonus: true,
+      redemption_multiplier: true,
+      active_days: true,
+      timezone: true,
+      hidden_from_players: true,
+      online_only: true,
+      status: true,
+      remark: true,
+      created_at: true,
+    },
+    orderBy: { created_at: 'desc' }
+  });
+  
+  return NextResponse.json({
+    promotions: rows.map(r => ({
+      id: r.id,
+      type: r.type,
+      assignAgentId: r.assign_agent_id,
+      assignUsername: r.agents_promotions_assign_agent_idToagents?.username || null,
+      bonusPercent: r.bonus_percent,
+      minDeposit: r.min_deposit,
+      maxBonus: r.max_bonus,
+      redemptionMultiplier: r.redemption_multiplier,
+      activeDays: r.active_days,
+      timezone: r.timezone,
+      hiddenFromPlayers: r.hidden_from_players,
+      onlineOnly: r.online_only,
+      status: r.status,
+      remark: r.remark,
+      createdAt: r.created_at,
+    }))
+  });
 }
 
-/** POST /api/agent/promotions — create a promotion. */
 export async function POST(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -61,10 +77,13 @@ export async function POST(req: Request) {
 
   let assignAgentId: string | null = null;
   if (typeof body.assignAgentId === 'string' && body.assignAgentId) {
-    const [assignee] = await db
-      .select({ id: s.agents.id })
-      .from(s.agents)
-      .where(and(eq(s.agents.id, body.assignAgentId), eq(s.agents.storeId, agent.storeId)));
+    const assignee = await db.agents.findFirst({
+      where: {
+        id: body.assignAgentId,
+        store_id: agent.storeId
+      },
+      select: { id: true }
+    });
     if (!assignee) {
       return NextResponse.json(
         { error: 'assignAgentId must belong to this store' },
@@ -75,31 +94,28 @@ export async function POST(req: Request) {
   }
 
   const bonusPercent = Math.min(200, Math.max(1, Number(body.bonusPercent) || 100));
-  const [created] = await db
-    .insert(s.promotions)
-    .values({
-      storeId: agent.storeId,
-      assignAgentId,
-      type,
-      hiddenFromAgentIds: Array.isArray(body.hiddenFromAgentIds)
-        ? (body.hiddenFromAgentIds as string[])
-        : [],
-      bonusPercent: String(bonusPercent),
-      minDeposit: String(Number(body.minDeposit) || 20),
-      maxBonus: String(maxBonus),
-      redemptionMultiplier: String(Number(body.redemptionMultiplier) || 2),
-      activeDays: Array.isArray(body.activeDays) ? (body.activeDays as number[]) : [],
+  const created = await db.promotions.create({
+    data: {
+      store_id: agent.storeId,
+      assign_agent_id: assignAgentId,
+      type: type as any,
+      hidden_from_agent_ids: Array.isArray(body.hiddenFromAgentIds) ? body.hiddenFromAgentIds : [],
+      bonus_percent: String(bonusPercent),
+      min_deposit: String(Number(body.minDeposit) || 20),
+      max_bonus: String(maxBonus),
+      redemption_multiplier: String(Number(body.redemptionMultiplier) || 2),
+      active_days: Array.isArray(body.activeDays) ? body.activeDays : [],
       timezone: typeof body.timezone === 'string' ? body.timezone : 'America/New_York',
-      hiddenFromPlayers: body.hiddenFromPlayers === true,
-      onlineOnly: body.onlineOnly === true,
+      hidden_from_players: body.hiddenFromPlayers === true,
+      online_only: body.onlineOnly === true,
       status: body.status === 'disabled' ? 'disabled' : 'enabled',
       remark: typeof body.remark === 'string' ? body.remark : null,
-    })
-    .returning({ id: s.promotions.id });
+    },
+    select: { id: true }
+  });
   return NextResponse.json({ ok: true, id: created.id });
 }
 
-/** PUT /api/agent/promotions — update status/remark or full config. */
 export async function PUT(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -114,27 +130,29 @@ export async function PUT(req: Request) {
   const id = typeof body.id === 'string' ? body.id : '';
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
-  const set: Partial<typeof s.promotions.$inferInsert> = {};
+  const set: any = {};
   if (body.status === 'enabled' || body.status === 'disabled') set.status = body.status;
   if (typeof body.remark === 'string') set.remark = body.remark;
   if (body.bonusPercent != null)
-    set.bonusPercent = String(Math.min(200, Math.max(1, Number(body.bonusPercent) || 100)));
-  if (body.minDeposit != null) set.minDeposit = String(Number(body.minDeposit) || 0);
-  if (body.maxBonus != null) set.maxBonus = String(Number(body.maxBonus) || 0);
+    set.bonus_percent = String(Math.min(200, Math.max(1, Number(body.bonusPercent) || 100)));
+  if (body.minDeposit != null) set.min_deposit = String(Number(body.minDeposit) || 0);
+  if (body.maxBonus != null) set.max_bonus = String(Number(body.maxBonus) || 0);
   if (body.redemptionMultiplier != null)
-    set.redemptionMultiplier = String(Number(body.redemptionMultiplier) || 2);
-  if (Array.isArray(body.activeDays)) set.activeDays = body.activeDays as number[];
-  if (typeof body.hiddenFromPlayers === 'boolean') set.hiddenFromPlayers = body.hiddenFromPlayers;
-  if (typeof body.onlineOnly === 'boolean') set.onlineOnly = body.onlineOnly;
+    set.redemption_multiplier = String(Number(body.redemptionMultiplier) || 2);
+  if (Array.isArray(body.activeDays)) set.active_days = body.activeDays;
+  if (typeof body.hiddenFromPlayers === 'boolean') set.hidden_from_players = body.hiddenFromPlayers;
+  if (typeof body.onlineOnly === 'boolean') set.online_only = body.onlineOnly;
 
-  await db
-    .update(s.promotions)
-    .set(set)
-    .where(and(eq(s.promotions.id, id), eq(s.promotions.storeId, agent.storeId)));
+  await db.promotions.updateMany({
+    where: {
+      id,
+      store_id: agent.storeId
+    },
+    data: set
+  });
   return NextResponse.json({ ok: true });
 }
 
-/** DELETE /api/agent/promotions?id= — remove a promotion. */
 export async function DELETE(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -146,8 +164,11 @@ export async function DELETE(req: Request) {
   }
   const id = new URL(req.url).searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-  await db
-    .delete(s.promotions)
-    .where(and(eq(s.promotions.id, id), eq(s.promotions.storeId, agent.storeId)));
+  await db.promotions.deleteMany({
+    where: {
+      id,
+      store_id: agent.storeId
+    }
+  });
   return NextResponse.json({ ok: true });
 }

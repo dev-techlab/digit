@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { api, Btn, Card, fmtDateTime, fmtMoney, Select } from '@/components/agent/ui';
 import { DataTable } from '@/components/ui/DataTable';
 import { useDataTable } from '@/hooks/useDataTable';
@@ -27,10 +27,8 @@ export function UsersScreen() {
 
   const table = useDataTable<UserRow>('/api/admin/users', 'users');
 
-  useEffect(() => {
-    void table.load(1, '', { status: '' });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // SWR automatically fetches based on the default page=1, search='', and status='' 
+  // No need for a manual useEffect on mount!
 
   const toggleStatus = async (row: UserRow) => {
     const next = row.status === 'active' ? 'blocked' : 'active';
@@ -58,14 +56,11 @@ export function UsersScreen() {
           manualPagination
           totalRows={table.total}
           currentPage={table.page}
-          onPageChange={(p) => {
-            table.setPage(p);
-            void table.load(p, table.search, { status });
-          }}
+          onPageChange={(p) => table.setPage(p)}
           globalSearch={table.search}
           onSearchChange={(v) => {
             table.setSearch(v);
-            void table.load(1, v, { status });
+            table.setPage(1);
           }}
           extraToolbar={
             <div className="flex items-center gap-2">
@@ -77,7 +72,7 @@ export function UsersScreen() {
                   const st = e.target.value;
                   setStatus(st);
                   table.setPage(1);
-                  void table.load(1, table.search, { status: st });
+                  table.load(1, table.search, { status: st });
                 }}
               >
                 <option value="">All</option>

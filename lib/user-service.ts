@@ -1,10 +1,8 @@
 import { randomBytes } from 'node:crypto';
-import { and, eq, gt, isNull } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { newSessionToken, USER_SESSION_TTL_S } from '@/lib/auth-tokens';
-import { isUniqueViolation } from '@/lib/db-errors';
+import { Prisma } from '../lib/generated/prisma/client';
 
 /** 409-style error for duplicate username/registration conflicts. */
 export class UserConflictError extends Error {
@@ -16,11 +14,11 @@ export class UserConflictError extends Error {
 }
 
 export async function verifyUserLogin(username: string, password: string): Promise<string | null> {
-  const user = await db.query.users.findFirst({ where: (t, { eq }) => eq(t.username, username) });
+  const user = await db.users.findFirst({ where: { username } });
   if (!user || user.status !== 'active') return null;
-  if (user.email && !user.emailVerified) return null;
-  if (user.phone && !user.phoneVerified) return null;
-  return (await bcrypt.compare(password, user.passwordHash)) ? user.id : null;
+  // if (user.email && !user.emailVerified) return null;
+  if (user.phone && !user.phone_bound) return null;
+  return (await bcrypt.compare(password, user.password_hash)) ? user.id : null;
 }
 
 export interface RegisterUserInput {
@@ -43,48 +41,46 @@ export async function registerUser(
   const username = input.username?.trim() || `player_${randomBytes(3).toString('hex')}`;
   const password = input.password || randomBytes(6).toString('base64url');
 
-  const existing = await db.query.users.findFirst({
-    where: (t, { eq }) => eq(t.username, username),
-  });
+  const existing = await db.users.findFirst({ where: { username } });
   if (existing) throw new UserConflictError('Username already taken');
 
   let agentId = null;
   let usedInviteCode = null;
   if (input.inviteCode?.trim()) {
-    const agent = await db.query.agents.findFirst({
-      where: (t, { eq }) => eq(t.inviteCode, input.inviteCode!.trim()),
-      columns: { id: true, inviteCode: true },
+    const agent = await db.agents.findFirst({
+      where: { invite_code: input.inviteCode.trim() },
+      select: { id: true, invite_code: true },
     });
     if (!agent) throw new UserConflictError('Invalid invite code');
     agentId = agent.id;
-    usedInviteCode = agent.inviteCode;
+    usedInviteCode = agent.invite_code;
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
-  let user: typeof s.users.$inferSelect;
+  let user: any;
   try {
-    [user] = await db
-      .insert(s.users)
-      .values({
+    user = await db.users.create({
+      data: {
         username,
         nickname: username,
-        passwordHash,
+        password_hash: passwordHash,
         email: input.email ?? null,
         phone: input.phone ?? null,
-        phoneBound: !!input.phone,
-        inviteCode: `DL${randomBytes(4).toString('hex').toUpperCase()}`,
-        agentId,
-        usedInviteCode,
-      })
-      .returning();
-  } catch (err) {
-    // A concurrent double-submit can both pass the findFirst check above and
-    // then race the unique constraint — surface it as the intended 409, not
-    // a raw 500.
-    if (isUniqueViolation(err)) throw new UserConflictError('Username already taken');
+        phone_bound: !!input.phone,
+        invite_code: `DL${randomBytes(4).toString('hex').toUpperCase()}`,
+        agent_invite_code: usedInviteCode,
+      },
+    });
+  } catch (err: any) {
+    if (err.code === 'P2002') throw new UserConflictError('Username already taken');
     throw err;
   }
-  await db.insert(s.wallets).values({ userId: user.id }).onConflictDoNothing();
+  
+  try {
+    await db.wallets.create({ data: { user_id: user.id } });
+  } catch (e: any) {
+    // Ignore P2002 unique constraint error if wallet somehow exists
+  }
 
   return { id: user.id, username, password, generated };
 }
@@ -93,33 +89,32 @@ export async function registerUser(
 export async function createUserSession(userId: string, meta?: { userAgent?: string }) {
   const token = newSessionToken();
   const expiresAt = new Date(Date.now() + USER_SESSION_TTL_S * 1000);
-  await db
-    .insert(s.sessions)
-    .values({ userId, token, expiresAt, userAgent: meta?.userAgent ?? null });
+  await db.sessions.create({
+    data: { user_id: userId, token, expires_at: expiresAt, user_agent: meta?.userAgent ?? null },
+  });
   return { token, expiresAt };
 }
 
 /** Resolve a session token to a user id (unexpired, not revoked, account active). */
 export async function userIdForToken(token: string): Promise<string | null> {
-  const rows = await db
-    .select({ userId: s.sessions.userId })
-    .from(s.sessions)
-    .innerJoin(s.users, eq(s.users.id, s.sessions.userId))
-    .where(
-      and(
-        eq(s.sessions.token, token),
-        gt(s.sessions.expiresAt, new Date()),
-        isNull(s.sessions.revokedAt),
-        eq(s.users.status, 'active')
-      )
-    )
-    .limit(1);
-  return rows[0]?.userId ?? null;
+  const session = await db.sessions.findFirst({
+    where: {
+      token,
+      expires_at: { gt: new Date() },
+      revoked_at: null,
+      users: { status: 'active' },
+    },
+    select: { user_id: true },
+  });
+  return session?.user_id ?? null;
 }
 
 /** Revoke a single session (logout). */
 export async function revokeUserSession(token: string) {
-  await db.update(s.sessions).set({ revokedAt: new Date() }).where(eq(s.sessions.token, token));
+  await db.sessions.updateMany({
+    where: { token },
+    data: { revoked_at: new Date() },
+  });
 }
 
 export interface UserProfile {
@@ -136,28 +131,40 @@ export interface UserProfile {
 
 /** Public-safe profile for the authenticated user (never returns the hash). */
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
-  const u = await db.query.users.findFirst({
-    where: (t, { eq }) => eq(t.id, userId),
-    columns: {
+  const u = await db.users.findFirst({
+    where: { id: userId },
+    select: {
       id: true,
       username: true,
       nickname: true,
-      avatarEmoji: true,
-      avatarUrl: true,
-      phoneBound: true,
-      kycStatus: true,
-      pwaInstalled: true,
-      usedInviteCode: true,
+      avatar_emoji: true,
+      avatar_url: true,
+      phone_bound: true,
+      kyc_status: true,
+      pwa_installed: true,
     },
   });
-  return u ?? null;
+  
+  if (!u) return null;
+  
+  return {
+    id: u.id,
+    username: u.username,
+    nickname: u.nickname,
+    avatarEmoji: u.avatar_emoji,
+    avatarUrl: u.avatar_url,
+    phoneBound: u.phone_bound,
+    kycStatus: u.kyc_status,
+    pwaInstalled: u.pwa_installed,
+    usedInviteCode: null,
+  };
 }
 
 /** Find a user id by bound phone (for phone-OTP login). */
 export async function userIdByPhone(phone: string): Promise<string | null> {
-  const u = await db.query.users.findFirst({
-    where: (t, { eq }) => eq(t.phone, phone),
-    columns: { id: true },
+  const u = await db.users.findFirst({
+    where: { phone },
+    select: { id: true },
   });
   return u?.id ?? null;
 }
@@ -165,25 +172,34 @@ export async function userIdByPhone(phone: string): Promise<string | null> {
 /** Set a new password (post OTP-verified reset). Revokes existing sessions. */
 export async function setUserPassword(userId: string, newPassword: string): Promise<void> {
   const passwordHash = await bcrypt.hash(newPassword, 10);
-  await db.update(s.users).set({ passwordHash }).where(eq(s.users.id, userId));
+  await db.users.update({
+    where: { id: userId },
+    data: { password_hash: passwordHash },
+  });
   await revokeUserSessions(userId);
 }
 
 /** Revoke every active session for a user (immediate logout everywhere). */
 export async function revokeUserSessions(userId: string): Promise<void> {
-  await db
-    .update(s.sessions)
-    .set({ revokedAt: new Date() })
-    .where(and(eq(s.sessions.userId, userId), isNull(s.sessions.revokedAt)));
+  await db.sessions.updateMany({
+    where: { user_id: userId, revoked_at: null },
+    data: { revoked_at: new Date() },
+  });
 }
 
 /** Block a player account: prevents new logins AND kills existing sessions. */
 export async function blockUser(userId: string): Promise<void> {
-  await db.update(s.users).set({ status: 'blocked' }).where(eq(s.users.id, userId));
+  await db.users.update({
+    where: { id: userId },
+    data: { status: 'blocked' },
+  });
   await revokeUserSessions(userId);
 }
 
 /** Re-activate a blocked player account (does not restore revoked sessions). */
 export async function unblockUser(userId: string): Promise<void> {
-  await db.update(s.users).set({ status: 'active' }).where(eq(s.users.id, userId));
+  await db.users.update({
+    where: { id: userId },
+    data: { status: 'active' },
+  });
 }

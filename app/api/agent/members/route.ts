@@ -1,15 +1,12 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
-import { and, desc, eq, ilike, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAgentFromRequest } from '@/lib/agent-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/** GET /api/agent/members?search=&phone=&page=&pageSize= — paginated member list + aggregates. */
 export async function GET(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -19,45 +16,81 @@ export async function GET(req: Request) {
   const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
   const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('pageSize')) || 10));
 
-  const saleAgents = sql`(select username from ${s.agents} where ${s.agents.id} = ${s.members.saleAgentId})`;
-  const where = and(
-    eq(s.members.storeId, agent.storeId),
-    search ? ilike(s.members.username, `%${search}%`) : undefined,
-    phone ? ilike(s.members.phone, `%${phone}%`) : undefined
-  );
+  const agentCol = agent.type === 'sub' ? 'sub_agent_id' : (agent.type === 'sale' ? 'sale_agent_id' : null);
+  const where: any = { store_id: agent.storeId };
+  if (agentCol) where[agentCol] = agent.id;
+  
+  if (search || phone) {
+    where.AND = [];
+    if (search) where.AND.push({ username: { contains: search, mode: 'insensitive' } });
+    if (phone) where.AND.push({ phone: { contains: phone, mode: 'insensitive' } });
+  }
 
-  const [{ total }] = await db
-    .select({ total: sql<number>`count(*)::int` })
-    .from(s.members)
-    .where(where);
+  const [rawRows, total] = await Promise.all([
+    db.members.findMany({
+      where,
+      select: {
+        id: true,
+        username: true,
+        phone: true,
+        agents_members_sale_agent_idToagents: { select: { username: true } },
+        online_sc: true,
+        sc_reward_enabled: true,
+        remark: true,
+        status: true,
+        created_at: true,
+      },
+      orderBy: { created_at: 'desc' },
+      take: pageSize,
+      skip: (page - 1) * pageSize,
+    }),
+    db.members.count({ where }),
+  ]);
+  
+  const memberIds = rawRows.map(m => m.id);
+  let aggregate: any[] = [];
+  
+  if (memberIds.length > 0) {
+    const bindParams = memberIds.map((_, i) => `$${i+1}`).join(',');
+    aggregate = await db.$queryRawUnsafe(`
+      SELECT 
+        member_id,
+        COALESCE(SUM(amount) FILTER (WHERE type = 'recharge'), 0) AS deposit,
+        COALESCE(SUM(amount) FILTER (WHERE type = 'redeem'), 0) AS withdraw,
+        COALESCE(SUM(in_score), 0) AS "totalIn",
+        COALESCE(SUM(out_score), 0) AS "totalOut"
+      FROM member_transactions
+      WHERE member_id IN (${bindParams})
+      GROUP BY member_id
+    `, ...memberIds);
+  }
+  
+  const aggMap = new Map(aggregate.map(a => [a.member_id, a]));
 
-  const rows = await db
-    .select({
-      id: s.members.id,
-      username: s.members.username,
-      phone: s.members.phone,
-      saleAgent: sql<string | null>`${saleAgents}`,
-      onlineSc: s.members.onlineSc,
-      scRewardEnabled: s.members.scRewardEnabled,
-      remark: s.members.remark,
-      status: s.members.status,
-      createdAt: s.members.createdAt,
-      deposit: sql<string>`coalesce((select sum(amount) from ${s.memberTransactions} t where t.member_id = ${s.members.id} and t.type = 'recharge'), 0)`,
-      withdraw: sql<string>`coalesce((select sum(amount) from ${s.memberTransactions} t where t.member_id = ${s.members.id} and t.type = 'redeem'), 0)`,
-      totalIn: sql<string>`coalesce((select sum(in_score) from ${s.memberTransactions} t where t.member_id = ${s.members.id}), 0)`,
-      totalOut: sql<string>`coalesce((select sum(out_score) from ${s.memberTransactions} t where t.member_id = ${s.members.id}), 0)`,
-    })
-    .from(s.members)
-    .where(where)
-    .orderBy(desc(s.members.createdAt))
-    .limit(pageSize)
-    .offset((page - 1) * pageSize);
+  const rows = rawRows.map(r => {
+    const agg = aggMap.get(r.id) || {};
+    const totalIn = Number(agg.totalIn || 0);
+    const totalOut = Number(agg.totalOut || 0);
+    return {
+      id: r.id,
+      username: r.username,
+      phone: r.phone,
+      saleAgent: r.agents_members_sale_agent_idToagents?.username || null,
+      onlineSc: r.online_sc,
+      scRewardEnabled: r.sc_reward_enabled,
+      remark: r.remark,
+      status: r.status,
+      createdAt: r.created_at,
+      deposit: agg.deposit?.toString() || '0',
+      withdraw: agg.withdraw?.toString() || '0',
+      totalIn: totalIn.toString(),
+      totalOut: totalOut.toString(),
+      totalNet: (totalIn - totalOut).toFixed(2),
+    };
+  });
 
   return NextResponse.json({
-    members: rows.map((r) => ({
-      ...r,
-      totalNet: (Number(r.totalIn) - Number(r.totalOut)).toFixed(2),
-    })),
+    members: rows,
     total,
     page,
     pageSize,
@@ -70,7 +103,6 @@ const createMemberSchema = z.object({
   remark: z.string().optional(),
 });
 
-/** POST /api/agent/members — create a member under this store. */
 export async function POST(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -84,20 +116,24 @@ export async function POST(req: Request) {
   const { username, password, remark } = parseResult.data;
 
   try {
-    const [created] = await db
-      .insert(s.members)
-      .values({
-        storeId: agent.storeId,
-        saleAgentId: agent.type === 'sale' ? agent.id : null,
-        subAgentId: agent.type === 'sub' ? agent.id : null,
+    const created = await db.members.create({
+      data: {
+        store_id: agent.storeId,
+        sale_agent_id: agent.type === 'sale' ? agent.id : null,
+        sub_agent_id: agent.type === 'sub' ? agent.id : null,
         username,
-        passwordHash: await bcrypt.hash(password, 10),
-        remark: typeof body.remark === 'string' ? body.remark : null,
-      })
-      .returning({ id: s.members.id });
+        password_hash: await bcrypt.hash(password, 10),
+        remark: typeof remark === 'string' ? remark : null,
+      },
+      select: { id: true }
+    });
     return NextResponse.json({ ok: true, id: created.id });
-  } catch {
-    return NextResponse.json({ error: 'Username already exists' }, { status: 409 });
+  } catch (e: any) {
+    if (e.code === 'P2002') {
+      return NextResponse.json({ error: 'Username already exists' }, { status: 409 });
+    }
+    console.error(e);
+    return NextResponse.json({ error: 'Failed to create member' }, { status: 500 });
   }
 }
 
@@ -108,7 +144,6 @@ const updateMemberSchema = z.object({
   status: z.enum(['active', 'disabled']).optional(),
 });
 
-/** PUT /api/agent/members — update remark / status / SC-reward flag. */
 export async function PUT(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -127,14 +162,17 @@ export async function PUT(req: Request) {
 
   const { id, remark, scRewardEnabled, status } = parseResult.data;
 
-  const set: Partial<typeof s.members.$inferInsert> = {};
+  const set: any = {};
   if (remark !== undefined) set.remark = remark;
-  if (scRewardEnabled !== undefined) set.scRewardEnabled = scRewardEnabled;
+  if (scRewardEnabled !== undefined) set.sc_reward_enabled = scRewardEnabled;
   if (status !== undefined) set.status = status;
 
-  await db
-    .update(s.members)
-    .set(set)
-    .where(and(eq(s.members.id, id), eq(s.members.storeId, agent.storeId)));
+  await db.members.updateMany({
+    where: {
+      id,
+      store_id: agent.storeId
+    },
+    data: set
+  });
   return NextResponse.json({ ok: true });
 }

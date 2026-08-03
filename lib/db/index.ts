@@ -1,6 +1,5 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-import * as schema from './schema';
+import { PrismaClient } from '../generated/prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { env } from '@/lib/env';
 
 const connectionString = env.DATABASE_URL;
@@ -8,18 +7,20 @@ if (!connectionString) {
   throw new Error('DATABASE_URL is not set');
 }
 
-// Reuse a single postgres client across dev HMR reloads so we don't exhaust
-// connections; in production a fresh module instance is fine.
-const globalForDb = globalThis as unknown as { client?: ReturnType<typeof postgres> };
+const globalForDb = globalThis as unknown as { prisma?: PrismaClient };
 
-const client =
-  globalForDb.client ??
-  postgres(connectionString, {
-    max: env.NODE_ENV === 'production' ? 10 : 1,
-    prepare: false,
-  });
-if (env.NODE_ENV !== 'production') globalForDb.client = client;
+let prisma: PrismaClient;
 
-export const db = drizzle(client, { schema });
-export { schema };
-export type Database = typeof db;
+if (env.NODE_ENV === 'production') {
+  const adapter = new PrismaPg({ connectionString });
+  prisma = new PrismaClient({ adapter });
+} else {
+  if (!globalForDb.prisma) {
+    const adapter = new PrismaPg({ connectionString });
+    globalForDb.prisma = new PrismaClient({ adapter });
+  }
+  prisma = globalForDb.prisma;
+}
+
+export const db = prisma;
+export type Database = typeof prisma;

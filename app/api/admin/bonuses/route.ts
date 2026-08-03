@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { asc, eq, isNotNull, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission, PermissionError } from '@/lib/rbac-core';
 import { clientIp, logAdminAction } from '@/lib/audit-log';
@@ -9,7 +7,6 @@ import { clientIp, logAdminAction } from '@/lib/audit-log';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/** Resolve + permission-check the caller; returns the adminId or a ready-to-return error response. */
 async function authorize(
   req: Request,
   permKey: string
@@ -46,20 +43,17 @@ const slugify = (v: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-/** GET /api/admin/bonuses — full bonus definition catalog (including inactive, excluding soft-deleted) for management. */
 export async function GET(req: Request) {
   const { error } = await authorize(req, 'bonuses.read');
   if (error) return error;
 
-  const bonuses = await db
-    .select()
-    .from(s.bonuses)
-    .where(isNull(s.bonuses.deletedAt))
-    .orderBy(asc(s.bonuses.sort), asc(s.bonuses.title));
+  const bonuses = await db.bonuses.findMany({
+    where: { deleted_at: null },
+    orderBy: [{ sort: 'asc' }, { title: 'asc' }]
+  });
   return NextResponse.json({ bonuses });
 }
 
-/** POST /api/admin/bonuses — create a new bonus definition. */
 export async function POST(req: Request) {
   const { error, adminId } = await authorize(req, 'bonuses.write');
   if (error) return error;
@@ -82,44 +76,37 @@ export async function POST(req: Request) {
       { status: 400 }
     );
 
-  const values: typeof s.bonuses.$inferInsert = {
+  const values: any = {
     id,
     title,
     description,
     tags,
     active: body.active !== false,
-    bannerType,
-    bannerGradient: bannerType === 'gradient' ? str(body.bannerGradient) || null : null,
-    bannerBadgeIcon:
+    banner_type: bannerType,
+    banner_gradient: bannerType === 'gradient' ? str(body.bannerGradient) || null : null,
+    banner_badge_icon:
       bannerType === 'gradient' &&
       (body.bannerBadgeIcon === 'coin' || body.bannerBadgeIcon === 'percent')
         ? body.bannerBadgeIcon
         : null,
-    bannerBadgeText: bannerType === 'gradient' ? str(body.bannerBadgeText) || null : null,
-    scheduleIcon,
-    scheduleText: str(body.scheduleText),
-    scheduleCountdownSeconds: int(body.scheduleCountdownSeconds),
+    banner_badge_text: bannerType === 'gradient' ? str(body.bannerBadgeText) || null : null,
+    schedule_icon: scheduleIcon,
+    schedule_text: str(body.scheduleText),
+    schedule_countdown_seconds: int(body.scheduleCountdownSeconds),
     sort: int(body.sort) ?? 0,
   };
 
   try {
-    // A same-slug conflict against a soft-deleted bonus restores it (with the
-    // new values) instead of failing — the slug is otherwise
-    // invisible/reusable once deleted. A conflict against a still-active
-    // bonus is a real conflict and falls through to the WHERE clause not
-    // matching, leaving `row` undefined.
-    const [row] = await db
-      .insert(s.bonuses)
-      .values(values)
-      .onConflictDoUpdate({
-        target: s.bonuses.id,
-        set: { ...values, deletedAt: null },
-        setWhere: isNotNull(s.bonuses.deletedAt),
-      })
-      .returning();
-    if (!row) {
+    let row = await db.bonuses.findUnique({ where: { id } });
+    if (row && row.deleted_at === null) {
       return NextResponse.json({ error: 'A bonus with that id already exists' }, { status: 409 });
     }
+    if (row) {
+      row = await db.bonuses.update({ where: { id }, data: { ...values, deleted_at: null } });
+    } else {
+      row = await db.bonuses.create({ data: values });
+    }
+
     await logAdminAction({
       adminId,
       action: 'bonus.create',
@@ -135,7 +122,6 @@ export async function POST(req: Request) {
   }
 }
 
-/** PUT /api/admin/bonuses — update an existing bonus ({ id, ...fields }). The id itself is immutable. */
 export async function PUT(req: Request) {
   const { error, adminId } = await authorize(req, 'bonuses.write');
   if (error) return error;
@@ -144,7 +130,7 @@ export async function PUT(req: Request) {
   const id = str(body.id);
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
-  const set: Partial<typeof s.bonuses.$inferInsert> = {};
+  const set: any = {};
   if (str(body.title)) set.title = str(body.title);
   if (str(body.description)) set.description = str(body.description);
   if (Array.isArray(body.tags)) {
@@ -154,48 +140,45 @@ export async function PUT(req: Request) {
   }
   if (typeof body.active === 'boolean') set.active = body.active;
   if (body.bannerType === 'gradient' || body.bannerType === 'placeholder') {
-    set.bannerType = body.bannerType;
+    set.banner_type = body.bannerType;
     if (body.bannerType === 'placeholder') {
-      set.bannerGradient = null;
-      set.bannerBadgeIcon = null;
-      set.bannerBadgeText = null;
+      set.banner_gradient = null;
+      set.banner_badge_icon = null;
+      set.banner_badge_text = null;
     } else {
-      if (body.bannerGradient != null) set.bannerGradient = str(body.bannerGradient) || null;
+      if (body.bannerGradient != null) set.banner_gradient = str(body.bannerGradient) || null;
       if (body.bannerBadgeIcon === 'coin' || body.bannerBadgeIcon === 'percent')
-        set.bannerBadgeIcon = body.bannerBadgeIcon;
+        set.banner_badge_icon = body.bannerBadgeIcon;
       else if (body.bannerBadgeIcon === null || body.bannerBadgeIcon === '')
-        set.bannerBadgeIcon = null;
-      if (body.bannerBadgeText != null) set.bannerBadgeText = str(body.bannerBadgeText) || null;
+        set.banner_badge_icon = null;
+      if (body.bannerBadgeText != null) set.banner_badge_text = str(body.bannerBadgeText) || null;
     }
   }
   if (body.scheduleIcon === 'clock' || body.scheduleIcon === 'calendar')
-    set.scheduleIcon = body.scheduleIcon;
-  if (body.scheduleText != null) set.scheduleText = str(body.scheduleText);
+    set.schedule_icon = body.scheduleIcon;
+  if (body.scheduleText != null) set.schedule_text = str(body.scheduleText);
   if ('scheduleCountdownSeconds' in body)
-    set.scheduleCountdownSeconds = int(body.scheduleCountdownSeconds);
+    set.schedule_countdown_seconds = int(body.scheduleCountdownSeconds);
   if (body.sort != null) set.sort = int(body.sort) ?? 0;
 
-  const [row] = await db.update(s.bonuses).set(set).where(eq(s.bonuses.id, id)).returning();
-  if (!row) return NextResponse.json({ error: 'not found' }, { status: 404 });
-
-  await logAdminAction({
-    adminId,
-    action: 'bonus.update',
-    entityType: 'bonus',
-    entityId: id,
-    changes: set,
-    ipAddress: clientIp(req),
-  });
-  return NextResponse.json({ bonus: row });
+  try {
+    const row = await db.bonuses.update({ where: { id }, data: set });
+    await logAdminAction({
+      adminId,
+      action: 'bonus.update',
+      entityType: 'bonus',
+      entityId: id,
+      changes: set,
+      ipAddress: clientIp(req),
+    });
+    return NextResponse.json({ bonus: row });
+  } catch (err: any) {
+    if (err.code === 'P2025') return NextResponse.json({ error: 'not found' }, { status: 404 });
+    console.error('PUT /api/admin/bonuses', err);
+    return NextResponse.json({ error: 'Failed to update bonus' }, { status: 500 });
+  }
 }
 
-/**
- * DELETE /api/admin/bonuses?id=... — soft delete: stamps `deletedAt` and
- * hides the bonus from the catalog (this list, the player Bonus Center).
- * Nothing is destroyed — existing `user_bonus_claims` (a player's claim
- * history for this bonus) are left exactly as they were. There is no
- * separate hard-delete path.
- */
 export async function DELETE(req: Request) {
   const { error, adminId } = await authorize(req, 'bonuses.delete');
   if (error) return error;
@@ -203,19 +186,23 @@ export async function DELETE(req: Request) {
   const id = new URL(req.url).searchParams.get('id')?.trim() ?? '';
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
-  const [row] = await db
-    .update(s.bonuses)
-    .set({ deletedAt: new Date() })
-    .where(eq(s.bonuses.id, id))
-    .returning();
-  if (!row) return NextResponse.json({ error: 'not found' }, { status: 404 });
-  await logAdminAction({
-    adminId,
-    action: 'bonus.delete',
-    entityType: 'bonus',
-    entityId: id,
-    changes: { bonus: row },
-    ipAddress: clientIp(req),
-  });
-  return NextResponse.json({ ok: true });
+  try {
+    const row = await db.bonuses.update({
+      where: { id },
+      data: { deleted_at: new Date() }
+    });
+    await logAdminAction({
+      adminId,
+      action: 'bonus.delete',
+      entityType: 'bonus',
+      entityId: id,
+      changes: { bonus: row },
+      ipAddress: clientIp(req),
+    });
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    if (err.code === 'P2025') return NextResponse.json({ error: 'not found' }, { status: 404 });
+    console.error('DELETE /api/admin/bonuses', err);
+    return NextResponse.json({ error: 'Failed to delete bonus' }, { status: 500 });
+  }
 }

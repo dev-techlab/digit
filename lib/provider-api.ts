@@ -4,9 +4,7 @@
 // that package.
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 
 /**
  * The upstream provider-catalog API base URL — an admin-managed integration
@@ -14,12 +12,12 @@ import * as s from '@/lib/db/schema';
  * it can be repointed without a redeploy. Not public (queried directly,
  * bypassing getSettings()'s is_public filter) since it's server-only.
  */
-export async function getProviderApiBaseUrl(): Promise<string> {
-  const [row] = await db
-    .select({ value: s.siteSettings.value })
-    .from(s.siteSettings)
-    .where(eq(s.siteSettings.key, 'provider.api_base_url'));
-  return row?.value;
+export async function getProviderApiBaseUrl(): Promise<string | undefined> {
+  const row = await db.site_settings.findFirst({
+    where: { key: 'provider.api_base_url' },
+    select: { value: true },
+  });
+  return row?.value as string | undefined;
 }
 
 interface ApiProvider {
@@ -84,8 +82,8 @@ export interface SyncGamePlatformsResult {
 export async function syncGamePlatforms(): Promise<SyncGamePlatformsResult> {
   const [sc, gc] = await Promise.all([fetchProviders('SC'), fetchProviders('GC')]);
 
-  const existing = await db.select().from(s.gamePlatforms);
-  const byName = new Map(existing.map((row) => [normalize(row.name), row]));
+  const existing = await db.game_platforms.findMany();
+  const byName = new Map(existing.map((row: any) => [normalize(row.name), row]));
   const now = new Date();
 
   // De-dupe within each type by providerCode first (defensive against a
@@ -126,27 +124,30 @@ export async function syncGamePlatforms(): Promise<SyncGamePlatformsResult> {
     }
 
     const values = {
-      iconUrl: chosen.iconUrl,
-      externalId: chosen.id,
-      providerCode: chosen.providerCode,
-      providerType: chosen.providerType,
-      launchUrl: chosen.launchUrlTemplate,
+      icon_url: chosen.iconUrl,
+      external_id: chosen.id,
+      provider_code: chosen.providerCode,
+      provider_type: chosen.providerType as any,
+      launch_url: chosen.launchUrlTemplate,
       sort: chosen.sort,
-      isActive: chosen.status === 1,
-      syncedAt: now,
+      is_active: chosen.status === 1,
+      synced_at: now,
     };
     if (match) {
-      await db
-        .update(s.gamePlatforms)
-        .set({ ...values, name: chosen.name }) // adopt the API's canonical name
-        .where(eq(s.gamePlatforms.id, match.id));
+      await db.game_platforms.update({
+        where: { id: match.id },
+        data: { ...values, name: chosen.name },
+      });
       updated++;
     } else {
-      await db
-        .insert(s.gamePlatforms)
-        .values({ name: chosen.name, slug: slugify(chosen.name), ...values })
-        .onConflictDoNothing();
-      inserted++;
+      try {
+        await db.game_platforms.create({
+          data: { name: chosen.name, slug: slugify(chosen.name), ...values },
+        });
+        inserted++;
+      } catch (e: any) {
+        if (e.code !== 'P2002') throw e;
+      }
     }
   }
 
@@ -156,11 +157,11 @@ export async function syncGamePlatforms(): Promise<SyncGamePlatformsResult> {
     );
   }
 
-  const total = await db.select({ n: s.gamePlatforms.id }).from(s.gamePlatforms);
+  const totalCount = await db.game_platforms.count();
   return {
     updated,
     inserted,
-    total: total.length,
+    total: totalCount,
     unmatchedExisting: existing.length - updated,
     sources: { sc: sc.source, gc: gc.source },
     crossTypeConflicts,

@@ -1,44 +1,70 @@
 import { NextResponse } from 'next/server';
-import { and, desc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAgentFromRequest } from '@/lib/agent-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/** GET /api/agent/members/:id — detail: login history + platform bindings. */
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const [member] = await db
-    .select()
-    .from(s.members)
-    .where(and(eq(s.members.id, params.id), eq(s.members.storeId, agent.storeId)));
+  const member = await db.members.findFirst({
+    where: {
+      id: params.id,
+      store_id: agent.storeId
+    }
+  });
+
   if (!member) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  const logins = await db
-    .select({
-      ipAddress: s.memberLogins.ipAddress,
-      device: s.memberLogins.device,
-      createdAt: s.memberLogins.createdAt,
-    })
-    .from(s.memberLogins)
-    .where(eq(s.memberLogins.memberId, member.id))
-    .orderBy(desc(s.memberLogins.createdAt))
-    .limit(20);
+  const rawLogins = await db.member_logins.findMany({
+    where: { member_id: member.id },
+    orderBy: { created_at: 'desc' },
+    take: 20,
+    select: {
+      ip_address: true,
+      device: true,
+      created_at: true,
+    }
+  });
 
-  const bindings = await db
-    .select({
-      platform: s.gamePlatforms.name,
-      gameUsername: s.memberPlatformAccounts.gameUsername,
-      createdAt: s.memberPlatformAccounts.createdAt,
-    })
-    .from(s.memberPlatformAccounts)
-    .innerJoin(s.gamePlatforms, eq(s.gamePlatforms.id, s.memberPlatformAccounts.platformId))
-    .where(eq(s.memberPlatformAccounts.memberId, member.id));
+  const logins = rawLogins.map(l => ({
+    ipAddress: l.ip_address,
+    device: l.device,
+    createdAt: l.created_at,
+  }));
 
-  const { passwordHash: _omit, ...safe } = member;
-  return NextResponse.json({ member: safe, logins, bindings });
+  const rawBindings = await db.member_platform_accounts.findMany({
+    where: { member_id: member.id },
+    select: {
+      game_username: true,
+      created_at: true,
+      game_platforms: {
+        select: { name: true }
+      }
+    }
+  });
+
+  const bindings = rawBindings.map(b => ({
+    platform: b.game_platforms.name,
+    gameUsername: b.game_username,
+    createdAt: b.created_at,
+  }));
+
+  const safeFormatted = {
+    id: member.id,
+    storeId: member.store_id,
+    saleAgentId: member.sale_agent_id,
+    subAgentId: member.sub_agent_id,
+    username: member.username,
+    phone: member.phone,
+    onlineSc: member.online_sc,
+    scRewardEnabled: member.sc_reward_enabled,
+    remark: member.remark,
+    status: member.status,
+    createdAt: member.created_at,
+  };
+
+  return NextResponse.json({ member: safeFormatted, logins, bindings });
 }

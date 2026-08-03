@@ -1,14 +1,11 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAgentFromRequest } from '@/lib/agent-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/** POST /api/agent/change-password — { current, next } (min 6 chars). */
 export async function POST(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -23,17 +20,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
   }
 
-  const [row] = await db
-    .select({ passwordHash: s.agents.passwordHash })
-    .from(s.agents)
-    .where(eq(s.agents.id, agent.id));
-  if (!row || !(await bcrypt.compare(current, row.passwordHash))) {
+  const row = await db.agents.findUnique({
+    where: { id: agent.id },
+    select: { password_hash: true }
+  });
+  
+  if (!row || !(await bcrypt.compare(current, row.password_hash))) {
     return NextResponse.json({ error: 'Current password is incorrect' }, { status: 400 });
   }
 
-  await db
-    .update(s.agents)
-    .set({ passwordHash: await bcrypt.hash(next, 10) })
-    .where(eq(s.agents.id, agent.id));
+  await db.agents.update({
+    where: { id: agent.id },
+    data: { password_hash: await bcrypt.hash(next, 10) }
+  });
   return NextResponse.json({ ok: true });
 }

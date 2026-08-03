@@ -1,11 +1,8 @@
 import { NextResponse } from 'next/server';
-import { asc, eq, isNotNull, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission, PermissionError } from '@/lib/rbac-core';
 import { clientIp, logAdminAction } from '@/lib/audit-log';
-import { isUniqueViolation } from '@/lib/db-errors';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -15,7 +12,6 @@ const int = (v: unknown, fallback = 0) =>
   Number.isFinite(Number(v)) ? Math.trunc(Number(v)) : fallback;
 const bool = (v: unknown, fallback = false) => (typeof v === 'boolean' ? v : fallback);
 
-/** Resolve + permission-check the caller; returns the adminId or a ready-to-return error response. */
 async function authorize(
   req: Request,
   permKey: string
@@ -40,20 +36,17 @@ async function authorize(
   return { adminId, error: undefined };
 }
 
-/** GET /api/admin/providers — full provider catalog (excluding soft-deleted) for management. */
 export async function GET(req: Request) {
   const { error } = await authorize(req, 'providers.read');
   if (error) return error;
 
-  const providers = await db
-    .select()
-    .from(s.gameProviders)
-    .where(isNull(s.gameProviders.deletedAt))
-    .orderBy(asc(s.gameProviders.sort), asc(s.gameProviders.name));
+  const providers = await db.game_providers.findMany({
+    where: { deleted_at: null },
+    orderBy: [{ sort: 'asc' }, { name: 'asc' }]
+  });
   return NextResponse.json({ providers });
 }
 
-/** POST /api/admin/providers — create a new provider row. */
 export async function POST(req: Request) {
   const { error, adminId } = await authorize(req, 'providers.write');
   if (error) return error;
@@ -76,47 +69,40 @@ export async function POST(req: Request) {
   if (!providerType)
     return NextResponse.json({ error: 'providerType must be SC or GC' }, { status: 400 });
 
-  const values: typeof s.gameProviders.$inferInsert = {
+  const values: any = {
     id,
     name,
-    providerCode,
-    launchUrlTemplate,
-    iconUrl,
-    providerType,
+    provider_code: providerCode,
+    launch_url_template: launchUrlTemplate,
+    icon_url: iconUrl,
+    provider_type: providerType,
     status: int(body.status, 1),
     sort: int(body.sort, 0),
-    createType: int(body.createType, 1),
+    create_type: int(body.createType, 1),
     operate: int(body.operate, 0),
-    needInitBalance: int(body.needInitBalance, 0),
-    canManualInput: int(body.canManualInput, 1),
-    iframeSupported: bool(body.iframeSupported, false),
-    isMachineSupported: int(body.isMachineSupported, 0),
-    redeemField: int(body.redeemField, 0),
-    invalidPasswordState: int(body.invalidPasswordState, 0),
-    canChangePassword: int(body.canChangePassword, 1),
+    need_init_balance: int(body.needInitBalance, 0),
+    can_manual_input: int(body.canManualInput, 1),
+    iframe_supported: bool(body.iframeSupported, false),
+    is_machine_supported: int(body.isMachineSupported, 0),
+    redeem_field: int(body.redeemField, 0),
+    invalid_password_state: int(body.invalidPasswordState, 0),
+    can_change_password: int(body.canChangePassword, 1),
   };
 
   try {
-    // A same-id conflict against a soft-deleted row restores it (with the new
-    // values) instead of failing — the id is otherwise invisible/reusable
-    // from the admin's point of view once deleted. A conflict against a
-    // still-active row is a real conflict and falls through to the WHERE
-    // clause not matching, leaving `row` undefined.
-    const [row] = await db
-      .insert(s.gameProviders)
-      .values(values)
-      .onConflictDoUpdate({
-        target: s.gameProviders.id,
-        set: { ...values, deletedAt: null },
-        setWhere: isNotNull(s.gameProviders.deletedAt),
-      })
-      .returning();
-    if (!row) {
+    let row = await db.game_providers.findUnique({ where: { id } });
+    if (row && row.deleted_at === null) {
       return NextResponse.json(
         { error: 'A provider with that id already exists' },
         { status: 409 }
       );
     }
+    if (row) {
+      row = await db.game_providers.update({ where: { id }, data: { ...values, deleted_at: null } });
+    } else {
+      row = await db.game_providers.create({ data: values });
+    }
+
     await logAdminAction({
       adminId,
       action: 'provider.create',
@@ -126,8 +112,8 @@ export async function POST(req: Request) {
       ipAddress: clientIp(req),
     });
     return NextResponse.json({ provider: row }, { status: 201 });
-  } catch (err) {
-    if (isUniqueViolation(err)) {
+  } catch (err: any) {
+    if (err.code === 'P2002') {
       return NextResponse.json(
         { error: 'A provider with that id already exists' },
         { status: 409 }
@@ -138,7 +124,6 @@ export async function POST(req: Request) {
   }
 }
 
-/** PUT /api/admin/providers — update an existing provider ({ id, ...fields }). */
 export async function PUT(req: Request) {
   const { error, adminId } = await authorize(req, 'providers.write');
   if (error) return error;
@@ -147,32 +132,30 @@ export async function PUT(req: Request) {
   const id = int(body.id, NaN);
   if (!Number.isFinite(id)) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
-  const set: Partial<typeof s.gameProviders.$inferInsert> = { syncedAt: new Date() };
+  const set: any = { synced_at: new Date() };
   if (str(body.name)) set.name = str(body.name);
-  if (str(body.providerCode)) set.providerCode = str(body.providerCode);
-  if (str(body.launchUrlTemplate)) set.launchUrlTemplate = str(body.launchUrlTemplate);
-  if (str(body.iconUrl)) set.iconUrl = str(body.iconUrl);
+  if (str(body.providerCode)) set.provider_code = str(body.providerCode);
+  if (str(body.launchUrlTemplate)) set.launch_url_template = str(body.launchUrlTemplate);
+  if (str(body.iconUrl)) set.icon_url = str(body.iconUrl);
   if (body.providerType === 'SC' || body.providerType === 'GC')
-    set.providerType = body.providerType;
+    set.provider_type = body.providerType;
   if (body.status != null) set.status = int(body.status);
   if (body.sort != null) set.sort = int(body.sort);
-  if (body.createType != null) set.createType = int(body.createType);
+  if (body.createType != null) set.create_type = int(body.createType);
   if (body.operate != null) set.operate = int(body.operate);
-  if (body.needInitBalance != null) set.needInitBalance = int(body.needInitBalance);
-  if (body.canManualInput != null) set.canManualInput = int(body.canManualInput);
-  if (typeof body.iframeSupported === 'boolean') set.iframeSupported = body.iframeSupported;
-  if (body.isMachineSupported != null) set.isMachineSupported = int(body.isMachineSupported);
-  if (body.redeemField != null) set.redeemField = int(body.redeemField);
-  if (body.invalidPasswordState != null) set.invalidPasswordState = int(body.invalidPasswordState);
-  if (body.canChangePassword != null) set.canChangePassword = int(body.canChangePassword);
+  if (body.needInitBalance != null) set.need_init_balance = int(body.needInitBalance);
+  if (body.canManualInput != null) set.can_manual_input = int(body.canManualInput);
+  if (typeof body.iframeSupported === 'boolean') set.iframe_supported = body.iframeSupported;
+  if (body.isMachineSupported != null) set.is_machine_supported = int(body.isMachineSupported);
+  if (body.redeemField != null) set.redeem_field = int(body.redeemField);
+  if (body.invalidPasswordState != null) set.invalid_password_state = int(body.invalidPasswordState);
+  if (body.canChangePassword != null) set.can_change_password = int(body.canChangePassword);
 
   try {
-    const [row] = await db
-      .update(s.gameProviders)
-      .set(set)
-      .where(eq(s.gameProviders.id, id))
-      .returning();
-    if (!row) return NextResponse.json({ error: 'not found' }, { status: 404 });
+    const row = await db.game_providers.update({
+      where: { id },
+      data: set
+    });
     await logAdminAction({
       adminId,
       action: 'provider.update',
@@ -182,8 +165,9 @@ export async function PUT(req: Request) {
       ipAddress: clientIp(req),
     });
     return NextResponse.json({ provider: row });
-  } catch (err) {
-    if (isUniqueViolation(err)) {
+  } catch (err: any) {
+    if (err.code === 'P2025') return NextResponse.json({ error: 'not found' }, { status: 404 });
+    if (err.code === 'P2002') {
       return NextResponse.json(
         { error: 'Update conflicts with an existing provider' },
         { status: 409 }
@@ -194,13 +178,6 @@ export async function PUT(req: Request) {
   }
 }
 
-/**
- * DELETE /api/admin/providers?id=... — soft delete: stamps `deletedAt` and
- * hides the provider from the catalog (this list, the player /game lobby).
- * Nothing is destroyed — existing `provider_deposit_tiers` and
- * `user_provider_accounts` (real player game credentials/balance) are left
- * exactly as they were. There is no separate hard-delete path.
- */
 export async function DELETE(req: Request) {
   const { error, adminId } = await authorize(req, 'providers.write');
   if (error) return error;
@@ -208,19 +185,22 @@ export async function DELETE(req: Request) {
   const id = int(new URL(req.url).searchParams.get('id'), NaN);
   if (!Number.isFinite(id)) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
-  const [row] = await db
-    .update(s.gameProviders)
-    .set({ deletedAt: new Date() })
-    .where(eq(s.gameProviders.id, id))
-    .returning();
-  if (!row) return NextResponse.json({ error: 'not found' }, { status: 404 });
-  await logAdminAction({
-    adminId,
-    action: 'provider.delete',
-    entityType: 'game_provider',
-    entityId: String(id),
-    changes: { provider: row },
-    ipAddress: clientIp(req),
-  });
-  return NextResponse.json({ ok: true });
+  try {
+    const row = await db.game_providers.update({
+      where: { id },
+      data: { deleted_at: new Date() }
+    });
+    await logAdminAction({
+      adminId,
+      action: 'provider.delete',
+      entityType: 'game_provider',
+      entityId: String(id),
+      changes: { provider: row },
+      ipAddress: clientIp(req),
+    });
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    if (err.code === 'P2025') return NextResponse.json({ error: 'not found' }, { status: 404 });
+    return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });
+  }
 }

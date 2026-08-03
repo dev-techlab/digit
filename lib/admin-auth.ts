@@ -1,7 +1,5 @@
 import 'server-only';
-import { and, eq, gt, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 
 function cookieValue(cookieHeader: string | null, name: string): string | null {
   if (!cookieHeader) return null;
@@ -24,19 +22,15 @@ export async function getAdminIdFromRequest(req: Request): Promise<string | null
   const token = bearer ?? cookieValue(req.headers.get('cookie'), 'admin_session');
   if (!token) return null;
 
-  const session = await db
-    .select({ adminId: s.adminSessions.adminId })
-    .from(s.adminSessions)
-    .innerJoin(s.admins, eq(s.admins.id, s.adminSessions.adminId))
-    .where(
-      and(
-        eq(s.adminSessions.token, token),
-        gt(s.adminSessions.expiresAt, new Date()),
-        isNull(s.adminSessions.revokedAt),
-        eq(s.admins.status, 'active')
-      )
-    )
-    .limit(1);
+  const session = await db.admin_sessions.findFirst({
+    where: {
+      token,
+      expires_at: { gt: new Date() },
+      revoked_at: null,
+      admins: { status: 'active' },
+    },
+    select: { admin_id: true },
+  });
 
-  return session[0]?.adminId ?? null;
+  return session?.admin_id ?? null;
 }
