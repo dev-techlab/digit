@@ -7,12 +7,13 @@ interface IconInputProps extends InputHTMLAttributes<HTMLInputElement> {
   labelAction?: ReactNode;
   trailing?: ReactNode;
   error?: boolean;
+  containerClassName?: string;
 }
 
 export const IconInput = forwardRef<HTMLInputElement, IconInputProps>(
-  ({ icon, label, labelAction, trailing, error, className, ...props }, ref) => {
+  ({ icon, label, labelAction, trailing, error, className, containerClassName, ...props }, ref) => {
     return (
-      <div>
+      <div className={containerClassName}>
         {(label || labelAction) && (
           <div className="mb-1.5 flex items-center justify-between">
             {label && (

@@ -199,7 +199,7 @@ export function LoginModal() {
                 <IconInput
                   icon={<Lock size={16} />}
                   placeholder="Verification code"
-                  className="flex-1"
+                  containerClassName="flex-1"
                   autoComplete="one-time-code"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}

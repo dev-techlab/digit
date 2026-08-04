@@ -248,23 +248,30 @@ export function RegisterModal() {
           )}
 
           <div className="mt-4 w-full space-y-4 text-left">
-            <IconInput
-              icon={<Lock size={16} />}
-              label="Verification Code"
-              placeholder="Enter 6-digit code"
-              value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value)}
-            />
+            <div>
+              <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--text-secondary)]">
+                Verification Code
+              </span>
+              <div className="flex gap-2">
+                <IconInput
+                  icon={<Lock size={16} />}
+                  placeholder="Enter 6-digit code"
+                  containerClassName="flex-1"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                />
+                <Button
+                  variant="secondary"
+                  className="whitespace-nowrap px-4"
+                  disabled={sendingCode || cooldown > 0}
+                  onClick={sendCode}
+                >
+                  {cooldown > 0 ? `Resend (${cooldown}s)` : sendingCode ? 'Sending…' : 'Resend code'}
+                </Button>
+              </div>
+            </div>
             <Button fullWidth onClick={verifyOtp} disabled={loading || !otpCode}>
               {loading ? 'Verifying…' : 'Verify Account'}
-            </Button>
-            <Button
-              variant="secondary"
-              fullWidth
-              disabled={sendingCode || cooldown > 0}
-              onClick={sendCode}
-            >
-              {cooldown > 0 ? `Resend code (${cooldown}s)` : sendingCode ? 'Sending…' : 'Resend code'}
             </Button>
             <Button variant="secondary" fullWidth onClick={() => setPendingVerification(false)}>
               Back
