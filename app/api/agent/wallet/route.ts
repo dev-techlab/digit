@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAgentFromRequest } from '@/lib/agent-auth';
-
-import { db } from '@/lib/db';
-import { getAgentFromRequest } from '@/lib/agent-auth';
 import { z } from 'zod';
 
 const putSchema = z.object({
@@ -283,7 +280,7 @@ export async function POST(req: Request) {
       data: {
         agent_id: agent.storeId,
         type: 'deposit',
-        method,
+        method: method as any,
         amount: String(amount),
         balance_before: String(store?.online_balance || 0),
         status: 'pending',
@@ -315,7 +312,7 @@ export async function POST(req: Request) {
           data: {
             agent_id: agent.storeId,
             type: 'withdraw',
-            method,
+            method: method as any,
             amount: String(amount),
             fee: String(fee),
             commission_per: String(commPer),
