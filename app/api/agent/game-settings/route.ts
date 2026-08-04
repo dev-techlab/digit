@@ -1,9 +1,27 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAgentFromRequest } from '@/lib/agent-auth';
+import { z } from 'zod';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+const putSchema = z.object({
+  platformId: z.string().min(1, 'platformId required'),
+  enabled: z.boolean().optional(),
+  kioskId: z.string().optional(),
+  posAccount: z.string().optional(),
+  posPassword: z.string().optional(),
+  moneyBox: z.string().optional(),
+  remark: z.string().optional(),
+  scoreCostPct: z.coerce.number().optional(),
+  minDeposit: z.coerce.number().optional(),
+  minRedemption: z.coerce.number().optional(),
+  redeemDailyLimit: z.coerce.number().optional(),
+  minDepositToUnlock: z.coerce.number().optional()
+});
+
+const postSchema = z.object({
+  platformId: z.string().min(1, 'platformId required')
+});
+
 
 export async function GET(req: Request) {
   const agent = await getAgentFromRequest(req);
@@ -82,23 +100,29 @@ export async function PUT(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const platformId = typeof body.platformId === 'string' ? body.platformId : '';
-  if (!platformId) return NextResponse.json({ error: 'platformId required' }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+  const parseResult = putSchema.safeParse(body);
+
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+  }
+
+  const data = parseResult.data;
+  const platformId = data.platformId;
 
   const set: any = { updated_at: new Date() };
-  if (typeof body.enabled === 'boolean') set.enabled = body.enabled;
-  if (typeof body.kioskId === 'string') set.kiosk_id = body.kioskId;
-  if (typeof body.posAccount === 'string') set.pos_account = body.posAccount;
-  if (typeof body.posPassword === 'string') set.pos_password = body.posPassword;
-  if (typeof body.moneyBox === 'string') set.money_box = body.moneyBox;
-  if (typeof body.remark === 'string') set.remark = body.remark;
+  if (data.enabled !== undefined) set.enabled = data.enabled;
+  if (data.kioskId !== undefined) set.kiosk_id = data.kioskId;
+  if (data.posAccount !== undefined) set.pos_account = data.posAccount;
+  if (data.posPassword !== undefined) set.pos_password = data.posPassword;
+  if (data.moneyBox !== undefined) set.money_box = data.moneyBox;
+  if (data.remark !== undefined) set.remark = data.remark;
 
-  if (body.scoreCostPct != null && Number.isFinite(Number(body.scoreCostPct))) set.score_cost_pct = String(body.scoreCostPct);
-  if (body.minDeposit != null && Number.isFinite(Number(body.minDeposit))) set.min_deposit = String(body.minDeposit);
-  if (body.minRedemption != null && Number.isFinite(Number(body.minRedemption))) set.min_redemption = String(body.minRedemption);
-  if (body.redeemDailyLimit != null && Number.isFinite(Number(body.redeemDailyLimit))) set.redeem_daily_limit = String(body.redeemDailyLimit);
-  if (body.minDepositToUnlock != null && Number.isFinite(Number(body.minDepositToUnlock))) set.min_deposit_to_unlock = String(body.minDepositToUnlock);
+  if (data.scoreCostPct !== undefined) set.score_cost_pct = String(data.scoreCostPct);
+  if (data.minDeposit !== undefined) set.min_deposit = String(data.minDeposit);
+  if (data.minRedemption !== undefined) set.min_redemption = String(data.minRedemption);
+  if (data.redeemDailyLimit !== undefined) set.redeem_daily_limit = String(data.redeemDailyLimit);
+  if (data.minDepositToUnlock !== undefined) set.min_deposit_to_unlock = String(data.minDepositToUnlock);
 
   await db.store_platform_accounts.upsert({
     where: {
@@ -121,9 +145,14 @@ export async function POST(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const platformId = typeof body.platformId === 'string' ? body.platformId : '';
-  if (!platformId) return NextResponse.json({ error: 'platformId required' }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+  const parseResult = postSchema.safeParse(body);
+
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+  }
+
+  const { platformId } = parseResult.data;
 
   await db.store_platform_accounts.updateMany({
     where: {

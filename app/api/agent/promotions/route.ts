@@ -1,11 +1,38 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAgentFromRequest } from '@/lib/agent-auth';
-
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+import { z } from 'zod';
 
 const TYPES = ['promotion_game', 'double_game', 'loyalty_drop'] as const;
+
+const postSchema = z.object({
+  type: z.enum(TYPES).optional().default('promotion_game'),
+  maxBonus: z.coerce.number().positive('Max Bonus Amount is required'),
+  assignAgentId: z.string().nullable().optional(),
+  bonusPercent: z.coerce.number().optional().default(100),
+  hiddenFromAgentIds: z.array(z.string()).optional().default([]),
+  minDeposit: z.coerce.number().optional().default(20),
+  redemptionMultiplier: z.coerce.number().optional().default(2),
+  activeDays: z.array(z.number()).optional().default([]),
+  timezone: z.string().optional().default('America/New_York'),
+  hiddenFromPlayers: z.boolean().optional().default(false),
+  onlineOnly: z.boolean().optional().default(false),
+  status: z.enum(['enabled', 'disabled']).optional().default('enabled'),
+  remark: z.string().nullable().optional()
+});
+
+const putSchema = z.object({
+  id: z.string().min(1, 'id required'),
+  status: z.enum(['enabled', 'disabled']).optional(),
+  remark: z.string().optional(),
+  bonusPercent: z.coerce.number().optional(),
+  minDeposit: z.coerce.number().optional(),
+  maxBonus: z.coerce.number().optional(),
+  redemptionMultiplier: z.coerce.number().optional(),
+  activeDays: z.array(z.number()).optional(),
+  hiddenFromPlayers: z.boolean().optional(),
+  onlineOnly: z.boolean().optional()
+});
 
 export async function GET(req: Request) {
   const agent = await getAgentFromRequest(req);
@@ -66,20 +93,20 @@ export async function POST(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const type = TYPES.includes(body.type as (typeof TYPES)[number])
-    ? (body.type as (typeof TYPES)[number])
-    : 'promotion_game';
-  const maxBonus = Number(body.maxBonus);
-  if (!Number.isFinite(maxBonus) || maxBonus <= 0) {
-    return NextResponse.json({ error: 'Max Bonus Amount is required' }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+  const parseResult = postSchema.safeParse(body);
+
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
   }
 
+  const data = parseResult.data;
+
   let assignAgentId: string | null = null;
-  if (typeof body.assignAgentId === 'string' && body.assignAgentId) {
+  if (data.assignAgentId) {
     const assignee = await db.agents.findFirst({
       where: {
-        id: body.assignAgentId,
+        id: data.assignAgentId,
         store_id: agent.storeId
       },
       select: { id: true }
@@ -93,23 +120,23 @@ export async function POST(req: Request) {
     assignAgentId = assignee.id;
   }
 
-  const bonusPercent = Math.min(200, Math.max(1, Number(body.bonusPercent) || 100));
+  const bonusPercent = Math.min(200, Math.max(1, data.bonusPercent));
   const created = await db.promotions.create({
     data: {
       store_id: agent.storeId,
       assign_agent_id: assignAgentId,
-      type: type as any,
-      hidden_from_agent_ids: Array.isArray(body.hiddenFromAgentIds) ? body.hiddenFromAgentIds : [],
+      type: data.type,
+      hidden_from_agent_ids: data.hiddenFromAgentIds,
       bonus_percent: String(bonusPercent),
-      min_deposit: String(Number(body.minDeposit) || 20),
-      max_bonus: String(maxBonus),
-      redemption_multiplier: String(Number(body.redemptionMultiplier) || 2),
-      active_days: Array.isArray(body.activeDays) ? body.activeDays : [],
-      timezone: typeof body.timezone === 'string' ? body.timezone : 'America/New_York',
-      hidden_from_players: body.hiddenFromPlayers === true,
-      online_only: body.onlineOnly === true,
-      status: body.status === 'disabled' ? 'disabled' : 'enabled',
-      remark: typeof body.remark === 'string' ? body.remark : null,
+      min_deposit: String(data.minDeposit),
+      max_bonus: String(data.maxBonus),
+      redemption_multiplier: String(data.redemptionMultiplier),
+      active_days: data.activeDays,
+      timezone: data.timezone,
+      hidden_from_players: data.hiddenFromPlayers,
+      online_only: data.onlineOnly,
+      status: data.status,
+      remark: data.remark || null,
     },
     select: { id: true }
   });
@@ -126,22 +153,28 @@ export async function PUT(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const id = typeof body.id === 'string' ? body.id : '';
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+  const parseResult = putSchema.safeParse(body);
+
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+  }
+
+  const data = parseResult.data;
+  const id = data.id;
 
   const set: any = {};
-  if (body.status === 'enabled' || body.status === 'disabled') set.status = body.status;
-  if (typeof body.remark === 'string') set.remark = body.remark;
-  if (body.bonusPercent != null)
-    set.bonus_percent = String(Math.min(200, Math.max(1, Number(body.bonusPercent) || 100)));
-  if (body.minDeposit != null) set.min_deposit = String(Number(body.minDeposit) || 0);
-  if (body.maxBonus != null) set.max_bonus = String(Number(body.maxBonus) || 0);
-  if (body.redemptionMultiplier != null)
-    set.redemption_multiplier = String(Number(body.redemptionMultiplier) || 2);
-  if (Array.isArray(body.activeDays)) set.active_days = body.activeDays;
-  if (typeof body.hiddenFromPlayers === 'boolean') set.hidden_from_players = body.hiddenFromPlayers;
-  if (typeof body.onlineOnly === 'boolean') set.online_only = body.onlineOnly;
+  if (data.status !== undefined) set.status = data.status;
+  if (data.remark !== undefined) set.remark = data.remark;
+  if (data.bonusPercent !== undefined)
+    set.bonus_percent = String(Math.min(200, Math.max(1, data.bonusPercent)));
+  if (data.minDeposit !== undefined) set.min_deposit = String(data.minDeposit);
+  if (data.maxBonus !== undefined) set.max_bonus = String(data.maxBonus);
+  if (data.redemptionMultiplier !== undefined)
+    set.redemption_multiplier = String(data.redemptionMultiplier);
+  if (data.activeDays !== undefined) set.active_days = data.activeDays;
+  if (data.hiddenFromPlayers !== undefined) set.hidden_from_players = data.hiddenFromPlayers;
+  if (data.onlineOnly !== undefined) set.online_only = data.onlineOnly;
 
   await db.promotions.updateMany({
     where: {

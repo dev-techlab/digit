@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
+import { z, ZodError } from 'zod';
 import { db } from '@/lib/db';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission, PermissionError } from '@/lib/rbac-core';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 async function authorize(req: Request, permKey: string) {
   const adminId = await getAdminIdFromRequest(req);
@@ -63,43 +62,45 @@ export async function GET(req: Request) {
   return NextResponse.json({ platforms: rows });
 }
 
+const putSchema = z.object({
+  agentId: z.string().uuid(),
+  assignments: z.array(z.object({
+    platformId: z.string().uuid(),
+    availableFromTime: z.string().optional().or(z.literal('')),
+    availableToTime: z.string().optional().or(z.literal('')),
+  })).optional(),
+  platformIds: z.array(z.string().uuid()).optional(),
+});
+
 export async function PUT(req: Request) {
   const auth = await authorize(req, 'platforms.write');
   if (auth.error) return auth.error;
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const agentId = typeof body.agentId === 'string' ? body.agentId : '';
+  try {
+    const body = await req.json();
+    const data = putSchema.parse(body);
 
-  if (!agentId) return NextResponse.json({ error: 'agentId required' }, { status: 400 });
+    const assignments: Array<{
+      platformId: string;
+      availableFromTime?: string;
+      availableToTime?: string;
+    }> = [];
 
-  const assignments: Array<{
-    platformId: string;
-    availableFromTime?: string;
-    availableToTime?: string;
-  }> = [];
-
-  if (Array.isArray(body.assignments)) {
-    for (const item of body.assignments) {
-      if (typeof item === 'object' && item && typeof item.platformId === 'string') {
+    if (data.assignments && data.assignments.length > 0) {
+      for (const item of data.assignments) {
         assignments.push({
           platformId: item.platformId,
-          availableFromTime:
-            typeof item.availableFromTime === 'string' ? item.availableFromTime || null : undefined,
-          availableToTime:
-            typeof item.availableToTime === 'string' ? item.availableToTime || null : undefined,
+          availableFromTime: item.availableFromTime || undefined,
+          availableToTime: item.availableToTime || undefined,
         });
       }
+    } else if (data.platformIds && data.platformIds.length > 0) {
+      assignments.push(...data.platformIds.map(platformId => ({ platformId })));
     }
-  } else {
-    const platformIds = Array.isArray(body.platformIds)
-      ? body.platformIds.filter((id: unknown): id is string => typeof id === 'string')
-      : [];
-    assignments.push(...platformIds.map((platformId: string) => ({ platformId })));
-  }
 
-  if (assignments.length === 0) {
+    if (assignments.length === 0) {
     await db.agent_platform_mappings.deleteMany({
-      where: { agent_id: agentId }
+      where: { agent_id: data.agentId }
     });
     return NextResponse.json({ ok: true });
   }
@@ -107,7 +108,7 @@ export async function PUT(req: Request) {
   const desiredIds = new Set(assignments.map((a) => a.platformId));
 
   const existing = await db.agent_platform_mappings.findMany({
-    where: { agent_id: agentId },
+    where: { agent_id: data.agentId },
     select: { id: true, platform_id: true }
   });
 
@@ -118,7 +119,7 @@ export async function PUT(req: Request) {
   if (toDelete.length) {
     await db.agent_platform_mappings.deleteMany({
       where: {
-        agent_id: agentId,
+        agent_id: data.agentId,
         platform_id: { in: toDelete }
       }
     });
@@ -141,7 +142,7 @@ export async function PUT(req: Request) {
     } else {
       await db.agent_platform_mappings.create({
         data: {
-          agent_id: agentId,
+          agent_id: data.agentId,
           platform_id: assignment.platformId,
           available_from_time: assignment.availableFromTime || null,
           available_to_time: assignment.availableToTime || null,
@@ -151,5 +152,12 @@ export async function PUT(req: Request) {
   }
 
   return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    if (err instanceof ZodError) {
+      return NextResponse.json({ error: err.issues[0].message }, { status: 400 });
+    }
+    console.error('PUT /api/admin/agent-platforms', err);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
 }
 

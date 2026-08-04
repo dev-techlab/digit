@@ -2,23 +2,29 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
 import { getAgentFromRequest } from '@/lib/agent-auth';
+import { z } from 'zod';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+const passwordSchema = z.object({
+  current: z.string().min(1, 'Current password is required'),
+  next: z.string().min(6, 'Password must be at least 6 characters')
+});
+
 
 export async function POST(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const current = typeof body.current === 'string' ? body.current : '';
-  const next = typeof body.next === 'string' ? body.next : '';
-  if (!current || !next) {
-    return NextResponse.json({ error: 'Current and new password are required' }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+  const parseResult = passwordSchema.safeParse(body);
+  
+  if (!parseResult.success) {
+    return NextResponse.json(
+      { error: parseResult.error.issues[0]?.message || 'Invalid input' },
+      { status: 400 }
+    );
   }
-  if (next.length < 6) {
-    return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
-  }
+
+  const { current, next } = parseResult.data;
 
   const row = await db.agents.findUnique({
     where: { id: agent.id },

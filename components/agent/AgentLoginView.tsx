@@ -33,8 +33,7 @@ export function AgentLoginView() {
     };
   }, []);
 
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [form, setForm] = useState({ username: '', password: '' });
   const [usernameError, setUsernameError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [formError, setFormError] = useState('');
@@ -42,8 +41,8 @@ export function AgentLoginView() {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const isUsernameValid = username.trim().length > 0;
-    const isPasswordValid = password.trim().length > 0;
+    const isUsernameValid = form.username.trim().length > 0;
+    const isPasswordValid = form.password.trim().length > 0;
     setUsernameError(!isUsernameValid);
     setPasswordError(!isPasswordValid);
     if (!isUsernameValid || !isPasswordValid) return;
@@ -53,7 +52,7 @@ export function AgentLoginView() {
     try {
       await api('/api/agent/login', {
         method: 'POST',
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify(form),
       });
       router.replace('/agent');
     } catch (err) {
@@ -90,11 +89,6 @@ export function AgentLoginView() {
           <p className="mt-1 text-sm text-slate-500 sm:text-base">Agent Panel Sign In</p>
         </div>
 
-        {formError && (
-          <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-center text-sm text-red-500">
-            {formError}
-          </p>
-        )}
 
         <form className="mt-4 sm:mt-6" onSubmit={submit} noValidate>
           <div className="space-y-3">
@@ -107,9 +101,9 @@ export function AgentLoginView() {
                 <UserRound className="h-5 w-5 flex-shrink-0 text-slate-400" strokeWidth={1.8} />
                 <input
                   type="text"
-                  value={username}
+                  value={form.username}
                   onChange={(e) => {
-                    setUsername(e.target.value);
+                    setForm(prev => ({ ...prev, username: e.target.value }));
                     if (usernameError) setUsernameError(false);
                   }}
                   placeholder="Username"
@@ -129,9 +123,9 @@ export function AgentLoginView() {
                 <Lock className="h-5 w-5 flex-shrink-0 text-slate-400" strokeWidth={1.8} />
                 <input
                   type="password"
-                  value={password}
+                  value={form.password}
                   onChange={(e) => {
-                    setPassword(e.target.value);
+                    setForm(prev => ({ ...prev, password: e.target.value }));
                     if (passwordError) setPasswordError(false);
                   }}
                   placeholder="Password"
@@ -151,6 +145,12 @@ export function AgentLoginView() {
               Reset password?
             </Link>
           </div>
+
+          {formError && (
+            <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-center text-sm text-red-500">
+              {formError}
+            </p>
+          )}
 
           <button
             type="submit"

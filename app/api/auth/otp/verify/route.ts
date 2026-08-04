@@ -5,8 +5,6 @@ import { createUserSession, getUserProfile, userIdByPhone } from '@/lib/user-ser
 import { db } from '@/lib/db';
 import { USER_SESSION_COOKIE, USER_SESSION_TTL_S, sessionCookieOptions } from '@/lib/auth-tokens';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 const PURPOSES = new Set<string>(['login', 'register', 'reset_password']);
 

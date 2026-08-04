@@ -3,9 +3,39 @@ import { db } from '@/lib/db';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission, PermissionError } from '@/lib/rbac-core';
 import { clientIp, logAdminAction } from '@/lib/audit-log';
+import { z } from 'zod';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+const postSchema = z.object({
+  id: z.string().trim().optional(),
+  title: z.string().trim().min(1, 'title required'),
+  description: z.string().trim().min(1, 'description required'),
+  tags: z.array(z.string().trim().min(1)).optional().default([]),
+  active: z.boolean().optional().default(true),
+  bannerType: z.enum(['gradient', 'placeholder']).optional().default('placeholder'),
+  bannerGradient: z.string().trim().nullable().optional(),
+  bannerBadgeIcon: z.enum(['coin', 'percent']).nullable().optional(),
+  bannerBadgeText: z.string().trim().nullable().optional(),
+  scheduleIcon: z.enum(['clock', 'calendar']).optional().default('calendar'),
+  scheduleText: z.string().trim().optional(),
+  scheduleCountdownSeconds: z.coerce.number().int().nullable().optional(),
+  sort: z.coerce.number().int().optional().default(0)
+});
+
+const putSchema = z.object({
+  id: z.string().trim().min(1, 'id required'),
+  title: z.string().trim().optional(),
+  description: z.string().trim().optional(),
+  tags: z.array(z.string().trim().min(1)).optional(),
+  active: z.boolean().optional(),
+  bannerType: z.enum(['gradient', 'placeholder']).optional(),
+  bannerGradient: z.string().trim().nullable().optional(),
+  bannerBadgeIcon: z.enum(['coin', 'percent', '']).nullable().optional(),
+  bannerBadgeText: z.string().trim().nullable().optional(),
+  scheduleIcon: z.enum(['clock', 'calendar']).optional(),
+  scheduleText: z.string().trim().optional(),
+  scheduleCountdownSeconds: z.coerce.number().int().nullable().optional(),
+  sort: z.coerce.number().int().optional()
+});
 
 async function authorize(
   req: Request,
@@ -31,11 +61,6 @@ async function authorize(
   return { adminId, error: undefined };
 }
 
-const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
-const int = (v: unknown): number | null => {
-  const n = Number(v);
-  return v != null && v !== '' && Number.isFinite(n) ? Math.trunc(n) : null;
-};
 const slugify = (v: string) =>
   v
     .toLowerCase()
@@ -58,42 +83,37 @@ export async function POST(req: Request) {
   const { error, adminId } = await authorize(req, 'bonuses.write');
   if (error) return error;
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const title = str(body.title);
-  const id = str(body.id) ? slugify(str(body.id)) : slugify(title);
-  const description = str(body.description);
-  const tags = Array.isArray(body.tags)
-    ? body.tags.filter((t: unknown): t is string => typeof t === 'string' && t.trim().length > 0)
-    : [];
-  const bannerType = body.bannerType === 'gradient' ? 'gradient' : 'placeholder';
-  const scheduleIcon = body.scheduleIcon === 'clock' ? 'clock' : 'calendar';
+  const body = await req.json().catch(() => ({}));
+  const parseResult = postSchema.safeParse(body);
 
-  if (!title) return NextResponse.json({ error: 'title required' }, { status: 400 });
-  if (!description) return NextResponse.json({ error: 'description required' }, { status: 400 });
-  if (!id)
-    return NextResponse.json(
-      { error: 'id (or a title to derive it from) is required' },
-      { status: 400 }
-    );
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+  }
+
+  const data = parseResult.data;
+  const id = data.id ? slugify(data.id) : slugify(data.title);
+  
+  if (!id) {
+    return NextResponse.json({ error: 'id (or a title to derive it from) is required' }, { status: 400 });
+  }
 
   const values: any = {
     id,
-    title,
-    description,
-    tags,
-    active: body.active !== false,
-    banner_type: bannerType,
-    banner_gradient: bannerType === 'gradient' ? str(body.bannerGradient) || null : null,
+    title: data.title,
+    description: data.description,
+    tags: data.tags,
+    active: data.active,
+    banner_type: data.bannerType,
+    banner_gradient: data.bannerType === 'gradient' ? data.bannerGradient || null : null,
     banner_badge_icon:
-      bannerType === 'gradient' &&
-      (body.bannerBadgeIcon === 'coin' || body.bannerBadgeIcon === 'percent')
-        ? body.bannerBadgeIcon
+      data.bannerType === 'gradient' && (data.bannerBadgeIcon === 'coin' || data.bannerBadgeIcon === 'percent')
+        ? data.bannerBadgeIcon
         : null,
-    banner_badge_text: bannerType === 'gradient' ? str(body.bannerBadgeText) || null : null,
-    schedule_icon: scheduleIcon,
-    schedule_text: str(body.scheduleText),
-    schedule_countdown_seconds: int(body.scheduleCountdownSeconds),
-    sort: int(body.sort) ?? 0,
+    banner_badge_text: data.bannerType === 'gradient' ? data.bannerBadgeText || null : null,
+    schedule_icon: data.scheduleIcon,
+    schedule_text: data.scheduleText || '',
+    schedule_countdown_seconds: data.scheduleCountdownSeconds ?? null,
+    sort: data.sort ?? 0,
   };
 
   try {
@@ -126,40 +146,40 @@ export async function PUT(req: Request) {
   const { error, adminId } = await authorize(req, 'bonuses.write');
   if (error) return error;
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const id = str(body.id);
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+  const parseResult = putSchema.safeParse(body);
+
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+  }
+
+  const data = parseResult.data;
+  const id = data.id;
 
   const set: any = {};
-  if (str(body.title)) set.title = str(body.title);
-  if (str(body.description)) set.description = str(body.description);
-  if (Array.isArray(body.tags)) {
-    set.tags = body.tags.filter(
-      (t: unknown): t is string => typeof t === 'string' && t.trim().length > 0
-    );
-  }
-  if (typeof body.active === 'boolean') set.active = body.active;
-  if (body.bannerType === 'gradient' || body.bannerType === 'placeholder') {
-    set.banner_type = body.bannerType;
-    if (body.bannerType === 'placeholder') {
+  if (data.title !== undefined) set.title = data.title;
+  if (data.description !== undefined) set.description = data.description;
+  if (data.tags !== undefined) set.tags = data.tags;
+  if (data.active !== undefined) set.active = data.active;
+  if (data.bannerType !== undefined) {
+    set.banner_type = data.bannerType;
+    if (data.bannerType === 'placeholder') {
       set.banner_gradient = null;
       set.banner_badge_icon = null;
       set.banner_badge_text = null;
     } else {
-      if (body.bannerGradient != null) set.banner_gradient = str(body.bannerGradient) || null;
-      if (body.bannerBadgeIcon === 'coin' || body.bannerBadgeIcon === 'percent')
-        set.banner_badge_icon = body.bannerBadgeIcon;
-      else if (body.bannerBadgeIcon === null || body.bannerBadgeIcon === '')
+      if (data.bannerGradient !== undefined) set.banner_gradient = data.bannerGradient || null;
+      if (data.bannerBadgeIcon === 'coin' || data.bannerBadgeIcon === 'percent')
+        set.banner_badge_icon = data.bannerBadgeIcon;
+      else if (data.bannerBadgeIcon === null || data.bannerBadgeIcon === '')
         set.banner_badge_icon = null;
-      if (body.bannerBadgeText != null) set.banner_badge_text = str(body.bannerBadgeText) || null;
+      if (data.bannerBadgeText !== undefined) set.banner_badge_text = data.bannerBadgeText || null;
     }
   }
-  if (body.scheduleIcon === 'clock' || body.scheduleIcon === 'calendar')
-    set.schedule_icon = body.scheduleIcon;
-  if (body.scheduleText != null) set.schedule_text = str(body.scheduleText);
-  if ('scheduleCountdownSeconds' in body)
-    set.schedule_countdown_seconds = int(body.scheduleCountdownSeconds);
-  if (body.sort != null) set.sort = int(body.sort) ?? 0;
+  if (data.scheduleIcon !== undefined) set.schedule_icon = data.scheduleIcon;
+  if (data.scheduleText !== undefined) set.schedule_text = data.scheduleText;
+  if (data.scheduleCountdownSeconds !== undefined) set.schedule_countdown_seconds = data.scheduleCountdownSeconds;
+  if (data.sort !== undefined) set.sort = data.sort;
 
   try {
     const row = await db.bonuses.update({ where: { id }, data: set });

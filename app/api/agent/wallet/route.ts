@@ -2,10 +2,25 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAgentFromRequest } from '@/lib/agent-auth';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+import { db } from '@/lib/db';
+import { getAgentFromRequest } from '@/lib/agent-auth';
+import { z } from 'zod';
 
-class InsufficientBalanceError extends Error {}
+const putSchema = z.object({
+  email: z.string().email().optional(),
+  storeName: z.string().max(20).optional(),
+  dailyMaxRedeem: z.coerce.number().optional(),
+  dailyMaxWithdraw: z.coerce.number().optional(),
+  phoneBindRewardSc: z.coerce.number().optional(),
+  logoUrl: z.string().max(2.8 * 1024 * 1024, 'Logo must be at most 2MB').optional()
+});
+
+const postSchema = z.object({
+  action: z.enum(['clear_tips', 'cancel', 'withdraw', 'deposit', 'transfer'], { message: "Invalid input" }),
+  id: z.string().trim().optional(),
+  amount: z.coerce.number().optional(),
+  method: z.string().nullable().optional()
+});class InsufficientBalanceError extends Error {}
 
 const DEPOSIT_METHODS = ['paypal_pyusd', 'cashapp_usdc', 'bitcoin', 'bitcoin_lightning'] as const;
 const WITHDRAW_METHODS = ['paypal_pyusd', 'cashapp_usdc', 'bitcoin', 'bank_card', 'ach'] as const;
@@ -137,29 +152,28 @@ export async function PUT(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
+  const body = await req.json().catch(() => ({}));
+  const parseResult = putSchema.safeParse(body);
 
-  if (typeof body.email === 'string' && body.email.includes('@')) {
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+  }
+
+  const data = parseResult.data;
+
+  if (data.email) {
     await db.agents.update({
       where: { id: agent.storeId },
-      data: { email: body.email }
+      data: { email: data.email }
     });
   }
 
   const patch: any = { updated_at: new Date() };
-  if (typeof body.storeName === 'string') patch.store_name = body.storeName.slice(0, 20);
-  for (const key of ['dailyMaxRedeem', 'dailyMaxWithdraw', 'phoneBindRewardSc'] as const) {
-    if (body[key] != null && Number.isFinite(Number(body[key]))) {
-      const dbKey = key === 'dailyMaxRedeem' ? 'daily_max_redeem' : (key === 'dailyMaxWithdraw' ? 'daily_max_withdraw' : 'phone_bind_reward_sc');
-      patch[dbKey] = String(body[key]);
-    }
-  }
-  if (typeof body.logoUrl === 'string') {
-    if (body.logoUrl.length > 2.8 * 1024 * 1024) {
-      return NextResponse.json({ error: 'Logo must be at most 2MB' }, { status: 400 });
-    }
-    patch.logo_url = body.logoUrl;
-  }
+  if (data.storeName !== undefined) patch.store_name = data.storeName;
+  if (data.dailyMaxRedeem !== undefined) patch.daily_max_redeem = String(data.dailyMaxRedeem);
+  if (data.dailyMaxWithdraw !== undefined) patch.daily_max_withdraw = String(data.dailyMaxWithdraw);
+  if (data.phoneBindRewardSc !== undefined) patch.phone_bind_reward_sc = String(data.phoneBindRewardSc);
+  if (data.logoUrl !== undefined) patch.logo_url = data.logoUrl;
 
   await db.store_settings.upsert({
     where: { store_id: agent.storeId },
@@ -183,8 +197,15 @@ export async function POST(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const action = body.action;
+  const body = await req.json().catch(() => ({}));
+  const parseResult = postSchema.safeParse(body);
+
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+  }
+
+  const data = parseResult.data;
+  const action = data.action;
 
   if (action === 'clear_tips') {
     const cleared = await db.$transaction(async (tx) => {
@@ -218,7 +239,7 @@ export async function POST(req: Request) {
   }
 
   if (action === 'cancel') {
-    const id = typeof body.id === 'string' ? body.id : '';
+    const id = data.id;
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
     const txRow = await db.agent_transactions.findFirst({
       where: {
@@ -243,11 +264,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  const amount = Number(body.amount);
-  if (action !== 'withdraw' && action !== 'deposit' && action !== 'transfer') {
-    return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
-  }
-  if (!Number.isFinite(amount) || amount <= 0) {
+  const amount = data.amount;
+  if (amount === undefined || amount <= 0) {
     return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
   }
 
@@ -255,7 +273,7 @@ export async function POST(req: Request) {
     if (amount < 50) {
       return NextResponse.json({ error: 'Minimum deposit is 50 USD' }, { status: 400 });
     }
-    const method = DEPOSIT_METHODS.includes(body.method as any) ? body.method : null;
+    const method = DEPOSIT_METHODS.includes(data.method as any) ? data.method : null;
     if (!method) return NextResponse.json({ error: 'Select a payment method' }, { status: 400 });
     const store = await db.agents.findUnique({
       where: { id: agent.storeId },
@@ -275,7 +293,7 @@ export async function POST(req: Request) {
   }
 
   if (action === 'withdraw') {
-    const method = WITHDRAW_METHODS.includes(body.method as any) ? body.method : null;
+    const method = WITHDRAW_METHODS.includes(data.method as any) ? data.method : null;
     if (!method) return NextResponse.json({ error: 'Select a withdrawal method' }, { status: 400 });
 
     try {

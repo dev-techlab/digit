@@ -9,6 +9,9 @@ import { SplashScreen } from '@/components/shell/SplashScreen';
 import { AuthModals } from '@/components/auth/AuthModals';
 import { APP_NAME } from '@/lib/constants';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export const metadata: Metadata = {
   metadataBase: new URL(env.NEXT_PUBLIC_SITE_URL),
   title: `${APP_NAME} - Game Recharge Platform`,

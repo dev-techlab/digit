@@ -11,8 +11,6 @@ import { requestOtp } from '@/lib/otp';
 import { sendEmailVerification } from '@/lib/mail';
 import { sendSms } from '@/lib/sms';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 const registerSchema = z
   .object({

@@ -2,10 +2,12 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAgentFromRequest } from '@/lib/agent-auth';
 import { Prisma } from '@/lib/generated/prisma/client';
+import { z } from 'zod';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-
+const putSchema = z.object({
+  id: z.string().min(1, 'id and decision required'),
+  decision: z.enum(['approved', 'rejected'], { message: "Invalid input" })
+});
 class InsufficientBalanceError extends Error {}
 
 export async function GET(req: Request) {
@@ -56,12 +58,14 @@ export async function PUT(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const id = typeof body.id === 'string' ? body.id : '';
-  const decision = body.decision;
-  if (!id || (decision !== 'approved' && decision !== 'rejected')) {
-    return NextResponse.json({ error: 'id and decision required' }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+  const parseResult = putSchema.safeParse(body);
+
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
   }
+
+  const { id, decision } = parseResult.data;
 
   try {
     await db.$transaction(async (tx) => {

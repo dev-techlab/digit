@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
+import { z, ZodError } from 'zod';
 import { db } from '@/lib/db';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { isSuperAdmin } from '@/lib/rbac-core';
 import bcrypt from 'bcryptjs';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   const adminId = await getAdminIdFromRequest(req);
@@ -64,6 +63,12 @@ export async function GET(req: Request) {
   });
 }
 
+const postSchema = z.object({
+  username: z.string().min(4, 'Username must be at least 4 characters'),
+  email: z.string().email('Invalid email format'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
 export async function POST(req: Request) {
   const adminId = await getAdminIdFromRequest(req);
   if (!adminId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -72,22 +77,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const body = await req.json().catch(() => ({}));
-  const { username, email, password } = body;
-
-  if (!username || !email || !password) {
-    return NextResponse.json(
-      { error: 'Username, email, and password are required' },
-      { status: 400 }
-    );
-  }
-
   try {
-    const passwordHash = await bcrypt.hash(password, 12);
+    const body = await req.json();
+    const data = postSchema.parse(body);
+
+    const passwordHash = await bcrypt.hash(data.password, 12);
     const newAdmin = await db.admins.create({
       data: {
-        username,
-        email,
+        username: data.username,
+        email: data.email,
         password_hash: passwordHash,
         created_by_admin_id: adminId,
       },
@@ -104,12 +102,15 @@ export async function POST(req: Request) {
         action: 'create_admin',
         entity_type: 'admin',
         entity_id: newAdmin.id,
-        changes: { username, email },
+        changes: { username: data.username, email: data.email },
       }
     });
 
     return NextResponse.json({ admin: newAdmin });
   } catch (e: any) {
+    if (e instanceof ZodError) {
+      return NextResponse.json({ error: e.issues[0].message }, { status: 400 });
+    }
     if (e.code === 'P2002') {
       return NextResponse.json({ error: 'Username or email already exists' }, { status: 409 });
     }

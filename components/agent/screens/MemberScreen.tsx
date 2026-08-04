@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { Plus, Gamepad2, MoreHorizontal, AlertCircle } from 'lucide-react';
 import { api, Btn, Card, Field, fmtDateTime, fmtMoney, Modal, TextInput } from '../ui';
@@ -35,11 +36,10 @@ export function MemberScreen() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [phone, setPhone] = useState('');
-  const [addOpen, setAddOpen] = useState(false);
+  const [view, setView] = useState<'list' | 'create'>('list');
   const [editRow, setEditRow] = useState<MemberRow | null>(null);
   const [detail, setDetail] = useState<MemberDetail | null>(null);
   const [remark, setRemark] = useState('');
-  const [form, setForm] = useState({ username: randUser(), password: randPass(), remark: '' });
   const [err, setErr] = useState<string | null>(null);
 
   const load = useCallback(
@@ -53,21 +53,11 @@ export function MemberScreen() {
     [page, search, phone]
   );
   useEffect(() => {
-    void load(1, '', '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const create = async () => {
-    setErr(null);
-    try {
-      await api('/api/agent/members', { method: 'POST', body: JSON.stringify(form) });
-      setAddOpen(false);
-      setForm({ username: randUser(), password: randPass(), remark: '' });
-      void load();
-    } catch (e) {
-      setErr((e as Error).message);
+    if (view === 'list') {
+      void load(1, '', '');
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view]);
 
   const saveEdit = async () => {
     if (!editRow) return;
@@ -88,16 +78,27 @@ export function MemberScreen() {
     setDetail(await api<MemberDetail>(`/api/agent/members/${row.id}`));
   };
 
+  if (view === 'create') {
+    import('@/components/agent/PlayerCreateView').then(); // preload
+  }
+
   return (
     <div className="space-y-4">
-      <Card>
-        <Btn variant="success" className="mb-4" onClick={() => setAddOpen(true)}>
-          <Plus size={16} /> Add Member
-        </Btn>
-        <DataTable
-          data={rows}
-          rowKey={(r) => r.id}
-          manualPagination
+      {view === 'create' ? (
+        <React.Suspense fallback={<div>Loading...</div>}>
+          {React.createElement(require('@/components/agent/PlayerCreateView').PlayerCreateView, {
+            onBack: () => setView('list'),
+          })}
+        </React.Suspense>
+      ) : (
+        <Card>
+          <Btn variant="success" className="mb-4" onClick={() => setView('create')}>
+            <Plus size={16} /> Add Player
+          </Btn>
+          <DataTable
+            data={rows}
+            rowKey={(r) => r.id}
+            manualPagination
           totalRows={total}
           currentPage={page}
           onPageChange={(p) => {
@@ -196,45 +197,9 @@ export function MemberScreen() {
           ]}
         />
       </Card>
+      )}
 
-      <Modal
-        title="Add Member"
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
-        footer={
-          <>
-            <Btn onClick={create}>Create</Btn>
-            <Btn variant="ghost" onClick={() => setAddOpen(false)}>
-              Cancel
-            </Btn>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{err}</p>}
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Username" required>
-              <TextInput
-                value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value })}
-              />
-            </Field>
-            <Field label="Password" required>
-              <TextInput
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-              />
-            </Field>
-          </div>
-          <Field label="Remark">
-            <TextInput
-              placeholder="Enter remark..."
-              value={form.remark}
-              onChange={(e) => setForm({ ...form, remark: e.target.value })}
-            />
-          </Field>
-        </div>
-      </Modal>
+
 
       <Modal
         title={editRow ? `Edit Member[${editRow.username}]` : ''}
@@ -250,7 +215,6 @@ export function MemberScreen() {
         }
       >
         <div className="space-y-4">
-          {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{err}</p>}
           <Field label="Remark">
             <TextInput
               placeholder="Enter remark..."
@@ -258,6 +222,7 @@ export function MemberScreen() {
               onChange={(e) => setRemark(e.target.value)}
             />
           </Field>
+          {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{err}</p>}
         </div>
       </Modal>
 

@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server';
 import { verifyOtp } from '@/lib/otp';
 import { userIdByPhone, setUserPassword } from '@/lib/user-service';
+import { z } from 'zod';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+const resetSchema = z.object({
+  destination: z.string().trim().min(1, 'destination and code are required'),
+  code: z.string().trim().min(1, 'destination and code are required'),
+  newPassword: z.string().min(6, 'Password must be at least 6 characters')
+});
+
 
 /**
  * POST /api/auth/reset-password — { destination, code, newPassword }.
@@ -12,16 +17,17 @@ export const dynamic = 'force-dynamic';
  * with the new password afterward.
  */
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const destination = typeof body.destination === 'string' ? body.destination.trim() : '';
-  const code = typeof body.code === 'string' ? body.code.trim() : '';
-  const newPassword = typeof body.newPassword === 'string' ? body.newPassword : '';
-  if (!destination || !code) {
-    return NextResponse.json({ error: 'destination and code are required' }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+  const parseResult = resetSchema.safeParse(body);
+
+  if (!parseResult.success) {
+    return NextResponse.json(
+      { error: parseResult.error.issues[0]?.message || 'Invalid input' },
+      { status: 400 }
+    );
   }
-  if (newPassword.length < 6) {
-    return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
-  }
+
+  const { destination, code, newPassword } = parseResult.data;
 
   const result = await verifyOtp(destination, 'reset_password', code);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });

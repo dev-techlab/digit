@@ -2,9 +2,13 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAgentFromRequest } from '@/lib/agent-auth';
 import { sanitizeHtml } from '@/lib/sanitize-html';
+import { z } from 'zod';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+const putSchema = z.object({
+  locale: z.enum(['en', 'es']).optional().default('en'),
+  content: z.string().nullable().optional()
+});
+
 
 export async function GET(req: Request) {
   const agent = await getAgentFromRequest(req);
@@ -30,9 +34,15 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: 'Only the store account can manage terms' }, { status: 403 });
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const locale = body.locale === 'es' ? 'es' : 'en';
-  const content = typeof body.content === 'string' ? sanitizeHtml(body.content) : null;
+  const body = await req.json().catch(() => ({}));
+  const parseResult = putSchema.safeParse(body);
+
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+  }
+
+  const { locale, content: rawContent } = parseResult.data;
+  const content = typeof rawContent === 'string' ? sanitizeHtml(rawContent) : null;
 
   await db.store_terms.upsert({
     where: {

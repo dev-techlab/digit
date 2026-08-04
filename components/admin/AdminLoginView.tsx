@@ -10,8 +10,7 @@ import { BrandLoader } from '@/components/shell/BrandLoader';
 
 export function AdminLoginView() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [form, setForm] = useState({ email: '', password: '' });
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [formError, setFormError] = useState('');
@@ -19,8 +18,8 @@ export function AdminLoginView() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const isEmailValid = email.trim().length > 0;
-    const isPasswordValid = password.trim().length > 0;
+    const isEmailValid = form.email.trim().length > 0;
+    const isPasswordValid = form.password.trim().length > 0;
     setEmailError(!isEmailValid);
     setPasswordError(!isPasswordValid);
     if (!isEmailValid || !isPasswordValid) return;
@@ -31,7 +30,7 @@ export function AdminLoginView() {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(form),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -89,9 +88,9 @@ export function AdminLoginView() {
                 <Mail className="h-5 w-5 flex-shrink-0 text-slate-400" strokeWidth={1.8} />
                 <input
                   type="email"
-                  value={email}
+                  value={form.email}
                   onChange={(e) => {
-                    setEmail(e.target.value);
+                    setForm(prev => ({ ...prev, email: e.target.value }));
                     if (emailError) setEmailError(false);
                   }}
                   placeholder="Email"
@@ -110,9 +109,9 @@ export function AdminLoginView() {
                 <Lock className="h-5 w-5 flex-shrink-0 text-slate-400" strokeWidth={1.8} />
                 <input
                   type="password"
-                  value={password}
+                  value={form.password}
                   onChange={(e) => {
-                    setPassword(e.target.value);
+                    setForm(prev => ({ ...prev, password: e.target.value }));
                     if (passwordError) setPasswordError(false);
                   }}
                   placeholder="Password"

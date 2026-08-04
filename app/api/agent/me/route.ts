@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAgentFromRequest } from '@/lib/agent-auth';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 /** GET /api/agent/me — current agent + store basics. */
 export async function GET(req: Request) {

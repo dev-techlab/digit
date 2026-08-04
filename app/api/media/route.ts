@@ -4,8 +4,6 @@ import { requirePermission, PermissionError } from '@/lib/rbac';
 import { uploadMedia, ALLOWED_UPLOAD_TYPES } from '@/lib/media';
 import { media_kind } from '@/lib/generated/prisma/client';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB
 const KINDS = new Set(Object.values(media_kind));

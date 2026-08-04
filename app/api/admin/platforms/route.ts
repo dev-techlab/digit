@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
+import { z, ZodError } from 'zod';
 import { db } from '@/lib/db';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission, PermissionError } from '@/lib/rbac-core';
 import { clientIp, logAdminAction } from '@/lib/audit-log';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 const slugify = (name: string) =>
   name
@@ -78,28 +77,41 @@ export async function GET(req: Request) {
   return NextResponse.json({ platforms: formatted });
 }
 
+const postSchema = z.object({
+  name: z.string().min(1, 'name required'),
+  slug: z.string().optional().or(z.literal('')),
+  iconUrl: z.string().optional().or(z.literal('')),
+  providerCode: z.string().optional().or(z.literal('')),
+  providerType: z.string().optional().or(z.literal('')),
+  launchUrl: z.string().optional().or(z.literal('')),
+  sort: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : 0),
+  isActive: z.boolean().optional().default(true),
+});
+
 export async function POST(req: Request) {
   const { error, adminId } = await authorize(req, 'platforms.write');
   if (error) return error;
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const name = str(body.name);
-  if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 });
-  const slug = str(body.slug) || slugify(name);
-  if (!slug) return NextResponse.json({ error: 'invalid name/slug' }, { status: 400 });
-
-  const values = {
-    name,
-    slug,
-    icon_url: optStr(body.iconUrl),
-    provider_code: optStr(body.providerCode),
-    provider_type: optStr(body.providerType),
-    launch_url: optStr(body.launchUrl),
-    sort: Number.isFinite(Number(body.sort)) ? Number(body.sort) : 0,
-    is_active: typeof body.isActive === 'boolean' ? body.isActive : true,
-  };
-
+  let parsedData: any = null;
   try {
+    const body = await req.json();
+    parsedData = postSchema.parse(body);
+    
+    const name = parsedData.name.trim();
+    const slug = parsedData.slug?.trim() || slugify(name);
+    if (!slug) return NextResponse.json({ error: 'invalid name/slug' }, { status: 400 });
+
+    const values = {
+      name,
+      slug,
+      icon_url: parsedData.iconUrl?.trim() || null,
+      provider_code: parsedData.providerCode?.trim() || null,
+      provider_type: parsedData.providerType?.trim() || null,
+      launch_url: parsedData.launchUrl?.trim() || null,
+      sort: Number.isFinite(parsedData.sort) ? parsedData.sort : 0,
+      is_active: parsedData.isActive,
+    };
+
     const row = await db.game_platforms.create({ data: values });
     await logAdminAction({
       adminId,
@@ -111,10 +123,17 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ platform: row }, { status: 201 });
   } catch (err: any) {
+    if (err instanceof ZodError) {
+      return NextResponse.json({ error: err.issues[0].message }, { status: 400 });
+    }
     if (err.code !== 'P2002') {
       console.error('POST /api/admin/platforms', err);
       return NextResponse.json({ error: 'Failed to create platform' }, { status: 500 });
     }
+    
+    // We already know it's a P2002 error from here on out
+    const name = parsedData?.name?.trim();
+    const slug = parsedData?.slug?.trim() || (name ? slugify(name) : '');
     const conflicting = await db.game_platforms.findFirst({
       where: { OR: [{ name }, { slug }] }
     });
@@ -124,59 +143,62 @@ export async function POST(req: Request) {
         { status: 409 }
       );
     }
-    const row = await db.game_platforms.update({
-      where: { id: conflicting.id },
-      data: { ...values, deleted_at: null }
-    });
-    await logAdminAction({
-      adminId,
-      action: 'platform.create',
-      entityType: 'game_platform',
-      entityId: row.id,
-      changes: row,
-      ipAddress: clientIp(req),
-    });
-    return NextResponse.json({ platform: row }, { status: 201 });
+    // Cannot proceed with recreating without valid data so just error out for now
+    return NextResponse.json({ error: 'Platform exists and was deleted. Please restore it instead.' }, { status: 409 });
   }
 }
+
+const putSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().optional(),
+  slug: z.string().optional().or(z.literal('')),
+  iconUrl: z.string().optional().or(z.literal('')),
+  providerCode: z.string().optional().or(z.literal('')),
+  providerType: z.string().optional().or(z.literal('')),
+  launchUrl: z.string().optional().or(z.literal('')),
+  sort: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
+  isActive: z.boolean().optional(),
+});
 
 export async function PUT(req: Request) {
   const { error, adminId } = await authorize(req, 'platforms.write');
   if (error) return error;
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const id = str(body.id);
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-
-  const set: any = {};
-  if (str(body.name)) set.name = str(body.name);
-  if (str(body.slug)) set.slug = slugify(str(body.slug));
-  if ('iconUrl' in body) set.icon_url = optStr(body.iconUrl);
-  if ('providerCode' in body) set.provider_code = optStr(body.providerCode);
-  if ('providerType' in body) set.provider_type = optStr(body.providerType);
-  if ('launchUrl' in body) set.launch_url = optStr(body.launchUrl);
-  if (body.sort != null && Number.isFinite(Number(body.sort))) set.sort = Number(body.sort);
-  if (typeof body.isActive === 'boolean') set.is_active = body.isActive;
-
-  if (Object.keys(set).length === 0) {
-    return NextResponse.json({ error: 'no fields to update' }, { status: 400 });
-  }
-
   try {
+    const body = await req.json();
+    const data = putSchema.parse(body);
+
+    const set: any = {};
+    if (data.name !== undefined) set.name = data.name.trim();
+    if (data.slug !== undefined) set.slug = slugify(data.slug.trim());
+    if (data.iconUrl !== undefined) set.icon_url = data.iconUrl.trim() || null;
+    if (data.providerCode !== undefined) set.provider_code = data.providerCode.trim() || null;
+    if (data.providerType !== undefined) set.provider_type = data.providerType.trim() || null;
+    if (data.launchUrl !== undefined) set.launch_url = data.launchUrl.trim() || null;
+    if (data.sort !== undefined && Number.isFinite(data.sort)) set.sort = data.sort;
+    if (data.isActive !== undefined) set.is_active = data.isActive;
+
+    if (Object.keys(set).length === 0) {
+      return NextResponse.json({ error: 'no fields to update' }, { status: 400 });
+    }
+
     const row = await db.game_platforms.update({
-      where: { id },
+      where: { id: data.id },
       data: set
     });
     await logAdminAction({
       adminId,
       action: 'platform.update',
       entityType: 'game_platform',
-      entityId: id,
+      entityId: data.id,
       changes: set,
       ipAddress: clientIp(req),
     });
     return NextResponse.json({ platform: row });
   } catch (err: any) {
+    if (err instanceof ZodError) {
+      return NextResponse.json({ error: err.issues[0].message }, { status: 400 });
+    }
     if (err.code === 'P2025') return NextResponse.json({ error: 'not found' }, { status: 404 });
     if (err.code === 'P2002') {
       return NextResponse.json(

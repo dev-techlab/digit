@@ -77,7 +77,6 @@ export function KioskScreen() {
         }
       >
         <div className="space-y-4">
-          {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{err}</p>}
           <Field label="Name" required>
             <TextInput
               value={form.name}
@@ -90,6 +89,7 @@ export function KioskScreen() {
               onChange={(e) => setForm({ ...form, code: e.target.value })}
             />
           </Field>
+          {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{err}</p>}
         </div>
       </Modal>
     </div>

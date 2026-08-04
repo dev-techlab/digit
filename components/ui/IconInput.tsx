@@ -7,11 +7,12 @@ interface IconInputProps extends InputHTMLAttributes<HTMLInputElement> {
   labelAction?: ReactNode;
   trailing?: ReactNode;
   error?: boolean;
+  errorMessage?: string;
   containerClassName?: string;
 }
 
 export const IconInput = forwardRef<HTMLInputElement, IconInputProps>(
-  ({ icon, label, labelAction, trailing, error, className, containerClassName, ...props }, ref) => {
+  ({ icon, label, labelAction, trailing, error, errorMessage, className, containerClassName, ...props }, ref) => {
     return (
       <div className={containerClassName}>
         {(label || labelAction) && (
@@ -34,7 +35,7 @@ export const IconInput = forwardRef<HTMLInputElement, IconInputProps>(
               'w-full rounded-md border border-[var(--input-border)] bg-[var(--input-bg)] py-3 pl-11 text-[15px] text-[var(--text-primary)] outline-none transition-shadow placeholder:text-[var(--text-secondary)]',
               trailing ? 'pr-11' : 'pr-4',
               'focus:border-brand focus:shadow-glowBrand',
-              error && 'border-danger focus:shadow-glowDanger',
+              (error || errorMessage) && 'border-danger focus:shadow-glowDanger',
               className
             )}
             {...props}
@@ -45,6 +46,9 @@ export const IconInput = forwardRef<HTMLInputElement, IconInputProps>(
             </span>
           )}
         </div>
+        {errorMessage && (
+          <p className="mt-1 text-xs text-danger">{errorMessage}</p>
+        )}
       </div>
     );
   }

@@ -3,9 +3,13 @@ import { db } from '@/lib/db';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission, PermissionError } from '@/lib/rbac-core';
 import { clientIp, logAdminAction } from '@/lib/audit-log';
+import { z } from 'zod';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+const actionSchema = z.object({
+  id: z.string().min(1, 'id required'),
+  action: z.enum(['accept', 'reject'], { message: "Invalid input" }),
+  remark: z.string().trim().nullable().optional()
+});
 
 async function authorize(
   req: Request,
@@ -102,15 +106,14 @@ export async function POST(req: Request) {
   const { error, adminId } = await authorize(req, 'agents.write');
   if (error) return error;
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const id = typeof body.id === 'string' ? body.id : '';
-  const action = typeof body.action === 'string' ? body.action : '';
-  const remark = typeof body.remark === 'string' ? body.remark.trim() : null;
+  const body = await req.json().catch(() => ({}));
+  const parseResult = actionSchema.safeParse(body);
 
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-  if (action !== 'accept' && action !== 'reject') {
-    return NextResponse.json({ error: 'invalid action' }, { status: 400 });
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
   }
+
+  const { id, action, remark } = parseResult.data;
 
   try {
     await db.$transaction(async (tx) => {

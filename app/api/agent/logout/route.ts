@@ -6,8 +6,6 @@ import {
 } from '@/lib/agent-auth';
 import { sessionCookieOptions } from '@/lib/auth-tokens';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 /** POST /api/agent/logout — revokes the session and clears the cookie. */
 export async function POST(req: Request) {

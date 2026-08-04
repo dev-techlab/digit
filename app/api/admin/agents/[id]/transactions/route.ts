@@ -3,8 +3,6 @@ import { db } from '@/lib/db';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission } from '@/lib/rbac-core';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const adminId = await getAdminIdFromRequest(req);

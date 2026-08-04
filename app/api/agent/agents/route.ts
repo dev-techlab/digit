@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
+import { z, ZodError } from 'zod';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'node:crypto';
 import { db } from '@/lib/db';
 import { getAgentFromRequest } from '@/lib/agent-auth';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   const agent = await getAgentFromRequest(req);
@@ -95,6 +94,16 @@ export async function GET(req: Request) {
   return NextResponse.json({ agents: formatted });
 }
 
+const postSchema = z.object({
+  type: z.enum(['sub', 'sale']).optional().default('sale'),
+  username: z.string().min(4, 'Username must be at least 4 characters'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  nickname: z.string().min(1, 'Nickname required'),
+  ratioPct: z.union([z.string(), z.number()]).optional().transform(v => Number(v)),
+  commissionPer: z.union([z.string(), z.number()]).optional().transform(v => Number(v)),
+  remark: z.string().max(300).optional().or(z.literal('')),
+});
+
 export async function POST(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -102,38 +111,32 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Only the store account can add agents' }, { status: 403 });
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const type = body.type === 'sub' ? 'sub' : 'sale';
-  const username = typeof body.username === 'string' ? body.username.trim() : '';
-  const password = typeof body.password === 'string' ? body.password : '';
-  const nickname = typeof body.nickname === 'string' ? body.nickname.trim() : '';
-  if (!username || !password || !nickname) {
-    return NextResponse.json(
-      { error: 'Username, password and nickname are required' },
-      { status: 400 }
-    );
-  }
-
   try {
+    const body = await req.json();
+    const data = postSchema.parse(body);
+
     const created = await db.agents.create({
       data: {
-        type,
-        username,
-        password_hash: await bcrypt.hash(password, 10),
-        nickname,
+        type: data.type,
+        username: data.username.trim(),
+        password_hash: await bcrypt.hash(data.password, 10),
+        nickname: data.nickname.trim(),
         store_id: agent.storeId,
         parent_agent_id: agent.id,
-        ratio_pct: Number.isFinite(Number(body.ratioPct)) ? String(body.ratioPct) : '0',
-        commission_per: Number.isFinite(Number(body.commissionPer))
-          ? String(body.commissionPer)
+        ratio_pct: Number.isFinite(data.ratioPct) ? String(data.ratioPct) : '0',
+        commission_per: Number.isFinite(data.commissionPer)
+          ? String(data.commissionPer)
           : '0',
         invite_code: `MC${randomBytes(8).toString('hex').toUpperCase()}`,
-        remark: typeof body.remark === 'string' ? body.remark.slice(0, 300) : null,
+        remark: data.remark?.trim() || null,
       },
       select: { id: true }
     });
     return NextResponse.json({ ok: true, id: created.id });
   } catch (e: any) {
+    if (e instanceof ZodError) {
+      return NextResponse.json({ error: e.issues[0].message }, { status: 400 });
+    }
     if (e.code === 'P2002') {
       return NextResponse.json({ error: 'Username already exists' }, { status: 409 });
     }
@@ -141,6 +144,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Failed to create agent' }, { status: 500 });
   }
 }
+
+const putSchema = z.object({
+  id: z.string().uuid(),
+  ratioPct: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
+  commissionPer: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
+  status: z.enum(['active', 'disabled']).optional(),
+  remark: z.string().max(300).optional().or(z.literal('')),
+  nickname: z.string().optional().or(z.literal('')),
+  password: z.string().min(6).optional().or(z.literal('')),
+});
 
 export async function PUT(req: Request) {
   const agent = await getAgentFromRequest(req);
@@ -152,28 +165,39 @@ export async function PUT(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const id = typeof body.id === 'string' ? body.id : '';
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+  try {
+    const body = await req.json();
+    const data = putSchema.parse(body);
 
-  const set: any = {};
-  if (body.ratioPct != null && Number.isFinite(Number(body.ratioPct)))
-    set.ratio_pct = String(body.ratioPct);
-  if (body.commissionPer != null && Number.isFinite(Number(body.commissionPer)))
-    set.commission_per = String(body.commissionPer);
-  if (body.status === 'active' || body.status === 'disabled') set.status = body.status;
-  if (typeof body.remark === 'string') set.remark = body.remark.slice(0, 300);
-  if (typeof body.nickname === 'string') set.nickname = body.nickname;
-  if (typeof body.password === 'string' && body.password.length >= 6) {
-    set.password_hash = await bcrypt.hash(body.password, 10);
+    const set: any = {};
+    if (data.ratioPct !== undefined && Number.isFinite(data.ratioPct))
+      set.ratio_pct = String(data.ratioPct);
+    if (data.commissionPer !== undefined && Number.isFinite(data.commissionPer))
+      set.commission_per = String(data.commissionPer);
+    if (data.status) set.status = data.status;
+    if (data.remark !== undefined) set.remark = data.remark.trim() || null;
+    if (data.nickname !== undefined) set.nickname = data.nickname.trim() || null;
+    if (data.password) {
+      set.password_hash = await bcrypt.hash(data.password, 10);
+    }
+
+    if (Object.keys(set).length === 0) {
+      return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
+    }
+
+    await db.agents.updateMany({
+      where: {
+        id: data.id,
+        store_id: agent.storeId
+      },
+      data: set
+    });
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    if (err instanceof ZodError) {
+      return NextResponse.json({ error: err.issues[0].message }, { status: 400 });
+    }
+    console.error('PUT /api/agent/agents', err);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-
-  await db.agents.updateMany({
-    where: {
-      id,
-      store_id: agent.storeId
-    },
-    data: set
-  });
-  return NextResponse.json({ ok: true });
 }

@@ -1,11 +1,16 @@
 import { NextResponse } from 'next/server';
+import { z, ZodError } from 'zod';
 import { db } from '@/lib/db';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { isSuperAdmin } from '@/lib/rbac-core';
 import bcrypt from 'bcryptjs';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+
+const putSchema = z.object({
+  email: z.string().email().optional(),
+  status: z.enum(['active', 'suspended', 'invited']).optional(),
+  password: z.string().min(6).optional(),
+});
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   const adminId = await getAdminIdFromRequest(req);
@@ -16,24 +21,22 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 
   const targetId = params.id;
-  const body = await req.json().catch(() => ({}));
-
-  const updateData: any = {};
-  if (body.email) updateData.email = body.email;
-  if (body.status) {
-    if (['active', 'suspended', 'invited'].includes(body.status)) {
-      updateData.status = body.status;
-    }
-  }
-  if (body.password) {
-    updateData.password_hash = await bcrypt.hash(body.password, 12);
-  }
-
-  if (Object.keys(updateData).length === 0) {
-    return NextResponse.json({ error: 'No valid fields provided to update' }, { status: 400 });
-  }
 
   try {
+    const body = await req.json();
+    const data = putSchema.parse(body);
+
+    const updateData: any = {};
+    if (data.email) updateData.email = data.email;
+    if (data.status) updateData.status = data.status;
+    if (data.password) {
+      updateData.password_hash = await bcrypt.hash(data.password, 12);
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: 'No valid fields provided to update' }, { status: 400 });
+    }
+
     const updated = await db.admins.update({
       where: { id: targetId },
       data: updateData,
@@ -60,6 +63,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     return NextResponse.json({ admin: updated });
   } catch (e: any) {
+    if (e instanceof ZodError) {
+      return NextResponse.json({ error: e.issues[0].message }, { status: 400 });
+    }
     if (e.code === 'P2002') {
       return NextResponse.json({ error: 'Email already in use' }, { status: 409 });
     }

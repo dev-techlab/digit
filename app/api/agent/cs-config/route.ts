@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAgentFromRequest } from '@/lib/agent-auth';
+import { z } from 'zod';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+const putSchema = z.object({
+  enabled: z.boolean().optional(),
+  contactPhoneEnabled: z.boolean().optional(),
+  contactPhone: z.string().trim().optional(),
+  platform: z.string().trim().optional(),
+  jsUrl: z.string().trim().optional()
+});
+
 
 export async function GET(req: Request) {
   const agent = await getAgentFromRequest(req);
@@ -34,14 +41,21 @@ export async function PUT(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
+  const body = await req.json().catch(() => ({}));
+  const parseResult = putSchema.safeParse(body);
+
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+  }
+
+  const data = parseResult.data;
+
   const set: any = { updated_at: new Date() };
-  if (typeof body.enabled === 'boolean') set.enabled = body.enabled;
-  if (typeof body.contactPhoneEnabled === 'boolean')
-    set.contact_phone_enabled = body.contactPhoneEnabled;
-  if (typeof body.contactPhone === 'string') set.contact_phone = body.contactPhone;
-  if (typeof body.platform === 'string') set.platform = body.platform;
-  if (typeof body.jsUrl === 'string') set.js_url = body.jsUrl;
+  if (data.enabled !== undefined) set.enabled = data.enabled;
+  if (data.contactPhoneEnabled !== undefined) set.contact_phone_enabled = data.contactPhoneEnabled;
+  if (data.contactPhone !== undefined) set.contact_phone = data.contactPhone;
+  if (data.platform !== undefined) set.platform = data.platform;
+  if (data.jsUrl !== undefined) set.js_url = data.jsUrl;
 
   await db.cs_configs.upsert({
     where: { store_id: agent.storeId },

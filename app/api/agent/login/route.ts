@@ -6,18 +6,24 @@ import {
   AGENT_SESSION_TTL_S,
 } from '@/lib/agent-auth';
 import { sessionCookieOptions } from '@/lib/auth-tokens';
+import { z } from 'zod';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+const loginSchema = z.object({
+  username: z.string().trim().min(1, 'Username is required'),
+  password: z.string().min(1, 'Password is required')
+});
+
 
 /** POST /api/agent/login — { username, password } → sets the agent_session cookie. */
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const username = typeof body.username === 'string' ? body.username.trim() : '';
-  const password = typeof body.password === 'string' ? body.password : '';
-  if (!username || !password) {
-    return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+  const parseResult = loginSchema.safeParse(body);
+
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
   }
+
+  const { username, password } = parseResult.data;
 
   const agentId = await verifyAgentLogin(username, password);
   if (!agentId) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });

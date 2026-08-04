@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAgentFromRequest } from '@/lib/agent-auth';
+import { z } from 'zod';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+const postSchema = z.object({
+  name: z.string().trim().min(1, 'Name and code are required'),
+  code: z.string().trim().min(1, 'Name and code are required')
+});
+
 
 export async function GET(req: Request) {
   const agent = await getAgentFromRequest(req);
@@ -33,12 +37,14 @@ export async function POST(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const name = typeof body.name === 'string' ? body.name.trim() : '';
-  const code = typeof body.code === 'string' ? body.code.trim() : '';
-  if (!name || !code) {
-    return NextResponse.json({ error: 'Name and code are required' }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+  const parseResult = postSchema.safeParse(body);
+
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
   }
+
+  const { name, code } = parseResult.data;
 
   const created = await db.kiosks.create({
     data: { store_id: agent.storeId, name, code },

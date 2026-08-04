@@ -258,7 +258,6 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
         }
       >
         <div className="space-y-4">
-          {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{err}</p>}
           <Field label="Username" required>
             <TextInput
               value={form.username}

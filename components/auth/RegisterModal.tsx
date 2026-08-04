@@ -16,13 +16,16 @@ export function RegisterModal() {
   const [method, setMethod] = useState<'email' | 'phone'>('email');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [inviteCode, setInviteCode] = useState('');
+  const [form, setForm] = useState({
+    username: '',
+    password: '',
+    confirmPassword: '',
+    email: '',
+    phone: '',
+    inviteCode: ''
+  });
   
   const [pendingVerification, setPendingVerification] = useState(false);
   const [verificationMethod, setVerificationMethod] = useState<'email' | 'phone' | null>(null);
@@ -32,12 +35,14 @@ export function RegisterModal() {
   const [cooldown, setCooldown] = useState(0);
 
   const reset = () => {
-    setUsername('');
-    setPassword('');
-    setConfirmPassword('');
-    setEmail('');
-    setPhone('');
-    setInviteCode('');
+    setForm({
+      username: '',
+      password: '',
+      confirmPassword: '',
+      email: '',
+      phone: '',
+      inviteCode: ''
+    });
     setError(null);
     setPendingVerification(false);
     setVerificationMethod(null);
@@ -45,6 +50,7 @@ export function RegisterModal() {
     setOtpCode('');
     setCooldown(0);
     setSendingCode(false);
+    setFieldErrors({});
   };
 
   const sendCode = async () => {
@@ -118,34 +124,39 @@ export function RegisterModal() {
 
 
   const manualRegister = async () => {
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
+    const newFieldErrors: Record<string, string> = {};
+    if (form.password.length < 6) {
+      newFieldErrors.password = 'Password must be at least 6 characters.';
+    }
+    if (form.password !== form.confirmPassword) {
+      newFieldErrors.confirmPassword = 'Passwords do not match.';
+    }
+    if (!form.inviteCode.trim()) {
+      newFieldErrors.inviteCode = 'Invite Code is required.';
+    }
+    
+    if (Object.keys(newFieldErrors).length > 0) {
+      setFieldErrors(newFieldErrors);
       return;
     }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-    if (!inviteCode.trim()) {
-      setError('Invite Code is required.');
-      return;
-    }
+    
+    setFieldErrors({});
     
     setLoading(true);
     setError(null);
     try {
       const data = await register({
-        username: username.trim() || undefined,
-        password,
-        email: method === 'email' ? email.trim() : undefined,
-        phone: method === 'phone' ? phone.trim() : undefined,
-        inviteCode: inviteCode.trim(),
+        username: form.username.trim() || undefined,
+        password: form.password,
+        email: method === 'email' ? form.email.trim() : undefined,
+        phone: method === 'phone' ? form.phone.trim() : undefined,
+        inviteCode: form.inviteCode.trim(),
       });
       
       if (data.pendingVerification) {
         setPendingVerification(true);
         setVerificationMethod(data.verificationMethod ?? null);
-        setVerificationDestination(method === 'email' ? email.trim() : phone.trim());
+        setVerificationDestination(method === 'email' ? form.email.trim() : form.phone.trim());
       } else {
         setUser(data.user);
         reset();
@@ -228,9 +239,7 @@ export function RegisterModal() {
         }}
       />
 
-      {error && (
-        <p className="mt-4 rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
-      )}
+
 
       <div className="mt-5 space-y-4">
           {method === 'email' ? (
@@ -239,8 +248,8 @@ export function RegisterModal() {
               label="Email Address"
               placeholder="Enter your email"
               autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={form.email}
+              onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
             />
           ) : (
             <IconInput
@@ -248,8 +257,8 @@ export function RegisterModal() {
               label="Phone Number"
               placeholder="Enter your phone"
               autoComplete="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              value={form.phone}
+              onChange={(e) => setForm(prev => ({ ...prev, phone: e.target.value }))}
             />
           )}
           
@@ -258,8 +267,8 @@ export function RegisterModal() {
             label="Username (Optional)"
             placeholder="Min. 8 characters"
             autoComplete="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            value={form.username}
+            onChange={(e) => setForm(prev => ({ ...prev, username: e.target.value }))}
           />
           <IconInput
             icon={<Lock size={16} />}
@@ -267,8 +276,12 @@ export function RegisterModal() {
             type="password"
             placeholder="Min. 6 characters"
             autoComplete="new-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            value={form.password}
+            onChange={(e) => {
+              setForm(prev => ({ ...prev, password: e.target.value }));
+              setFieldErrors((prev) => ({ ...prev, password: '' }));
+            }}
+            errorMessage={fieldErrors.password}
           />
           <IconInput
             icon={<Lock size={16} />}
@@ -276,15 +289,23 @@ export function RegisterModal() {
             type="password"
             placeholder="Re-enter password"
             autoComplete="new-password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            value={form.confirmPassword}
+            onChange={(e) => {
+              setForm(prev => ({ ...prev, confirmPassword: e.target.value }));
+              setFieldErrors((prev) => ({ ...prev, confirmPassword: '' }));
+            }}
+            errorMessage={fieldErrors.confirmPassword}
           />
           <IconInput
             icon={<Gift size={16} />}
             label="Invite Code (Required)"
             placeholder="Enter invite code"
-            value={inviteCode}
-            onChange={(e) => setInviteCode(e.target.value)}
+            value={form.inviteCode}
+            onChange={(e) => {
+              setForm(prev => ({ ...prev, inviteCode: e.target.value }));
+              setFieldErrors((prev) => ({ ...prev, inviteCode: '' }));
+            }}
+            errorMessage={fieldErrors.inviteCode}
           />
           <p className="text-xs text-[var(--text-secondary)]">
             By continuing, you agree to our{' '}
@@ -296,6 +317,11 @@ export function RegisterModal() {
               Privacy
             </Link>
           </p>
+
+          {error && (
+            <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
+          )}
+
           <Button fullWidth onClick={manualRegister} disabled={loading}>
             {loading ? 'Creating…' : 'Create Account'}
             {!loading && <ArrowRight size={16} />}
