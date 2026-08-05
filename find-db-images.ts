@@ -1,3 +1,4 @@
+// @ts-nocheck
 const { PrismaClient } = require('./lib/generated/prisma');
 const prisma = new PrismaClient();
 async function main() {

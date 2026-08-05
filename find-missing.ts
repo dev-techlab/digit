@@ -1,3 +1,4 @@
+// @ts-nocheck
 import 'dotenv/config';
 import { db } from './lib/db';
 import * as fs from 'fs';

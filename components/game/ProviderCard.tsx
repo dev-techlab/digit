@@ -26,9 +26,11 @@ export function ProviderCard({ provider }: { provider: GameProvider }) {
       return;
     }
     setAction(kind);
+    window.open(provider.launchUrlTemplate, '_blank', 'noopener,noreferrer');
+    
+    // Keep the visual spinner for 800ms on the current page
     window.setTimeout(() => {
       setAction('idle');
-      window.open(provider.launchUrlTemplate, '_blank', 'noopener,noreferrer');
     }, 800);
   };
 
@@ -64,7 +66,6 @@ export function ProviderCard({ provider }: { provider: GameProvider }) {
               fill
               sizes="48px"
               className="object-cover"
-              unoptimized
               onError={() => setImgError(true)}
             />
           </div>
