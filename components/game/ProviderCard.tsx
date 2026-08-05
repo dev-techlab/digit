@@ -63,7 +63,7 @@ export function ProviderCard({ provider }: { provider: GameProvider }) {
               alt={provider.name}
               fill
               sizes="48px"
-              className="object-contain"
+              className="object-cover"
               unoptimized
               onError={() => setImgError(true)}
             />
