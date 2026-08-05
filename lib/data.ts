@@ -63,14 +63,28 @@ export async function getProviders(providerType: 'SC' | 'GC'): Promise<GameProvi
     if (user?.agent_invite_code) {
       const agent = await db.agents.findFirst({
         where: { invite_code: user.agent_invite_code },
-        select: { id: true }
+        select: { id: true, store_id: true }
       });
       if (agent) {
-        const enabledAccounts = await db.store_platform_accounts.findMany({
-          where: { store_id: agent.id, enabled: true },
-          include: { game_platforms: { select: { name: true } } },
+        const storeId = agent.store_id ?? agent.id;
+        
+        // Fetch master platforms allowed for this store
+        const allowedMappings = await db.agent_platform_mappings.findMany({
+          where: { agent_id: storeId },
+          select: { platform_id: true, game_platforms: { select: { name: true } } }
         });
-        allowedNames = new Set(enabledAccounts.map(a => a.game_platforms.name.toLowerCase()));
+        
+        // Fetch user-enabled accounts for this store
+        const enabledAccounts = await db.store_platform_accounts.findMany({
+          where: { store_id: storeId, enabled: true },
+          select: { platform_id: true }
+        });
+        
+        // Intersect them
+        const enabledPlatformIds = new Set(enabledAccounts.map(a => a.platform_id));
+        const validPlatforms = allowedMappings.filter(m => enabledPlatformIds.has(m.platform_id));
+        
+        allowedNames = new Set(validPlatforms.map(m => m.game_platforms.name.toLowerCase()));
       }
     }
   }

@@ -29,6 +29,5 @@ export async function POST(req: Request) {
   // echo it only in non-prod so the flow is testable without an SMS gateway.
   return NextResponse.json({
     ok: true,
-    ...(env.NODE_ENV !== 'production' ? { devCode: result.code } : {}),
   });
 }

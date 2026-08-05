@@ -24,12 +24,12 @@ export { isSmtpConfigured } from './transport';
 /** Send immediately (bypasses the queue). Use in scripts/tests or when no worker runs. */
 export { deliver as sendEmailNow } from './deliver';
 
-/**
- * Queue an email for async delivery via the `email.send` pg-boss job.
- * Requires DATABASE_URL and a running worker (scripts/worker.ts).
- */
 export async function sendEmail(payload: MailPayload): Promise<void> {
-  await enqueue('email.send', payload);
+  if (process.env.NODE_ENV !== 'production') {
+    await deliver(payload);
+  } else {
+    await enqueue('email.send', payload);
+  }
 }
 
 // --- Per-flow helpers: the one call each future flow makes -------------------
