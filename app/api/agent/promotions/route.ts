@@ -1,45 +1,88 @@
 import { NextResponse } from 'next/server';
-import { and, desc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAgentFromRequest } from '@/lib/agent-auth';
-
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+import { z } from 'zod';
 
 const TYPES = ['promotion_game', 'double_game', 'loyalty_drop'] as const;
 
-/** GET /api/agent/promotions — list this store's promotions. */
+const postSchema = z.object({
+  type: z.enum(TYPES).optional().default('promotion_game'),
+  maxBonus: z.coerce.number().positive('Max Bonus Amount is required'),
+  assignAgentId: z.string().nullable().optional(),
+  bonusPercent: z.coerce.number().optional().default(100),
+  hiddenFromAgentIds: z.array(z.string()).optional().default([]),
+  minDeposit: z.coerce.number().optional().default(20),
+  redemptionMultiplier: z.coerce.number().optional().default(2),
+  activeDays: z.array(z.number()).optional().default([]),
+  timezone: z.string().optional().default('America/New_York'),
+  hiddenFromPlayers: z.boolean().optional().default(false),
+  onlineOnly: z.boolean().optional().default(false),
+  status: z.enum(['enabled', 'disabled']).optional().default('enabled'),
+  remark: z.string().nullable().optional()
+});
+
+const putSchema = z.object({
+  id: z.string().min(1, 'id required'),
+  status: z.enum(['enabled', 'disabled']).optional(),
+  remark: z.string().optional(),
+  bonusPercent: z.coerce.number().optional(),
+  minDeposit: z.coerce.number().optional(),
+  maxBonus: z.coerce.number().optional(),
+  redemptionMultiplier: z.coerce.number().optional(),
+  activeDays: z.array(z.number()).optional(),
+  hiddenFromPlayers: z.boolean().optional(),
+  onlineOnly: z.boolean().optional()
+});
+
 export async function GET(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const rows = await db
-    .select({
-      id: s.promotions.id,
-      type: s.promotions.type,
-      assignAgentId: s.promotions.assignAgentId,
-      assignUsername: s.agents.username,
-      bonusPercent: s.promotions.bonusPercent,
-      minDeposit: s.promotions.minDeposit,
-      maxBonus: s.promotions.maxBonus,
-      redemptionMultiplier: s.promotions.redemptionMultiplier,
-      activeDays: s.promotions.activeDays,
-      timezone: s.promotions.timezone,
-      hiddenFromPlayers: s.promotions.hiddenFromPlayers,
-      onlineOnly: s.promotions.onlineOnly,
-      status: s.promotions.status,
-      remark: s.promotions.remark,
-      createdAt: s.promotions.createdAt,
-    })
-    .from(s.promotions)
-    .leftJoin(s.agents, eq(s.agents.id, s.promotions.assignAgentId))
-    .where(eq(s.promotions.storeId, agent.storeId))
-    .orderBy(desc(s.promotions.createdAt));
-  return NextResponse.json({ promotions: rows });
+  const rows = await db.promotions.findMany({
+    where: { store_id: agent.storeId },
+    select: {
+      id: true,
+      type: true,
+      assign_agent_id: true,
+      agents_promotions_assign_agent_idToagents: {
+        select: { username: true }
+      },
+      bonus_percent: true,
+      min_deposit: true,
+      max_bonus: true,
+      redemption_multiplier: true,
+      active_days: true,
+      timezone: true,
+      hidden_from_players: true,
+      online_only: true,
+      status: true,
+      remark: true,
+      created_at: true,
+    },
+    orderBy: { created_at: 'desc' }
+  });
+  
+  return NextResponse.json({
+    promotions: rows.map(r => ({
+      id: r.id,
+      type: r.type,
+      assignAgentId: r.assign_agent_id,
+      assignUsername: r.agents_promotions_assign_agent_idToagents?.username || null,
+      bonusPercent: r.bonus_percent,
+      minDeposit: r.min_deposit,
+      maxBonus: r.max_bonus,
+      redemptionMultiplier: r.redemption_multiplier,
+      activeDays: r.active_days,
+      timezone: r.timezone,
+      hiddenFromPlayers: r.hidden_from_players,
+      onlineOnly: r.online_only,
+      status: r.status,
+      remark: r.remark,
+      createdAt: r.created_at,
+    }))
+  });
 }
 
-/** POST /api/agent/promotions — create a promotion. */
 export async function POST(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -50,21 +93,24 @@ export async function POST(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const type = TYPES.includes(body.type as (typeof TYPES)[number])
-    ? (body.type as (typeof TYPES)[number])
-    : 'promotion_game';
-  const maxBonus = Number(body.maxBonus);
-  if (!Number.isFinite(maxBonus) || maxBonus <= 0) {
-    return NextResponse.json({ error: 'Max Bonus Amount is required' }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+  const parseResult = postSchema.safeParse(body);
+
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
   }
 
+  const data = parseResult.data;
+
   let assignAgentId: string | null = null;
-  if (typeof body.assignAgentId === 'string' && body.assignAgentId) {
-    const [assignee] = await db
-      .select({ id: s.agents.id })
-      .from(s.agents)
-      .where(and(eq(s.agents.id, body.assignAgentId), eq(s.agents.storeId, agent.storeId)));
+  if (data.assignAgentId) {
+    const assignee = await db.agents.findFirst({
+      where: {
+        id: data.assignAgentId,
+        store_id: agent.storeId
+      },
+      select: { id: true }
+    });
     if (!assignee) {
       return NextResponse.json(
         { error: 'assignAgentId must belong to this store' },
@@ -74,32 +120,29 @@ export async function POST(req: Request) {
     assignAgentId = assignee.id;
   }
 
-  const bonusPercent = Math.min(200, Math.max(1, Number(body.bonusPercent) || 100));
-  const [created] = await db
-    .insert(s.promotions)
-    .values({
-      storeId: agent.storeId,
-      assignAgentId,
-      type,
-      hiddenFromAgentIds: Array.isArray(body.hiddenFromAgentIds)
-        ? (body.hiddenFromAgentIds as string[])
-        : [],
-      bonusPercent: String(bonusPercent),
-      minDeposit: String(Number(body.minDeposit) || 20),
-      maxBonus: String(maxBonus),
-      redemptionMultiplier: String(Number(body.redemptionMultiplier) || 2),
-      activeDays: Array.isArray(body.activeDays) ? (body.activeDays as number[]) : [],
-      timezone: typeof body.timezone === 'string' ? body.timezone : 'America/New_York',
-      hiddenFromPlayers: body.hiddenFromPlayers === true,
-      onlineOnly: body.onlineOnly === true,
-      status: body.status === 'disabled' ? 'disabled' : 'enabled',
-      remark: typeof body.remark === 'string' ? body.remark : null,
-    })
-    .returning({ id: s.promotions.id });
+  const bonusPercent = Math.min(200, Math.max(1, data.bonusPercent));
+  const created = await db.promotions.create({
+    data: {
+      store_id: agent.storeId,
+      assign_agent_id: assignAgentId,
+      type: data.type,
+      hidden_from_agent_ids: data.hiddenFromAgentIds,
+      bonus_percent: String(bonusPercent),
+      min_deposit: String(data.minDeposit),
+      max_bonus: String(data.maxBonus),
+      redemption_multiplier: String(data.redemptionMultiplier),
+      active_days: data.activeDays,
+      timezone: data.timezone,
+      hidden_from_players: data.hiddenFromPlayers,
+      online_only: data.onlineOnly,
+      status: data.status,
+      remark: data.remark || null,
+    },
+    select: { id: true }
+  });
   return NextResponse.json({ ok: true, id: created.id });
 }
 
-/** PUT /api/agent/promotions — update status/remark or full config. */
 export async function PUT(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -110,31 +153,39 @@ export async function PUT(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const id = typeof body.id === 'string' ? body.id : '';
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+  const parseResult = putSchema.safeParse(body);
 
-  const set: Partial<typeof s.promotions.$inferInsert> = {};
-  if (body.status === 'enabled' || body.status === 'disabled') set.status = body.status;
-  if (typeof body.remark === 'string') set.remark = body.remark;
-  if (body.bonusPercent != null)
-    set.bonusPercent = String(Math.min(200, Math.max(1, Number(body.bonusPercent) || 100)));
-  if (body.minDeposit != null) set.minDeposit = String(Number(body.minDeposit) || 0);
-  if (body.maxBonus != null) set.maxBonus = String(Number(body.maxBonus) || 0);
-  if (body.redemptionMultiplier != null)
-    set.redemptionMultiplier = String(Number(body.redemptionMultiplier) || 2);
-  if (Array.isArray(body.activeDays)) set.activeDays = body.activeDays as number[];
-  if (typeof body.hiddenFromPlayers === 'boolean') set.hiddenFromPlayers = body.hiddenFromPlayers;
-  if (typeof body.onlineOnly === 'boolean') set.onlineOnly = body.onlineOnly;
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+  }
 
-  await db
-    .update(s.promotions)
-    .set(set)
-    .where(and(eq(s.promotions.id, id), eq(s.promotions.storeId, agent.storeId)));
+  const data = parseResult.data;
+  const id = data.id;
+
+  const set: any = {};
+  if (data.status !== undefined) set.status = data.status;
+  if (data.remark !== undefined) set.remark = data.remark;
+  if (data.bonusPercent !== undefined)
+    set.bonus_percent = String(Math.min(200, Math.max(1, data.bonusPercent)));
+  if (data.minDeposit !== undefined) set.min_deposit = String(data.minDeposit);
+  if (data.maxBonus !== undefined) set.max_bonus = String(data.maxBonus);
+  if (data.redemptionMultiplier !== undefined)
+    set.redemption_multiplier = String(data.redemptionMultiplier);
+  if (data.activeDays !== undefined) set.active_days = data.activeDays;
+  if (data.hiddenFromPlayers !== undefined) set.hidden_from_players = data.hiddenFromPlayers;
+  if (data.onlineOnly !== undefined) set.online_only = data.onlineOnly;
+
+  await db.promotions.updateMany({
+    where: {
+      id,
+      store_id: agent.storeId
+    },
+    data: set
+  });
   return NextResponse.json({ ok: true });
 }
 
-/** DELETE /api/agent/promotions?id= — remove a promotion. */
 export async function DELETE(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -146,8 +197,11 @@ export async function DELETE(req: Request) {
   }
   const id = new URL(req.url).searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-  await db
-    .delete(s.promotions)
-    .where(and(eq(s.promotions.id, id), eq(s.promotions.storeId, agent.storeId)));
+  await db.promotions.deleteMany({
+    where: {
+      id,
+      store_id: agent.storeId
+    }
+  });
   return NextResponse.json({ ok: true });
 }

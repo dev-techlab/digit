@@ -1,19 +1,27 @@
 import { NextResponse } from 'next/server';
-import { and, desc, eq, gte, lt, lte, sql } from 'drizzle-orm';
-import { alias } from 'drizzle-orm/pg-core';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAgentFromRequest } from '@/lib/agent-auth';
+import { z } from 'zod';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+const putSchema = z.object({
+  email: z.string().email().optional(),
+  storeName: z.string().max(20).optional(),
+  dailyMaxRedeem: z.coerce.number().optional(),
+  dailyMaxWithdraw: z.coerce.number().optional(),
+  phoneBindRewardSc: z.coerce.number().optional(),
+  logoUrl: z.string().max(2.8 * 1024 * 1024, 'Logo must be at most 2MB').optional()
+});
 
-class InsufficientBalanceError extends Error {}
+const postSchema = z.object({
+  action: z.enum(['clear_tips', 'cancel', 'withdraw', 'deposit', 'transfer'], { message: "Invalid input" }),
+  id: z.string().trim().optional(),
+  amount: z.coerce.number().optional(),
+  method: z.string().nullable().optional()
+});class InsufficientBalanceError extends Error {}
 
 const DEPOSIT_METHODS = ['paypal_pyusd', 'cashapp_usdc', 'bitcoin', 'bitcoin_lightning'] as const;
 const WITHDRAW_METHODS = ['paypal_pyusd', 'cashapp_usdc', 'bitcoin', 'bank_card', 'ach'] as const;
 
-/** GET /api/agent/wallet — balances, settings, invite link, funding logs + daily report. */
 export async function GET(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -22,77 +30,115 @@ export async function GET(req: Request) {
   const fromStr = searchParams.get('from');
   const toStr = searchParams.get('to');
   const tzParam = searchParams.get('tz') || 'America/New_York';
-  const tzStr = tzParam === 'browser' ? 'UTC' : tzParam; // Fallback if browser is somehow passed
+  const tzStr = tzParam === 'browser' ? 'UTC' : tzParam; 
 
-  const [store] = await db
-    .select({
-      email: s.agents.email,
-      username: s.agents.username,
-      inviteCode: s.agents.inviteCode,
-      onlineBalance: s.agents.onlineBalance,
-      tipsBalance: s.agents.tipsBalance,
-      commissionPer: s.agents.commissionPer,
-    })
-    .from(s.agents)
-    .where(eq(s.agents.id, agent.storeId));
+  const store = await db.agents.findUnique({
+    where: { id: agent.storeId },
+    select: {
+      email: true,
+      username: true,
+      invite_code: true,
+      online_balance: true,
+      tips_balance: true,
+      commission_per: true,
+    }
+  });
 
-  const [settings] = await db
-    .select()
-    .from(s.storeSettings)
-    .where(eq(s.storeSettings.storeId, agent.storeId));
+  const settings = await db.store_settings.findUnique({
+    where: { store_id: agent.storeId }
+  });
 
-  const counterparty = alias(s.agents, 'counterparty');
+  const tzSafe = tzStr.replace(/'/g, "''");
+  let dateFilterStr = `agent_id = $1`;
+  const params: any[] = [agent.storeId];
+  let pIdx = 2;
 
-  const dateFilter = and(
-    eq(s.agentTransactions.agentId, agent.storeId),
-    fromStr
-      ? gte(sql`${s.agentTransactions.createdAt} AT TIME ZONE ${tzStr}`, `${fromStr} 00:00:00`)
-      : undefined,
-    toStr
-      ? lte(sql`${s.agentTransactions.createdAt} AT TIME ZONE ${tzStr}`, `${toStr} 23:59:59`)
-      : undefined
-  );
+  if (fromStr) {
+    dateFilterStr += ` AND t.created_at AT TIME ZONE '${tzSafe}' >= $${pIdx++}`;
+    params.push(`${fromStr} 00:00:00`);
+  }
+  if (toStr) {
+    dateFilterStr += ` AND t.created_at AT TIME ZONE '${tzSafe}' <= $${pIdx++}`;
+    params.push(`${toStr} 23:59:59`);
+  }
 
-  const logs = await db
-    .select({
-      id: s.agentTransactions.id,
-      type: s.agentTransactions.type,
-      method: s.agentTransactions.method,
-      amount: s.agentTransactions.amount,
-      fee: s.agentTransactions.fee,
-      commissionPer: s.agentTransactions.commissionPer,
-      netAmount: s.agentTransactions.netAmount,
-      address: s.agentTransactions.address,
-      balanceBefore: s.agentTransactions.balanceBefore,
-      balanceAfter: s.agentTransactions.balanceAfter,
-      remark: s.agentTransactions.remark,
-      counterparty: counterparty.username,
-      status: s.agentTransactions.status,
-      createdAt: s.agentTransactions.createdAt,
-    })
-    .from(s.agentTransactions)
-    .leftJoin(counterparty, eq(counterparty.id, s.agentTransactions.counterpartyAgentId))
-    .where(dateFilter)
-    .orderBy(desc(s.agentTransactions.createdAt))
-    .limit(200);
+  const logsRaw = await db.$queryRawUnsafe(`
+    SELECT 
+      t.id,
+      t.type,
+      t.method,
+      t.amount,
+      t.fee,
+      t.commission_per,
+      t.net_amount,
+      t.address,
+      t.balance_before,
+      t.balance_after,
+      t.remark,
+      c.username AS counterparty,
+      t.status,
+      t.created_at
+    FROM agent_transactions t
+    LEFT JOIN agents c ON c.id = t.counterparty_agent_id
+    WHERE ${dateFilterStr}
+    ORDER BY t.created_at DESC
+    LIMIT 200
+  `, ...params);
 
-  // Daily deposit report for the date range
-  const report = await db
-    .select({
-      day: sql<string>`to_char(date_trunc('day', ${s.agentTransactions.createdAt} AT TIME ZONE ${tzStr}), 'YYYY-MM-DD')`,
-      deposit: sql<string>`coalesce(sum(${s.agentTransactions.amount}) filter (where ${s.agentTransactions.type} = 'deposit'), 0)`,
-      depositFee: sql<string>`coalesce(sum(${s.agentTransactions.fee}) filter (where ${s.agentTransactions.type} = 'deposit'), 0)`,
-      depositOrders: sql<number>`count(*) filter (where ${s.agentTransactions.type} = 'deposit')::int`,
-    })
-    .from(s.agentTransactions)
-    .where(dateFilter)
-    .groupBy(sql`1`)
-    .orderBy(sql`1 desc`);
+  const reportRaw = await db.$queryRawUnsafe(`
+    SELECT 
+      TO_CHAR(DATE_TRUNC('day', t.created_at AT TIME ZONE '${tzSafe}'), 'YYYY-MM-DD') AS day,
+      COALESCE(SUM(amount) FILTER (WHERE type = 'deposit'), 0) AS deposit,
+      COALESCE(SUM(fee) FILTER (WHERE type = 'deposit'), 0) AS "depositFee",
+      COUNT(*) FILTER (WHERE type = 'deposit')::int AS "depositOrders"
+    FROM agent_transactions t
+    WHERE ${dateFilterStr}
+    GROUP BY 1
+    ORDER BY 1 DESC
+  `, ...params);
 
-  return NextResponse.json({ store, settings, logs, report });
+  return NextResponse.json({ 
+    store: store ? {
+      email: store.email,
+      username: store.username,
+      inviteCode: store.invite_code,
+      onlineBalance: store.online_balance,
+      tipsBalance: store.tips_balance,
+      commissionPer: store.commission_per,
+    } : null, 
+    settings: settings ? {
+      storeId: settings.store_id,
+      storeName: settings.store_name,
+      logoUrl: settings.logo_url,
+      dailyMaxRedeem: settings.daily_max_redeem,
+      dailyMaxWithdraw: settings.daily_max_withdraw,
+      phoneBindRewardSc: settings.phone_bind_reward_sc,
+      updatedAt: settings.updated_at,
+    } : null, 
+    logs: (logsRaw as any[]).map(r => ({
+      id: r.id,
+      type: r.type,
+      method: r.method,
+      amount: r.amount?.toString(),
+      fee: r.fee?.toString(),
+      commissionPer: r.commission_per?.toString(),
+      netAmount: r.net_amount?.toString(),
+      address: r.address,
+      balanceBefore: r.balance_before?.toString(),
+      balanceAfter: r.balance_after?.toString(),
+      remark: r.remark,
+      counterparty: r.counterparty,
+      status: r.status,
+      createdAt: r.created_at,
+    })), 
+    report: (reportRaw as any[]).map(r => ({
+      ...r,
+      deposit: r.deposit?.toString(),
+      depositFee: r.depositFee?.toString()
+    }))
+  });
 }
 
-/** PUT /api/agent/wallet — update store settings / email / logo. */
 export async function PUT(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -103,40 +149,41 @@ export async function PUT(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
+  const body = await req.json().catch(() => ({}));
+  const parseResult = putSchema.safeParse(body);
 
-  // Store email lives on the agent row, not in store_settings.
-  if (typeof body.email === 'string' && body.email.includes('@')) {
-    await db.update(s.agents).set({ email: body.email }).where(eq(s.agents.id, agent.storeId));
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
   }
 
-  const patch: Partial<typeof s.storeSettings.$inferInsert> = { updatedAt: new Date() };
-  if (typeof body.storeName === 'string') patch.storeName = body.storeName.slice(0, 20);
-  for (const key of ['dailyMaxRedeem', 'dailyMaxWithdraw', 'phoneBindRewardSc'] as const) {
-    if (body[key] != null && Number.isFinite(Number(body[key]))) patch[key] = String(body[key]);
-  }
-  if (typeof body.logoUrl === 'string') {
-    if (body.logoUrl.length > 2.8 * 1024 * 1024) {
-      return NextResponse.json({ error: 'Logo must be at most 2MB' }, { status: 400 });
-    }
-    patch.logoUrl = body.logoUrl;
+  const data = parseResult.data;
+
+  if (data.email) {
+    await db.agents.update({
+      where: { id: agent.storeId },
+      data: { email: data.email }
+    });
   }
 
-  await db
-    .insert(s.storeSettings)
-    .values({ storeId: agent.storeId, ...patch })
-    .onConflictDoUpdate({ target: s.storeSettings.storeId, set: patch });
+  const patch: any = { updated_at: new Date() };
+  if (data.storeName !== undefined) patch.store_name = data.storeName;
+  if (data.dailyMaxRedeem !== undefined) patch.daily_max_redeem = String(data.dailyMaxRedeem);
+  if (data.dailyMaxWithdraw !== undefined) patch.daily_max_withdraw = String(data.dailyMaxWithdraw);
+  if (data.phoneBindRewardSc !== undefined) patch.phone_bind_reward_sc = String(data.phoneBindRewardSc);
+  if (data.logoUrl !== undefined) patch.logo_url = data.logoUrl;
+
+  await db.store_settings.upsert({
+    where: { store_id: agent.storeId },
+    create: {
+      store_id: agent.storeId,
+      ...patch
+    },
+    update: patch
+  });
+  
   return NextResponse.json({ ok: true });
 }
 
-/**
- * POST /api/agent/wallet — funding actions:
- *   { action: 'deposit',  method, amount }                     — min $50
- *   { action: 'withdraw', method, amount, address }            — $2 fee on PYUSD/USDC
- *   { action: 'transfer', recipient, amount, remark }          — to an agent in this store
- *   { action: 'clear_tips' }                                   — tips → online balance
- *   { action: 'cancel', id }                                   — cancel own pending tx
- */
 export async function POST(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -147,33 +194,41 @@ export async function POST(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const action = body.action;
+  const body = await req.json().catch(() => ({}));
+  const parseResult = postSchema.safeParse(body);
+
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+  }
+
+  const data = parseResult.data;
+  const action = data.action;
 
   if (action === 'clear_tips') {
-    // Lock the row for the life of the transaction so a concurrent clear_tips
-    // (double-click, two tabs) can't both read the same pre-clear tips value.
-    const cleared = await db.transaction(async (tx) => {
-      const [store] = await tx
-        .select({ tips: s.agents.tipsBalance })
-        .from(s.agents)
-        .where(eq(s.agents.id, agent.storeId))
-        .for('update');
-      const tips = Number(store?.tips ?? 0);
+    const cleared = await db.$transaction(async (tx) => {
+      const stores = await tx.$queryRaw<any[]>`
+        SELECT tips_balance
+        FROM agents
+        WHERE id = ${agent.storeId}
+        FOR UPDATE
+      `;
+      const tips = Number(stores[0]?.tips_balance ?? 0);
       if (tips <= 0) return 0;
-      await tx
-        .update(s.agents)
-        .set({
-          onlineBalance: sql`${s.agents.onlineBalance} + ${tips}`,
-          tipsBalance: '0',
-        })
-        .where(eq(s.agents.id, agent.storeId));
-      await tx.insert(s.agentTransactions).values({
-        agentId: agent.storeId,
-        type: 'transfer',
-        amount: String(tips),
-        remark: 'Tips cleared to online balance',
-        status: 'completed',
+      await tx.agents.update({
+        where: { id: agent.storeId },
+        data: {
+          online_balance: { increment: tips },
+          tips_balance: '0'
+        }
+      });
+      await tx.agent_transactions.create({
+        data: {
+          agent_id: agent.storeId,
+          type: 'transfer',
+          amount: String(tips),
+          remark: 'Tips cleared to online balance',
+          status: 'completed',
+        }
       });
       return tips;
     });
@@ -181,40 +236,33 @@ export async function POST(req: Request) {
   }
 
   if (action === 'cancel') {
-    const id = typeof body.id === 'string' ? body.id : '';
+    const id = data.id;
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    const [txRow] = await db
-      .select()
-      .from(s.agentTransactions)
-      .where(
-        and(
-          eq(s.agentTransactions.id, id),
-          eq(s.agentTransactions.agentId, agent.storeId),
-          eq(s.agentTransactions.status, 'pending')
-        )
-      );
+    const txRow = await db.agent_transactions.findFirst({
+      where: {
+        id,
+        agent_id: agent.storeId,
+        status: 'pending'
+      }
+    });
     if (!txRow) return NextResponse.json({ error: 'Pending order not found' }, { status: 404 });
-    await db.transaction(async (tx) => {
-      await tx
-        .update(s.agentTransactions)
-        .set({ status: 'cancelled' })
-        .where(eq(s.agentTransactions.id, id));
-      // Withdrawals debit the balance on submit — refund on cancel.
+    await db.$transaction(async (tx) => {
+      await tx.agent_transactions.update({
+        where: { id },
+        data: { status: 'cancelled' }
+      });
       if (txRow.type === 'withdraw') {
-        await tx
-          .update(s.agents)
-          .set({ onlineBalance: sql`${s.agents.onlineBalance} + ${Number(txRow.amount)}` })
-          .where(eq(s.agents.id, agent.storeId));
+        await tx.agents.update({
+          where: { id: agent.storeId },
+          data: { online_balance: { increment: Number(txRow.amount) } }
+        });
       }
     });
     return NextResponse.json({ ok: true });
   }
 
-  const amount = Number(body.amount);
-  if (action !== 'withdraw' && action !== 'deposit' && action !== 'transfer') {
-    return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
-  }
-  if (!Number.isFinite(amount) || amount <= 0) {
+  const amount = data.amount;
+  if (amount === undefined || amount <= 0) {
     return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
   }
 
@@ -222,63 +270,64 @@ export async function POST(req: Request) {
     if (amount < 50) {
       return NextResponse.json({ error: 'Minimum deposit is 50 USD' }, { status: 400 });
     }
-    const method = DEPOSIT_METHODS.includes(body.method as (typeof DEPOSIT_METHODS)[number])
-      ? (body.method as (typeof DEPOSIT_METHODS)[number])
-      : null;
+    const method = DEPOSIT_METHODS.includes(data.method as any) ? data.method : null;
     if (!method) return NextResponse.json({ error: 'Select a payment method' }, { status: 400 });
-    const [store] = await db
-      .select({ balance: s.agents.onlineBalance })
-      .from(s.agents)
-      .where(eq(s.agents.id, agent.storeId));
-    await db.insert(s.agentTransactions).values({
-      agentId: agent.storeId,
-      type: 'deposit',
-      method,
-      amount: String(amount),
-      balanceBefore: String(store.balance),
-      status: 'pending',
+    const store = await db.agents.findUnique({
+      where: { id: agent.storeId },
+      select: { online_balance: true }
+    });
+    await db.agent_transactions.create({
+      data: {
+        agent_id: agent.storeId,
+        type: 'deposit',
+        method: method as any,
+        amount: String(amount),
+        balance_before: String(store?.online_balance || 0),
+        status: 'pending',
+      }
     });
     return NextResponse.json({ ok: true });
   }
 
   if (action === 'withdraw') {
-    const method = WITHDRAW_METHODS.includes(body.method as (typeof WITHDRAW_METHODS)[number])
-      ? (body.method as (typeof WITHDRAW_METHODS)[number])
-      : null;
+    const method = WITHDRAW_METHODS.includes(data.method as any) ? data.method : null;
     if (!method) return NextResponse.json({ error: 'Select a withdrawal method' }, { status: 400 });
 
     try {
-      await db.transaction(async (tx) => {
-        // Lock the balance row for the life of the transaction so a concurrent
-        // withdraw/transfer can't pass the same stale balance check twice.
-        const [row] = await tx
-          .select({ balance: s.agents.onlineBalance, commissionPer: s.agents.commissionPer })
-          .from(s.agents)
-          .where(eq(s.agents.id, agent.storeId))
-          .for('update');
-
-        const commPer = Number(row.commissionPer || 0);
+      await db.$transaction(async (tx) => {
+        const rows = await tx.$queryRaw<any[]>`
+          SELECT online_balance, commission_per
+          FROM agents
+          WHERE id = ${agent.storeId}
+          FOR UPDATE
+        `;
+        const row = rows[0];
+        const commPer = Number(row?.commission_per || 0);
         const fee = amount * (commPer / 100);
         const netAmount = amount - fee;
-        const balance = Number(row.balance);
+        const balance = Number(row?.online_balance || 0);
         if (balance < amount) throw new InsufficientBalanceError();
-        await tx.insert(s.agentTransactions).values({
-          agentId: agent.storeId,
-          type: 'withdraw',
-          method,
-          amount: String(amount),
-          fee: String(fee),
-          commissionPer: String(commPer),
-          netAmount: String(netAmount),
-          address: typeof body.address === 'string' ? body.address : null,
-          balanceBefore: String(balance),
-          balanceAfter: String(balance - amount),
-          status: 'pending',
+        
+        await tx.agent_transactions.create({
+          data: {
+            agent_id: agent.storeId,
+            type: 'withdraw',
+            method: method as any,
+            amount: String(amount),
+            fee: String(fee),
+            commission_per: String(commPer),
+            net_amount: String(netAmount),
+            address: typeof body.address === 'string' ? body.address : null,
+            balance_before: String(balance),
+            balance_after: String(balance - amount),
+            status: 'pending',
+          }
         });
-        await tx
-          .update(s.agents)
-          .set({ onlineBalance: sql`${s.agents.onlineBalance} - ${amount}` })
-          .where(eq(s.agents.id, agent.storeId));
+        
+        await tx.agents.update({
+          where: { id: agent.storeId },
+          data: { online_balance: { decrement: amount } }
+        });
       });
     } catch (err) {
       if (err instanceof InsufficientBalanceError) {
@@ -294,42 +343,50 @@ export async function POST(req: Request) {
   if (!recipient) {
     return NextResponse.json({ error: 'Recipient agent is required' }, { status: 400 });
   }
-  const [target] = await db
-    .select({ id: s.agents.id })
-    .from(s.agents)
-    .where(and(eq(s.agents.username, recipient), eq(s.agents.storeId, agent.storeId)));
+  const target = await db.agents.findFirst({
+    where: {
+      username: recipient,
+      store_id: agent.storeId
+    },
+    select: { id: true }
+  });
   if (!target || target.id === agent.storeId) {
     return NextResponse.json({ error: 'Recipient agent not found in your store' }, { status: 404 });
   }
+  
   try {
-    await db.transaction(async (tx) => {
-      // Lock the sender's balance row so a concurrent withdraw/transfer can't
-      // pass the same stale balance check twice.
-      const [row] = await tx
-        .select({ balance: s.agents.onlineBalance })
-        .from(s.agents)
-        .where(eq(s.agents.id, agent.storeId))
-        .for('update');
-      const balance = Number(row.balance);
+    await db.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<any[]>`
+        SELECT online_balance
+        FROM agents
+        WHERE id = ${agent.storeId}
+        FOR UPDATE
+      `;
+      const balance = Number(rows[0]?.online_balance || 0);
       if (balance < amount) throw new InsufficientBalanceError();
-      await tx.insert(s.agentTransactions).values({
-        agentId: agent.storeId,
-        type: 'transfer',
-        amount: String(amount),
-        counterpartyAgentId: target.id,
-        remark: typeof body.remark === 'string' ? body.remark.slice(0, 100) : null,
-        balanceBefore: String(balance),
-        balanceAfter: String(balance - amount),
-        status: 'completed',
+      
+      await tx.agent_transactions.create({
+        data: {
+          agent_id: agent.storeId,
+          type: 'transfer',
+          amount: String(amount),
+          counterparty_agent_id: target.id,
+          remark: typeof body.remark === 'string' ? body.remark.slice(0, 100) : null,
+          balance_before: String(balance),
+          balance_after: String(balance - amount),
+          status: 'completed',
+        }
       });
-      await tx
-        .update(s.agents)
-        .set({ onlineBalance: sql`${s.agents.onlineBalance} - ${amount}` })
-        .where(eq(s.agents.id, agent.storeId));
-      await tx
-        .update(s.agents)
-        .set({ onlineBalance: sql`${s.agents.onlineBalance} + ${amount}` })
-        .where(eq(s.agents.id, target.id));
+      
+      await tx.agents.update({
+        where: { id: agent.storeId },
+        data: { online_balance: { decrement: amount } }
+      });
+      
+      await tx.agents.update({
+        where: { id: target.id },
+        data: { online_balance: { increment: amount } }
+      });
     });
   } catch (err) {
     if (err instanceof InsufficientBalanceError) {

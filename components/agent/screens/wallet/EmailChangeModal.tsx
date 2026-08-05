@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { api, Btn, Field, Modal, TextInput } from '@/components/agent/ui';
+import { api, Btn, Field, Modal, TextInput } from '../../ui';
 
-interface EmailChangeModalProps {
+interface Props {
   open: boolean;
   onClose: () => void;
   currentEmail: string | null;
-  onSuccess: () => void;
+  mutate: () => void;
+  flash: (ok: boolean, text: string) => void;
 }
 
 function maskEmail(email: string | null) {
@@ -16,44 +17,20 @@ function maskEmail(email: string | null) {
   return `${user.slice(0, 2)}***@${domain ?? ''}`;
 }
 
-export function EmailChangeModal({
-  open,
-  onClose,
-  currentEmail,
-  onSuccess,
-}: EmailChangeModalProps) {
+export function EmailChangeModal({ open, onClose, currentEmail, mutate, flash }: Props) {
   const [step, setStep] = useState<1 | 2>(1);
   const [code, setCode] = useState('');
   const [codeSent, setCodeSent] = useState(false);
   const [newEmail, setNewEmail] = useState('');
-  const [fieldErrs, setFieldErrs] = useState<Record<string, string>>({});
 
   const handleClose = () => {
-    setStep(1);
-    setCode('');
-    setCodeSent(false);
-    setNewEmail('');
-    setFieldErrs({});
     onClose();
-  };
-
-  const submit = async () => {
-    setFieldErrs({});
-    if (!newEmail.includes('@')) {
-      setFieldErrs({ email: 'Please enter a valid email address' });
-      return;
-    }
-
-    try {
-      await api('/api/agent/wallet', {
-        method: 'PUT',
-        body: JSON.stringify({ email: newEmail }),
-      });
-      onSuccess();
-      handleClose();
-    } catch (e) {
-      setFieldErrs({ email: (e as Error).message });
-    }
+    setTimeout(() => {
+      setStep(1);
+      setCode('');
+      setCodeSent(false);
+      setNewEmail('');
+    }, 200);
   };
 
   return (
@@ -76,7 +53,22 @@ export function EmailChangeModal({
             <Btn variant="ghost" onClick={handleClose}>
               Cancel
             </Btn>
-            <Btn disabled={!newEmail.includes('@')} onClick={submit}>
+            <Btn
+              disabled={!newEmail.includes('@')}
+              onClick={async () => {
+                try {
+                  await api('/api/agent/wallet', {
+                    method: 'PUT',
+                    body: JSON.stringify({ email: newEmail }),
+                  });
+                  flash(true, 'Email updated');
+                  mutate();
+                  handleClose();
+                } catch (e) {
+                  flash(false, (e as Error).message);
+                }
+              }}
+            >
               Confirm
             </Btn>
           </>
@@ -101,7 +93,7 @@ export function EmailChangeModal({
                 maxLength={6}
                 placeholder="Please enter 6-digit verification code"
                 value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCode(e.target.value.replace(/\D/g, ''))}
               />
               <Btn
                 className="shrink-0 justify-center"
@@ -117,20 +109,12 @@ export function EmailChangeModal({
           </div>
         </div>
       ) : (
-        <Field 
-          label="New Email" 
-          required 
-          hint="A verification email will be sent to this address."
-          error={fieldErrs.email}
-        >
+        <Field label="New Email" required hint="A verification email will be sent to this address.">
           <TextInput
             type="email"
             placeholder="name@example.com"
             value={newEmail}
-            onChange={(e) => {
-              setNewEmail(e.target.value);
-              setFieldErrs({});
-            }}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewEmail(e.target.value)}
           />
         </Field>
       )}

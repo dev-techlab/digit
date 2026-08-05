@@ -31,10 +31,7 @@ export function SystemAdminsScreen() {
 
   const deleteModal = useActionModal<SystemAdminRow>();
 
-  useEffect(() => {
-    void table.load(1, '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // SWR fetches automatically; no manual useEffect needed
 
   const create = async () => {
     createModal.setErr(null);
@@ -126,14 +123,11 @@ export function SystemAdminsScreen() {
           manualPagination
           totalRows={table.total}
           currentPage={table.page}
-          onPageChange={(p) => {
-            table.setPage(p);
-            void table.load(p);
-          }}
+          onPageChange={(p) => table.setPage(p)}
           globalSearch={table.search}
           onSearchChange={(v) => {
             table.setSearch(v);
-            void table.load(1, v);
+            table.setPage(1);
           }}
           columns={[
             {

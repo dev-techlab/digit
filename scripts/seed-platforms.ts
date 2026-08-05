@@ -12,9 +12,7 @@
 import './load-env';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 
 interface SnapshotProvider {
   id: number;
@@ -49,8 +47,8 @@ async function main() {
   for (const p of [...gc, ...sc]) byCode.set(p.providerCode, p);
   const providers = [...byCode.values()];
 
-  const existing = await db.select().from(s.gamePlatforms);
-  const byName = new Map(existing.map((row) => [normalize(row.name), row]));
+  const existing = await db.game_platforms.findMany();
+  const byName = new Map(existing.map((row: any) => [normalize(row.name), row]));
   const now = new Date();
 
   let updated = 0;
@@ -68,23 +66,22 @@ async function main() {
     };
     const match = byName.get(normalize(p.name));
     if (match) {
-      await db
-        .update(s.gamePlatforms)
-        .set({ ...values, name: p.name })
-        .where(eq(s.gamePlatforms.id, match.id));
+      await db.game_platforms.update({
+        where: { id: match.id },
+        data: { ...values, name: p.name }
+      });
       updated++;
     } else {
-      await db
-        .insert(s.gamePlatforms)
-        .values({ name: p.name, slug: slugify(p.name), ...values })
-        .onConflictDoNothing();
+      await db.game_platforms.create({
+        data: { name: p.name, slug: slugify(p.name), ...values }
+      }).catch(() => {}); // ignore duplicates
       inserted++;
     }
   }
 
-  const total = await db.select({ n: s.gamePlatforms.id }).from(s.gamePlatforms);
+  const total = await db.game_platforms.count();
   console.log(
-    `✓ seeded from snapshots: ${updated} updated, ${inserted} inserted, ${total.length} total`
+    `✓ seeded from snapshots: ${updated} updated, ${inserted} inserted, ${total} total`
   );
   process.exit(0);
 }

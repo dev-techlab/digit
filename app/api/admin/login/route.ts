@@ -4,18 +4,26 @@ import { effectivePermissions } from '@/lib/rbac-core';
 import { ADMIN_SESSION_COOKIE, ADMIN_SESSION_TTL_S, sessionCookieOptions } from '@/lib/auth-tokens';
 import { checkLoginRateLimit, recordLoginFailure, recordLoginSuccess } from '@/lib/rate-limit';
 import { clientIp, logAdminAction } from '@/lib/audit-log';
+import { z } from 'zod';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+const loginSchema = z.object({
+  email: z.string().email('Invalid email address').transform(s => s.toLowerCase().trim()),
+  password: z.string().min(1, 'Password is required')
+});
 
 /** POST /api/admin/login — { email, password } → sets the admin_session cookie. */
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const email = typeof body.email === 'string' ? body.email : '';
-  const password = typeof body.password === 'string' ? body.password : '';
-  if (!email || !password) {
-    return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+  const parseResult = loginSchema.safeParse(body);
+  
+  if (!parseResult.success) {
+    return NextResponse.json(
+      { error: parseResult.error.issues[0]?.message || 'Invalid input' },
+      { status: 400 }
+    );
   }
+
+  const { email, password } = parseResult.data;
 
   const ip = clientIp(req);
   const rateLimitKey = `${email.toLowerCase()}:${ip ?? 'unknown'}`;

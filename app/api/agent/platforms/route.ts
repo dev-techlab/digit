@@ -1,38 +1,57 @@
 import { NextResponse } from 'next/server';
-import { and, asc, eq, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAgentFromRequest } from '@/lib/agent-auth';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
-/** GET /api/agent/platforms — platforms explicitly assigned to this agent. */
 export async function GET(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const platforms = await db
-    .select({
-      id: s.gamePlatforms.id,
-      name: s.gamePlatforms.name,
-      slug: s.gamePlatforms.slug,
-      iconUrl: s.gamePlatforms.iconUrl,
-      externalId: s.gamePlatforms.externalId,
-      providerCode: s.gamePlatforms.providerCode,
-      providerType: s.gamePlatforms.providerType,
-      launchUrl: s.gamePlatforms.launchUrl,
-      sort: s.gamePlatforms.sort,
-      isActive: s.gamePlatforms.isActive,
-      syncedAt: s.gamePlatforms.syncedAt,
-      createdAt: s.gamePlatforms.createdAt,
-    })
-    .from(s.agentPlatformMappings)
-    .innerJoin(s.gamePlatforms, eq(s.gamePlatforms.id, s.agentPlatformMappings.platformId))
-    .where(
-      and(eq(s.agentPlatformMappings.agentId, agent.storeId), isNull(s.gamePlatforms.deletedAt))
-    )
-    .orderBy(asc(s.gamePlatforms.sort), asc(s.gamePlatforms.name));
+  const rawPlatforms = await db.agent_platform_mappings.findMany({
+    where: {
+      agent_id: agent.storeId,
+      game_platforms: {
+        deleted_at: null
+      }
+    },
+    select: {
+      game_platforms: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          icon_url: true,
+          external_id: true,
+          provider_code: true,
+          provider_type: true,
+          launch_url: true,
+          sort: true,
+          is_active: true,
+          synced_at: true,
+          created_at: true,
+        }
+      }
+    },
+    orderBy: [
+      { game_platforms: { sort: 'asc' } },
+      { game_platforms: { name: 'asc' } }
+    ]
+  });
+
+  const platforms = rawPlatforms.map(mapping => ({
+    id: mapping.game_platforms.id,
+    name: mapping.game_platforms.name,
+    slug: mapping.game_platforms.slug,
+    iconUrl: mapping.game_platforms.icon_url,
+    externalId: mapping.game_platforms.external_id,
+    providerCode: mapping.game_platforms.provider_code,
+    providerType: mapping.game_platforms.provider_type,
+    launchUrl: mapping.game_platforms.launch_url,
+    sort: mapping.game_platforms.sort,
+    isActive: mapping.game_platforms.is_active,
+    syncedAt: mapping.game_platforms.synced_at,
+    createdAt: mapping.game_platforms.created_at,
+  }));
 
   return NextResponse.json({ platforms });
 }

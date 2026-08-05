@@ -57,16 +57,12 @@ const statusChip = (st: string) => (
 
 export function WithdrawalsScreen() {
   const [statusFilter, setStatusFilter] = useState<string>('pending');
-  const table = useDataTable<WithdrawalRow>('/api/admin/withdrawals', 'withdrawals');
+  const table = useDataTable<WithdrawalRow>('/api/admin/withdrawals', 'withdrawals', 20, { status: 'pending' });
 
   const actionModal = useActionModal<WithdrawalRow, 'accept' | 'reject'>();
   const [remark, setRemark] = useState('');
 
-  // Initial load
-  useEffect(() => {
-    void table.load(1, '', { status: 'pending' });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // SWR fetches automatically based on default status='pending'
 
   const openAction = (type: 'accept' | 'reject', row: WithdrawalRow) => {
     actionModal.openModal(row, type);
@@ -112,14 +108,11 @@ export function WithdrawalsScreen() {
           manualPagination
           totalRows={table.total}
           currentPage={table.page}
-          onPageChange={(p) => {
-            table.setPage(p);
-            void table.load(p, table.search, { status: statusFilter });
-          }}
+          onPageChange={(p) => table.setPage(p)}
           globalSearch={table.search}
           onSearchChange={(v) => {
             table.setSearch(v);
-            void table.load(1, v, { status: statusFilter });
+            table.setPage(1);
           }}
           extraToolbar={
             <div className="flex items-center gap-2">
@@ -130,7 +123,7 @@ export function WithdrawalsScreen() {
                 onChange={(e) => {
                   setStatusFilter(e.target.value);
                   table.setPage(1);
-                  void table.load(1, table.search, { status: e.target.value });
+                  table.load(1, table.search, { status: e.target.value });
                 }}
               >
                 <option value="">All</option>

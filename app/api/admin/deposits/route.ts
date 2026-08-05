@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server';
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission, PermissionError } from '@/lib/rbac-core';
 import { clientIp, logAdminAction } from '@/lib/audit-log';
+import { z } from 'zod';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+const actionSchema = z.object({
+  id: z.string().min(1, 'id required'),
+  action: z.enum(['accept', 'reject'], { message: "Invalid input" }),
+  remark: z.string().trim().nullable().optional()
+});
 
 async function authorize(
   req: Request,
@@ -33,7 +35,6 @@ async function authorize(
   return { adminId, error: undefined };
 }
 
-/** GET /api/admin/deposits */
 export async function GET(req: Request) {
   const { error } = await authorize(req, 'agents.read');
   if (error) return error;
@@ -45,119 +46,120 @@ export async function GET(req: Request) {
   const statusFilter = url.searchParams.get('status') as
     'pending' | 'completed' | 'failed' | 'cancelled' | null;
 
-  const where = and(
-    eq(s.agentTransactions.type, 'deposit'),
-    statusFilter ? eq(s.agentTransactions.status, statusFilter) : undefined,
-    search
-      ? or(ilike(s.agents.username, `%${search}%`), ilike(s.agentTransactions.id, `%${search}%`))
-      : undefined
-  );
+  const where: any = { type: 'deposit' };
+  if (statusFilter) where.status = statusFilter;
 
-  const [rows, [{ count }]] = await Promise.all([
-    db
-      .select({
-        id: s.agentTransactions.id,
-        agentId: s.agentTransactions.agentId,
-        username: s.agents.username,
-        method: s.agentTransactions.method,
-        amount: s.agentTransactions.amount,
-        fee: s.agentTransactions.fee,
-        netAmount: s.agentTransactions.netAmount,
-        address: s.agentTransactions.address,
-        balanceBefore: s.agentTransactions.balanceBefore,
-        balanceAfter: s.agentTransactions.balanceAfter,
-        remark: s.agentTransactions.remark,
-        status: s.agentTransactions.status,
-        createdAt: s.agentTransactions.createdAt,
-      })
-      .from(s.agentTransactions)
-      .innerJoin(s.agents, eq(s.agents.id, s.agentTransactions.agentId))
-      .where(where)
-      .orderBy(desc(s.agentTransactions.createdAt))
-      .limit(pageSize)
-      .offset((page - 1) * pageSize),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(s.agentTransactions)
-      .innerJoin(s.agents, eq(s.agents.id, s.agentTransactions.agentId))
-      .where(where),
+  if (search) {
+    where.OR = [
+      { id: { contains: search, mode: 'insensitive' } },
+      { agents_agent_transactions_agent_idToagents: { username: { contains: search, mode: 'insensitive' } } }
+    ];
+  }
+
+  const [rows, count] = await Promise.all([
+    db.agent_transactions.findMany({
+      where,
+      select: {
+        id: true,
+        agent_id: true,
+        method: true,
+        amount: true,
+        fee: true,
+        net_amount: true,
+        address: true,
+        balance_before: true,
+        balance_after: true,
+        remark: true,
+        status: true,
+        created_at: true,
+        agents_agent_transactions_agent_idToagents: {
+          select: { username: true }
+        }
+      },
+      orderBy: { created_at: 'desc' },
+      take: pageSize,
+      skip: (page - 1) * pageSize,
+    }),
+    db.agent_transactions.count({ where }),
   ]);
 
-  return NextResponse.json({ deposits: rows, total: count });
+  const formattedRows = rows.map(r => ({
+    id: r.id,
+    agentId: r.agent_id,
+    username: r.agents_agent_transactions_agent_idToagents?.username,
+    method: r.method,
+    amount: r.amount,
+    fee: r.fee,
+    netAmount: r.net_amount,
+    address: r.address,
+    balanceBefore: r.balance_before,
+    balanceAfter: r.balance_after,
+    remark: r.remark,
+    status: r.status,
+    createdAt: r.created_at,
+  }));
+
+  return NextResponse.json({ deposits: formattedRows, total: count });
 }
 
-/** POST /api/admin/deposits — accept or reject a pending deposit */
 export async function POST(req: Request) {
   const { error, adminId } = await authorize(req, 'agents.write');
   if (error) return error;
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const id = typeof body.id === 'string' ? body.id : '';
-  const action = typeof body.action === 'string' ? body.action : '';
-  const remark = typeof body.remark === 'string' ? body.remark.trim() : null;
+  const body = await req.json().catch(() => ({}));
+  const parseResult = actionSchema.safeParse(body);
 
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-  if (action !== 'accept' && action !== 'reject') {
-    return NextResponse.json({ error: 'invalid action' }, { status: 400 });
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
   }
 
+  const { id, action, remark } = parseResult.data;
+
   try {
-    await db.transaction(async (tx) => {
-      const [txRow] = await tx
-        .select()
-        .from(s.agentTransactions)
-        .where(
-          and(
-            eq(s.agentTransactions.id, id),
-            eq(s.agentTransactions.type, 'deposit'),
-            eq(s.agentTransactions.status, 'pending')
-          )
-        )
-        .for('update');
+    await db.$transaction(async (tx) => {
+      const txRow = await tx.agent_transactions.findFirst({
+        where: { id, type: 'deposit', status: 'pending' }
+      });
 
       if (!txRow) {
         throw new Error('Pending deposit request not found');
       }
 
-      // Lock the agent to get their current balance
-      const [agentRow] = await tx
-        .select({ balance: s.agents.onlineBalance })
-        .from(s.agents)
-        .where(eq(s.agents.id, txRow.agentId))
-        .for('update');
+      const agentRow = await tx.agents.findUnique({
+        where: { id: txRow.agent_id },
+        select: { online_balance: true }
+      });
 
-      const currentBalance = Number(agentRow.balance);
+      const currentBalance = Number(agentRow?.online_balance || 0);
 
       if (action === 'accept') {
         const amount = Number(txRow.amount);
         const balanceAfter = currentBalance + amount;
 
-        // Accept: change status, record correct balances, and increase agent balance
-        await tx
-          .update(s.agentTransactions)
-          .set({
+        await tx.agent_transactions.update({
+          where: { id },
+          data: {
             status: 'completed',
             remark,
-            balanceBefore: String(currentBalance),
-            balanceAfter: String(balanceAfter),
-          })
-          .where(eq(s.agentTransactions.id, id));
+            balance_before: String(currentBalance),
+            balance_after: String(balanceAfter),
+          }
+        });
 
-        await tx
-          .update(s.agents)
-          .set({ onlineBalance: String(balanceAfter) })
-          .where(eq(s.agents.id, txRow.agentId));
+        await tx.agents.update({
+          where: { id: txRow.agent_id },
+          data: { online_balance: String(balanceAfter) }
+        });
       } else {
-        // Rejecting: change status, record current balance (no change)
-        await tx
-          .update(s.agentTransactions)
-          .set({
+        await tx.agent_transactions.update({
+          where: { id },
+          data: {
             status: 'failed',
             remark,
-            balanceBefore: String(currentBalance),
-            balanceAfter: String(currentBalance),
-          })
-          .where(eq(s.agentTransactions.id, id));
+            balance_before: String(currentBalance),
+            balance_after: String(currentBalance),
+          }
+        });
       }
     });
 

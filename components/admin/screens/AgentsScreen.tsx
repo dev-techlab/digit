@@ -57,6 +57,8 @@ export function AgentsScreen() {
   const [form, setForm] = useState(emptyForm());
   const [created, setCreated] = useState<{ username: string; password: string } | null>(null);
 
+  const deleteModal = useActionModal<AgentRow>();
+
   const editModal = useActionModal<AgentRow>();
   const [editForm, setEditForm] = useState({
     nickname: '',
@@ -69,10 +71,7 @@ export function AgentsScreen() {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [gameSearch, setGameSearch] = useState('');
 
-  useEffect(() => {
-    void table.load(1, '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // SWR fetches automatically; no manual useEffect needed
 
   const loadPlatforms = useCallback(async (agentId?: string) => {
     if (agentId) {
@@ -168,6 +167,21 @@ export function AgentsScreen() {
       editModal.setErr(e instanceof Error ? e.message : 'Failed to update agent.');
     } finally {
       editModal.setBusy(false);
+    }
+  };
+
+  const deleteAgent = async () => {
+    if (!deleteModal.item) return;
+    deleteModal.setErr(null);
+    deleteModal.setBusy(true);
+    try {
+      await api(`/api/admin/agents?id=${deleteModal.item.id}`, { method: 'DELETE' });
+      void table.reload();
+      deleteModal.closeModal();
+    } catch (e) {
+      deleteModal.setErr(e instanceof Error ? e.message : 'Failed to delete agent.');
+    } finally {
+      deleteModal.setBusy(false);
     }
   };
 
@@ -267,14 +281,11 @@ export function AgentsScreen() {
           manualPagination
           totalRows={table.total}
           currentPage={table.page}
-          onPageChange={(p) => {
-            table.setPage(p);
-            void table.load(p);
-          }}
+          onPageChange={(p) => table.setPage(p)}
           globalSearch={table.search}
           onSearchChange={(v) => {
             table.setSearch(v);
-            void table.load(1, v);
+            table.setPage(1);
           }}
           columns={[
             {
@@ -371,6 +382,14 @@ export function AgentsScreen() {
                     onClick={() => void toggleStatus(r)}
                   >
                     {r.status === 'active' ? 'Block Access' : 'Restore Access'}
+                  </Btn>
+                  <Btn
+                    variant="danger"
+                    className="px-3 py-1.5 text-xs ml-1 bg-red-600 hover:bg-red-700"
+                    disabled={busyId === r.id || (deleteModal.busy && deleteModal.item?.id === r.id)}
+                    onClick={() => deleteModal.openModal(r)}
+                  >
+                    Delete
                   </Btn>
                 </div>
               ),
@@ -527,6 +546,31 @@ export function AgentsScreen() {
               placeholder="Optional note"
             />
           </Field>
+        </div>
+      </Modal>
+
+      <Modal
+        title="Confirm Delete"
+        open={deleteModal.open}
+        onClose={deleteModal.closeModal}
+        footer={
+          <>
+            <Btn variant="ghost" onClick={deleteModal.closeModal}>
+              Cancel
+            </Btn>
+            <Btn variant="danger" onClick={deleteAgent} disabled={deleteModal.busy}>
+              {deleteModal.busy ? 'Deleting…' : 'Delete'}
+            </Btn>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {deleteModal.err && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{deleteModal.err}</p>
+          )}
+          <p className="text-slate-700">
+            Are you sure you want to delete agent <strong>{deleteModal.item?.username}</strong>? This action cannot be undone.
+          </p>
         </div>
       </Modal>
     </div>

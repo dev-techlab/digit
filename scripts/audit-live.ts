@@ -3,10 +3,8 @@
  * loopholes against the real DB. Read-only except for temporary rows it cleans
  * up. Run: pnpm tsx --env-file=.env scripts/audit-live.ts
  */
-import { and, eq, gt, isNull } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { verifyAdminLogin } from '@/lib/admin-service';
 import { isSuperAdmin, can } from '@/lib/rbac-core';
 
@@ -14,20 +12,16 @@ import { isSuperAdmin, can } from '@/lib/rbac-core';
 // imports `server-only`, which can't load under plain tsx) — including the
 // status='active' join added by the suspended-admin fix.
 async function adminIdForToken(token: string): Promise<string | null> {
-  const rows = await db
-    .select({ adminId: s.adminSessions.adminId })
-    .from(s.adminSessions)
-    .innerJoin(s.admins, eq(s.admins.id, s.adminSessions.adminId))
-    .where(
-      and(
-        eq(s.adminSessions.token, token),
-        gt(s.adminSessions.expiresAt, new Date()),
-        isNull(s.adminSessions.revokedAt),
-        eq(s.admins.status, 'active')
-      )
-    )
-    .limit(1);
-  return rows[0]?.adminId ?? null;
+  const session = await db.admin_sessions.findFirst({
+    where: {
+      token,
+      expires_at: { gt: new Date() },
+      revoked_at: null,
+      admins: { status: 'active' }
+    },
+    select: { admin_id: true }
+  });
+  return session?.admin_id ?? null;
 }
 
 let pass = 0;
@@ -39,9 +33,9 @@ function check(name: string, ok: boolean, detail = '') {
 }
 
 async function main() {
-  const admins = await db.select().from(s.admins);
-  const roles = await db.select().from(s.roles);
-  const perms = await db.select().from(s.permissions);
+  const admins = await db.admins.findMany();
+  const roles = await db.roles.findMany();
+  const perms = await db.permissions.findMany();
   console.log(`\nseed: admins=${admins.length} roles=${roles.length} permissions=${perms.length}`);
   if (admins.length === 0) {
     console.log('DB not seeded — run `pnpm db:seed` first.');
@@ -83,45 +77,42 @@ async function main() {
 
   console.log('\n— Deny-wins —');
   const ordersRead = perms.find((p) => p.key === 'orders.read')!;
-  await db
-    .insert(s.adminPermissions)
-    .values({ adminId: finId!, permissionId: ordersRead.id, effect: 'deny' })
-    .onConflictDoUpdate({
-      target: [s.adminPermissions.adminId, s.adminPermissions.permissionId],
-      set: { effect: 'deny' },
-    });
+  await db.admin_permissions.upsert({
+    where: {
+      admin_id_permission_id: { admin_id: finId!, permission_id: ordersRead.id }
+    },
+    create: { admin_id: finId!, permission_id: ordersRead.id, effect: 'deny' },
+    update: { effect: 'deny' }
+  });
   check('direct deny overrides role grant', !(await can(finId!, 'orders.read')));
-  await db
-    .delete(s.adminPermissions)
-    .where(
-      and(
-        eq(s.adminPermissions.adminId, finId!),
-        eq(s.adminPermissions.permissionId, ordersRead.id)
-      )
-    );
+  await db.admin_permissions.deleteMany({
+    where: { admin_id: finId!, permission_id: ordersRead.id }
+  });
 
   console.log('\n— Suspended-admin fix (loophole must be CLOSED) —');
   const token = 'audit-' + randomUUID();
-  await db.insert(s.adminSessions).values({
-    adminId: finId!,
-    token,
-    expiresAt: new Date(Date.now() + 3600_000),
+  await db.admin_sessions.create({
+    data: {
+      admin_id: finId!,
+      token,
+      expires_at: new Date(Date.now() + 3600_000),
+    }
   });
   check('active admin session resolves before suspend', (await adminIdForToken(token)) === finId!);
-  await db.update(s.admins).set({ status: 'suspended' }).where(eq(s.admins.id, finId!));
+  await db.admins.update({ where: { id: finId! }, data: { status: 'suspended' } });
   try {
     const after = await adminIdForToken(token);
     const canAfter = await can(finId!, 'orders.write');
     check('suspended admin session is REJECTED', after === null, `resolves=${after ?? 'null'}`);
     check('suspended admin can() is DENIED', !canAfter, 'orders.write');
   } finally {
-    await db.update(s.admins).set({ status: 'active' }).where(eq(s.admins.id, finId!));
-    await db.delete(s.adminSessions).where(eq(s.adminSessions.token, token));
+    await db.admins.update({ where: { id: finId! }, data: { status: 'active' } });
+    await db.admin_sessions.deleteMany({ where: { token } });
   }
 
   console.log('\n— User side —');
-  const demo = await db.query.users.findFirst({
-    where: (u, { eq }) => eq(u.username, 'player_2481'),
+  const demo = await db.users.findFirst({
+    where: { username: 'player_2481' }
   });
   check('demo user seeded (player_2481)', !!demo);
   console.log('  NOTE: no user login service/route exists — user auth is the frontend mock.');

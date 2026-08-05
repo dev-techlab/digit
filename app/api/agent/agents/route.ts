@@ -1,15 +1,11 @@
 import { NextResponse } from 'next/server';
+import { z, ZodError } from 'zod';
 import bcrypt from 'bcryptjs';
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
 import { randomBytes } from 'node:crypto';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAgentFromRequest } from '@/lib/agent-auth';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
-/** GET /api/agent/agents?type=sale|sub&search=&report=1 — list (or totals report). */
 export async function GET(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -18,62 +14,96 @@ export async function GET(req: Request) {
   const search = url.searchParams.get('search')?.trim();
 
   if (url.searchParams.get('report')) {
-    // Per-agent totals: deposits/withdrawals of the members assigned to each agent.
-    const agentCol = type === 'sub' ? s.members.subAgentId : s.members.saleAgentId;
-    const rows = await db
-      .select({
-        agentId: s.agents.id,
-        username: s.agents.username,
-        deposit: sql<string>`coalesce(sum(${s.memberTransactions.amount}) filter (where ${s.memberTransactions.type} = 'recharge'), 0)`,
-        depositors: sql<number>`count(distinct ${s.memberTransactions.memberId}) filter (where ${s.memberTransactions.type} = 'recharge')::int`,
-        withdrawal: sql<string>`coalesce(sum(${s.memberTransactions.amount}) filter (where ${s.memberTransactions.type} = 'redeem'), 0)`,
-        withdrawers: sql<number>`count(distinct ${s.memberTransactions.memberId}) filter (where ${s.memberTransactions.type} = 'redeem')::int`,
-        totalIn: sql<string>`coalesce(sum(${s.memberTransactions.inScore}), 0)`,
-        totalOut: sql<string>`coalesce(sum(${s.memberTransactions.outScore}), 0)`,
-        bonus: sql<string>`coalesce(sum(${s.memberTransactions.bonusScore}), 0)`,
-        gameDepositFee: sql<string>`coalesce(sum(${s.memberTransactions.gameDepositFee}), 0)`,
-        platformFee: sql<string>`coalesce(sum(${s.memberTransactions.platformFee}), 0)`,
-      })
-      .from(s.agents)
-      .leftJoin(s.members, eq(agentCol, s.agents.id))
-      .leftJoin(s.memberTransactions, eq(s.memberTransactions.memberId, s.members.id))
-      .where(and(eq(s.agents.storeId, agent.storeId), eq(s.agents.type, type)))
-      .groupBy(s.agents.id, s.agents.username);
-    return NextResponse.json({ report: rows });
+    const agentCol = type === 'sub' ? 'sub_agent_id' : 'sale_agent_id';
+    const rows = await db.$queryRawUnsafe(`
+      SELECT 
+        a.id AS "agentId", 
+        a.username,
+        COALESCE(SUM(mt.amount) FILTER (WHERE mt.type = 'recharge'), 0) AS deposit,
+        COUNT(DISTINCT mt.member_id) FILTER (WHERE mt.type = 'recharge')::int AS depositors,
+        COALESCE(SUM(mt.amount) FILTER (WHERE mt.type = 'redeem'), 0) AS withdrawal,
+        COUNT(DISTINCT mt.member_id) FILTER (WHERE mt.type = 'redeem')::int AS withdrawers,
+        COALESCE(SUM(mt.in_score), 0) AS "totalIn",
+        COALESCE(SUM(mt.out_score), 0) AS "totalOut",
+        COALESCE(SUM(mt.bonus_score), 0) AS bonus,
+        COALESCE(SUM(mt.game_deposit_fee), 0) AS "gameDepositFee",
+        COALESCE(SUM(mt.platform_fee), 0) AS "platformFee"
+      FROM agents a
+      LEFT JOIN members m ON m.${agentCol} = a.id
+      LEFT JOIN member_transactions mt ON mt.member_id = m.id
+      WHERE a.store_id = $1 AND a.type = $2
+      GROUP BY a.id, a.username
+    `, agent.storeId, type);
+
+    const formattedRows = (rows as any[]).map(row => {
+      const formatted: any = {};
+      for (const key in row) {
+        formatted[key] = typeof row[key] === 'bigint' ? row[key].toString() : row[key];
+      }
+      return formatted;
+    });
+
+    return NextResponse.json({ report: formattedRows });
   }
 
-  const where = and(
-    eq(s.agents.storeId, agent.storeId),
-    eq(s.agents.type, type),
-    search
-      ? or(
-          ilike(s.agents.username, `%${search}%`),
-          ilike(s.agents.nickname, `%${search}%`),
-          ilike(s.agents.email, `%${search}%`)
-        )
-      : undefined
-  );
-  const rows = await db
-    .select({
-      id: s.agents.id,
-      username: s.agents.username,
-      nickname: s.agents.nickname,
-      email: s.agents.email,
-      ratioPct: s.agents.ratioPct,
-      commissionPer: s.agents.commissionPer,
-      onlineBalance: s.agents.onlineBalance,
-      inviteCode: s.agents.inviteCode,
-      status: s.agents.status,
-      remark: s.agents.remark,
-      createdAt: s.agents.createdAt,
-    })
-    .from(s.agents)
-    .where(where)
-    .orderBy(desc(s.agents.createdAt));
-  return NextResponse.json({ agents: rows });
+  const where: any = {
+    store_id: agent.storeId,
+    type,
+  };
+
+  if (search) {
+    where.OR = [
+      { username: { contains: search, mode: 'insensitive' } },
+      { nickname: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } },
+    ];
+  }
+
+  const rows = await db.agents.findMany({
+    where,
+    select: {
+      id: true,
+      username: true,
+      nickname: true,
+      email: true,
+      ratio_pct: true,
+      commission_per: true,
+      online_balance: true,
+      invite_code: true,
+      status: true,
+      remark: true,
+      created_at: true,
+    },
+    orderBy: { created_at: 'desc' },
+  });
+
+  const formatted = rows.map(r => ({
+    id: r.id,
+    username: r.username,
+    nickname: r.nickname,
+    email: r.email,
+    ratioPct: r.ratio_pct,
+    commissionPer: r.commission_per,
+    onlineBalance: r.online_balance,
+    inviteCode: r.invite_code,
+    status: r.status,
+    remark: r.remark,
+    createdAt: r.created_at,
+  }));
+
+  return NextResponse.json({ agents: formatted });
 }
 
-/** POST /api/agent/agents — create a sale/sub agent under this store. */
+const postSchema = z.object({
+  type: z.enum(['sub', 'sale']).optional().default('sale'),
+  username: z.string().min(4, 'Username must be at least 4 characters'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  nickname: z.string().min(1, 'Nickname required'),
+  ratioPct: z.union([z.string(), z.number()]).optional().transform(v => Number(v)),
+  commissionPer: z.union([z.string(), z.number()]).optional().transform(v => Number(v)),
+  remark: z.string().max(300).optional().or(z.literal('')),
+});
+
 export async function POST(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -81,43 +111,50 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Only the store account can add agents' }, { status: 403 });
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const type = body.type === 'sub' ? 'sub' : 'sale';
-  const username = typeof body.username === 'string' ? body.username.trim() : '';
-  const password = typeof body.password === 'string' ? body.password : '';
-  const nickname = typeof body.nickname === 'string' ? body.nickname.trim() : '';
-  if (!username || !password || !nickname) {
-    return NextResponse.json(
-      { error: 'Username, password and nickname are required' },
-      { status: 400 }
-    );
-  }
-
   try {
-    const [created] = await db
-      .insert(s.agents)
-      .values({
-        type,
-        username,
-        passwordHash: await bcrypt.hash(password, 10),
-        nickname,
-        storeId: agent.storeId,
-        parentAgentId: agent.id,
-        ratioPct: Number.isFinite(Number(body.ratioPct)) ? String(body.ratioPct) : '0',
-        commissionPer: Number.isFinite(Number(body.commissionPer))
-          ? String(body.commissionPer)
+    const body = await req.json();
+    const data = postSchema.parse(body);
+
+    const created = await db.agents.create({
+      data: {
+        type: data.type,
+        username: data.username.trim(),
+        password_hash: await bcrypt.hash(data.password, 10),
+        nickname: data.nickname.trim(),
+        store_id: agent.storeId,
+        parent_agent_id: agent.id,
+        ratio_pct: Number.isFinite(data.ratioPct) ? String(data.ratioPct) : '0',
+        commission_per: Number.isFinite(data.commissionPer)
+          ? String(data.commissionPer)
           : '0',
-        inviteCode: `MC${randomBytes(8).toString('hex').toUpperCase()}`,
-        remark: typeof body.remark === 'string' ? body.remark.slice(0, 300) : null,
-      })
-      .returning({ id: s.agents.id });
+        invite_code: `MC${randomBytes(8).toString('hex').toUpperCase()}`,
+        remark: data.remark?.trim() || null,
+      },
+      select: { id: true }
+    });
     return NextResponse.json({ ok: true, id: created.id });
-  } catch {
-    return NextResponse.json({ error: 'Username already exists' }, { status: 409 });
+  } catch (e: any) {
+    if (e instanceof ZodError) {
+      return NextResponse.json({ error: e.issues[0].message }, { status: 400 });
+    }
+    if (e.code === 'P2002') {
+      return NextResponse.json({ error: 'Username already exists' }, { status: 409 });
+    }
+    console.error(e);
+    return NextResponse.json({ error: 'Failed to create agent' }, { status: 500 });
   }
 }
 
-/** PUT /api/agent/agents — update ratio/status/remark of an owned agent. */
+const putSchema = z.object({
+  id: z.string().uuid(),
+  ratioPct: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
+  commissionPer: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
+  status: z.enum(['active', 'disabled']).optional(),
+  remark: z.string().max(300).optional().or(z.literal('')),
+  nickname: z.string().optional().or(z.literal('')),
+  password: z.string().min(6).optional().or(z.literal('')),
+});
+
 export async function PUT(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -128,25 +165,39 @@ export async function PUT(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const id = typeof body.id === 'string' ? body.id : '';
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+  try {
+    const body = await req.json();
+    const data = putSchema.parse(body);
 
-  const set: Partial<typeof s.agents.$inferInsert> = {};
-  if (body.ratioPct != null && Number.isFinite(Number(body.ratioPct)))
-    set.ratioPct = String(body.ratioPct);
-  if (body.commissionPer != null && Number.isFinite(Number(body.commissionPer)))
-    set.commissionPer = String(body.commissionPer);
-  if (body.status === 'active' || body.status === 'disabled') set.status = body.status;
-  if (typeof body.remark === 'string') set.remark = body.remark.slice(0, 300);
-  if (typeof body.nickname === 'string') set.nickname = body.nickname;
-  if (typeof body.password === 'string' && body.password.length >= 6) {
-    set.passwordHash = await bcrypt.hash(body.password, 10);
+    const set: any = {};
+    if (data.ratioPct !== undefined && Number.isFinite(data.ratioPct))
+      set.ratio_pct = String(data.ratioPct);
+    if (data.commissionPer !== undefined && Number.isFinite(data.commissionPer))
+      set.commission_per = String(data.commissionPer);
+    if (data.status) set.status = data.status;
+    if (data.remark !== undefined) set.remark = data.remark.trim() || null;
+    if (data.nickname !== undefined) set.nickname = data.nickname.trim() || null;
+    if (data.password) {
+      set.password_hash = await bcrypt.hash(data.password, 10);
+    }
+
+    if (Object.keys(set).length === 0) {
+      return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
+    }
+
+    await db.agents.updateMany({
+      where: {
+        id: data.id,
+        store_id: agent.storeId
+      },
+      data: set
+    });
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    if (err instanceof ZodError) {
+      return NextResponse.json({ error: err.issues[0].message }, { status: 400 });
+    }
+    console.error('PUT /api/agent/agents', err);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-
-  await db
-    .update(s.agents)
-    .set(set)
-    .where(and(eq(s.agents.id, id), eq(s.agents.storeId, agent.storeId)));
-  return NextResponse.json({ ok: true });
 }

@@ -1,7 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
+import useSWR from 'swr';
 import { Plus, ClipboardList, Info } from 'lucide-react';
+import { env } from '@/lib/env';
 import {
   api,
   Btn,
@@ -45,10 +47,8 @@ interface ReportRow {
 }
 
 export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
-  const [rows, setRows] = useState<AgentRow[]>([]);
-  const [search, setSearch] = useState('');
-  const [code, setCode] = useState('');
-  const [status, setStatus] = useState('all');
+  const [filters, setFilters] = useState({ search: '', code: '', status: 'all' });
+  const [query, setQuery] = useState(''); // Only update on Search click
   const [addOpen, setAddOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [report, setReport] = useState<ReportRow[]>([]);
@@ -63,17 +63,12 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
   const [err, setErr] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const load = useCallback(
-    (q = search) =>
-      api<{ agents: AgentRow[] }>(
-        `/api/agent/agents?type=${type}&search=${encodeURIComponent(q)}`
-      ).then((d) => setRows(d.agents)),
-    [type, search]
+  const { data, mutate } = useSWR<{ agents: AgentRow[] }>(
+    `/api/agent/agents?type=${type}&search=${encodeURIComponent(query)}`,
+    (url: string) => api<{ agents: AgentRow[] }>(url)
   );
-  useEffect(() => {
-    void load('');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type]);
+
+  const rows = data?.agents || [];
 
   const openReport = async () => {
     const d = await api<{ report: ReportRow[] }>(`/api/agent/agents?type=${type}&report=1`);
@@ -94,7 +89,7 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
         commissionPer: '0.00',
         remark: '',
       });
-      void load();
+      void mutate();
     } catch (e) {
       setErr((e as Error).message);
     }
@@ -103,14 +98,16 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
   const toggleStatus = async (row: AgentRow) => {
     const next = row.status === 'active' ? 'disabled' : 'active';
     setBusyId(row.id);
-    setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, status: next } : r)));
+    const updatedRows = rows.map((r) => (r.id === row.id ? { ...r, status: next } : r));
+    void mutate({ agents: updatedRows }, false);
     try {
       await api('/api/agent/agents', {
         method: 'PUT',
         body: JSON.stringify({ id: row.id, status: next }),
       });
+      void mutate();
     } catch (e) {
-      setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, status: row.status } : r)));
+      void mutate();
       window.alert(e instanceof Error ? e.message : 'Failed to update status.');
     } finally {
       setBusyId(null);
@@ -121,8 +118,8 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
 
   const filtered = rows.filter(
     (r) =>
-      (status === 'all' || r.status === status) &&
-      (!code || r.inviteCode.toLowerCase().includes(code.toLowerCase()))
+      (filters.status === 'all' || r.status === filters.status) &&
+      (!filters.code || r.inviteCode.toLowerCase().includes(filters.code.toLowerCase()))
   );
 
   return (
@@ -132,33 +129,31 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
         <TextInput
           className="w-full sm:w-64"
           placeholder="Username/Nickname/Email"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={filters.search}
+          onChange={(e) => setFilters({ ...filters, search: e.target.value })}
         />
         <span className="text-sm text-slate-500">Code</span>
         <TextInput
           className="w-full sm:w-40"
           placeholder="Enter code"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
+          value={filters.code}
+          onChange={(e) => setFilters({ ...filters, code: e.target.value })}
         />
         <span className="text-sm text-slate-500">Status</span>
         <Select
           className="w-full sm:w-32"
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
+          value={filters.status}
+          onChange={(e) => setFilters({ ...filters, status: e.target.value })}
         >
           <option value="all">All</option>
           <option value="active">Active</option>
           <option value="disabled">Disabled</option>
         </Select>
-        <SearchBtn onClick={() => void load()} />
+        <SearchBtn onClick={() => setQuery(filters.search)} />
         <ResetBtn
           onClick={() => {
-            setSearch('');
-            setCode('');
-            setStatus('all');
-            void load('');
+            setFilters({ search: '', code: '', status: 'all' });
+            setQuery('');
           }}
         />
       </Card>
@@ -208,7 +203,7 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
               accessorKey: 'inviteCode',
               cell: (r) => (
                 <div className="max-w-56 truncate text-blue-500">
-                  {process.env.NEXT_PUBLIC_SITE_URL}?inviteCode={r.inviteCode}
+                  {env.NEXT_PUBLIC_SITE_URL}?inviteCode={r.inviteCode}
                 </div>
               ),
             },
@@ -263,7 +258,6 @@ export function AgentListScreen({ type }: { type: 'sale' | 'sub' }) {
         }
       >
         <div className="space-y-4">
-          {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{err}</p>}
           <Field label="Username" required>
             <TextInput
               value={form.username}

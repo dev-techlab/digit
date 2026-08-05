@@ -56,6 +56,7 @@ const TITLES: Record<string, string> = {
   'game-platforms': 'Game Platforms',
   'sale-agents': 'Sale Agent List',
   members: 'Member List',
+  customers: 'Customer List',
   'sub-agents': 'Sub Agent List',
   kiosks: 'Kiosk List',
   'member-rewards': 'Member Rewards',
@@ -198,6 +199,7 @@ export function AgentShell({ children }: { children: React.ReactNode }) {
           <NavItem indent icon={LayoutGrid} label="Game Platforms" href="/agent/game-platforms" />
           <NavItem indent icon={UserRound} label="Sale Agent List" href="/agent/sale-agents" />
           <NavItem indent icon={Wine} label="Member List" href="/agent/members" />
+          <NavItem indent icon={UserCircle} label="Customers" href="/agent/customers" />
           <NavItem indent icon={UserRound} label="Sub Agent List" href="/agent/sub-agents" />
           <NavItem indent icon={Monitor} label="Kiosk List" href="/agent/kiosks" />
           <NavItem indent icon={Trophy} label="Member Rewards" href="/agent/member-rewards" />

@@ -54,15 +54,12 @@ const statusChip = (st: string) => (
 
 export function DepositsScreen() {
   const [statusFilter, setStatusFilter] = useState<string>('pending');
-  const table = useDataTable<DepositRow>('/api/admin/deposits', 'deposits');
+  const table = useDataTable<DepositRow>('/api/admin/deposits', 'deposits', 20, { status: 'pending' });
 
   const actionModal = useActionModal<DepositRow, 'accept' | 'reject'>();
   const [remark, setRemark] = useState('');
 
-  useEffect(() => {
-    void table.load(1, '', { status: 'pending' });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // SWR fetches automatically based on default status='pending'
 
   const openAction = (type: 'accept' | 'reject', row: DepositRow) => {
     actionModal.openModal(row, type);
@@ -107,14 +104,11 @@ export function DepositsScreen() {
           manualPagination
           totalRows={table.total}
           currentPage={table.page}
-          onPageChange={(p) => {
-            table.setPage(p);
-            void table.load(p, table.search, { status: statusFilter });
-          }}
+          onPageChange={(p) => table.setPage(p)}
           globalSearch={table.search}
           onSearchChange={(v) => {
             table.setSearch(v);
-            void table.load(1, v, { status: statusFilter });
+            table.setPage(1);
           }}
           extraToolbar={
             <div className="flex items-center gap-2">
@@ -125,7 +119,7 @@ export function DepositsScreen() {
                 onChange={(e) => {
                   setStatusFilter(e.target.value);
                   table.setPage(1);
-                  void table.load(1, table.search, { status: e.target.value });
+                  table.load(1, table.search, { status: e.target.value });
                 }}
               >
                 <option value="">All</option>

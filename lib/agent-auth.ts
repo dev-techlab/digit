@@ -1,8 +1,6 @@
 import 'server-only';
 import bcrypt from 'bcryptjs';
-import { and, eq, gt, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { newSessionToken } from '@/lib/auth-tokens';
 
 export const AGENT_SESSION_COOKIE = 'agent_session';
@@ -34,44 +32,46 @@ export async function getAgentFromRequest(req: Request): Promise<AgentContext | 
   const token = bearer ?? cookieValue(req.headers.get('cookie'), AGENT_SESSION_COOKIE);
   if (!token) return null;
 
-  const rows = await db
-    .select({
-      id: s.agents.id,
-      type: s.agents.type,
-      username: s.agents.username,
-      nickname: s.agents.nickname,
-      email: s.agents.email,
-      storeId: s.agents.storeId,
-    })
-    .from(s.agentSessions)
-    .innerJoin(s.agents, eq(s.agents.id, s.agentSessions.agentId))
-    .where(
-      and(
-        eq(s.agentSessions.token, token),
-        gt(s.agentSessions.expiresAt, new Date()),
-        isNull(s.agentSessions.revokedAt),
-        eq(s.agents.status, 'active')
-      )
-    )
-    .limit(1);
+  const session = await db.agent_sessions.findFirst({
+    where: {
+      token,
+      expires_at: { gt: new Date() },
+      revoked_at: null,
+      agents: { status: 'active' },
+    },
+    include: {
+      agents: {
+        select: {
+          id: true,
+          type: true,
+          username: true,
+          nickname: true,
+          email: true,
+          store_id: true,
+        },
+      },
+    },
+  });
 
-  const a = rows[0];
+  const a = session?.agents;
   if (!a) return null;
-  return { ...a, storeId: a.storeId ?? a.id };
+  return { ...a, storeId: a.store_id ?? a.id } as AgentContext;
 }
 
 /** Verify username/password → agent id, or null. */
 export async function verifyAgentLogin(username: string, password: string) {
-  const [agent] = await db
-    .select({ id: s.agents.id, passwordHash: s.agents.passwordHash, status: s.agents.status })
-    .from(s.agents)
-    .where(eq(s.agents.username, username))
-    .limit(1);
+  const agent = await db.agents.findFirst({
+    where: { username },
+    select: { id: true, password_hash: true, status: true },
+  });
   if (agent) {
     if (agent.status !== 'active') return null;
-    const ok = await bcrypt.compare(password, agent.passwordHash);
+    const ok = await bcrypt.compare(password, agent.password_hash);
     if (!ok) return null;
-    await db.update(s.agents).set({ lastLoginAt: new Date() }).where(eq(s.agents.id, agent.id));
+    await db.agents.update({
+      where: { id: agent.id },
+      data: { last_login_at: new Date() },
+    });
     return agent.id;
   }
 
@@ -79,37 +79,34 @@ export async function verifyAgentLogin(username: string, password: string) {
   // own in `agents`, and `agent_sessions.agent_id` has no separate identity
   // for them) — authenticate them, then resolve the session to their store's
   // agent id so they get that store's full 'store'-type access.
-  const [admin] = await db
-    .select({
-      storeId: s.storeAdministrators.storeId,
-      passwordHash: s.storeAdministrators.passwordHash,
-      status: s.storeAdministrators.status,
-    })
-    .from(s.storeAdministrators)
-    .where(eq(s.storeAdministrators.username, username))
-    .limit(1);
+  const admin = await db.store_administrators.findFirst({
+    where: { username },
+    select: { store_id: true, password_hash: true, status: true },
+  });
   if (!admin || admin.status !== 'active') return null;
-  const ok = await bcrypt.compare(password, admin.passwordHash);
+  const ok = await bcrypt.compare(password, admin.password_hash);
   if (!ok) return null;
-  return admin.storeId;
+  return admin.store_id;
 }
 
 export async function createAgentSession(agentId: string, meta?: { userAgent?: string }) {
   const token = newSessionToken();
-  await db.insert(s.agentSessions).values({
-    agentId,
-    token,
-    userAgent: meta?.userAgent,
-    expiresAt: new Date(Date.now() + AGENT_SESSION_TTL_S * 1000),
+  await db.agent_sessions.create({
+    data: {
+      agent_id: agentId,
+      token,
+      user_agent: meta?.userAgent,
+      expires_at: new Date(Date.now() + AGENT_SESSION_TTL_S * 1000),
+    },
   });
   return { token };
 }
 
 export async function revokeAgentSession(token: string) {
-  await db
-    .update(s.agentSessions)
-    .set({ revokedAt: new Date() })
-    .where(eq(s.agentSessions.token, token));
+  await db.agent_sessions.updateMany({
+    where: { token },
+    data: { revoked_at: new Date() },
+  });
 }
 
 export function agentSessionTokenFromRequest(req: Request): string | null {

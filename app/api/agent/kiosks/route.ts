@@ -1,26 +1,32 @@
 import { NextResponse } from 'next/server';
-import { desc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAgentFromRequest } from '@/lib/agent-auth';
+import { z } from 'zod';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+const postSchema = z.object({
+  name: z.string().trim().min(1, 'Name and code are required'),
+  code: z.string().trim().min(1, 'Name and code are required')
+});
 
-/** GET /api/agent/kiosks — kiosk terminals for this store. */
+
 export async function GET(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const rows = await db
-    .select()
-    .from(s.kiosks)
-    .where(eq(s.kiosks.storeId, agent.storeId))
-    .orderBy(desc(s.kiosks.createdAt));
-  return NextResponse.json({ kiosks: rows });
+  const rows = await db.kiosks.findMany({
+    where: { store_id: agent.storeId },
+    orderBy: { created_at: 'desc' }
+  });
+  
+  return NextResponse.json({ kiosks: rows.map(r => ({
+    id: r.id,
+    storeId: r.store_id,
+    name: r.name,
+    code: r.code,
+    createdAt: r.created_at,
+  })) });
 }
 
-/** POST /api/agent/kiosks — add a kiosk. */
 export async function POST(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -31,16 +37,18 @@ export async function POST(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const name = typeof body.name === 'string' ? body.name.trim() : '';
-  const code = typeof body.code === 'string' ? body.code.trim() : '';
-  if (!name || !code) {
-    return NextResponse.json({ error: 'Name and code are required' }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+  const parseResult = postSchema.safeParse(body);
+
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
   }
 
-  const [created] = await db
-    .insert(s.kiosks)
-    .values({ storeId: agent.storeId, name, code })
-    .returning({ id: s.kiosks.id });
+  const { name, code } = parseResult.data;
+
+  const created = await db.kiosks.create({
+    data: { store_id: agent.storeId, name, code },
+    select: { id: true }
+  });
   return NextResponse.json({ ok: true, id: created.id });
 }

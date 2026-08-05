@@ -1,0 +1,1058 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model admin_audit_logs {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  admin_id    String?  @db.Uuid
+  action      String
+  entity_type String?
+  entity_id   String?
+  changes     Json?
+  ip_address  String?  @db.Inet
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  admins      admins?  @relation(fields: [admin_id], references: [id], onUpdate: NoAction, map: "admin_audit_logs_admin_id_admins_id_fk")
+}
+
+model admin_invitations {
+  id                                                   String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                                                String
+  token                                                String            @unique(map: "admin_invitations_token_unique")
+  role_id                                              String?           @db.Uuid
+  invited_by_admin_id                                  String?           @db.Uuid
+  status                                               invitation_status @default(pending)
+  expires_at                                           DateTime          @db.Timestamptz(6)
+  accepted_admin_id                                    String?           @db.Uuid
+  created_at                                           DateTime          @default(now()) @db.Timestamptz(6)
+  admins_admin_invitations_accepted_admin_idToadmins   admins?           @relation("admin_invitations_accepted_admin_idToadmins", fields: [accepted_admin_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "admin_invitations_accepted_admin_id_admins_id_fk")
+  admins_admin_invitations_invited_by_admin_idToadmins admins?           @relation("admin_invitations_invited_by_admin_idToadmins", fields: [invited_by_admin_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "admin_invitations_invited_by_admin_id_admins_id_fk")
+  roles                                                roles?            @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "admin_invitations_role_id_roles_id_fk")
+}
+
+model admin_permissions {
+  admin_id                                             String            @db.Uuid
+  permission_id                                        String            @db.Uuid
+  effect                                               permission_effect @default(allow)
+  granted_by_admin_id                                  String?           @db.Uuid
+  created_at                                           DateTime          @default(now()) @db.Timestamptz(6)
+  admins_admin_permissions_admin_idToadmins            admins            @relation("admin_permissions_admin_idToadmins", fields: [admin_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "admin_permissions_admin_id_admins_id_fk")
+  admins_admin_permissions_granted_by_admin_idToadmins admins?           @relation("admin_permissions_granted_by_admin_idToadmins", fields: [granted_by_admin_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "admin_permissions_granted_by_admin_id_admins_id_fk")
+  permissions                                          permissions       @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "admin_permissions_permission_id_permissions_id_fk")
+
+  @@id([admin_id, permission_id], map: "admin_permissions_admin_id_permission_id_pk")
+}
+
+model admin_roles {
+  admin_id                                        String   @db.Uuid
+  role_id                                         String   @db.Uuid
+  assigned_by_admin_id                            String?  @db.Uuid
+  assigned_at                                     DateTime @default(now()) @db.Timestamptz(6)
+  admins_admin_roles_admin_idToadmins             admins   @relation("admin_roles_admin_idToadmins", fields: [admin_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "admin_roles_admin_id_admins_id_fk")
+  admins_admin_roles_assigned_by_admin_idToadmins admins?  @relation("admin_roles_assigned_by_admin_idToadmins", fields: [assigned_by_admin_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "admin_roles_assigned_by_admin_id_admins_id_fk")
+  roles                                           roles    @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "admin_roles_role_id_roles_id_fk")
+
+  @@id([admin_id, role_id], map: "admin_roles_admin_id_role_id_pk")
+}
+
+model admin_sessions {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  admin_id   String    @db.Uuid
+  token      String    @unique(map: "admin_sessions_token_unique")
+  ip_address String?   @db.Inet
+  user_agent String?
+  expires_at DateTime  @db.Timestamptz(6)
+  revoked_at DateTime? @db.Timestamptz(6)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  admins     admins    @relation(fields: [admin_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "admin_sessions_admin_id_admins_id_fk")
+}
+
+model admins {
+  id                                                              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username                                                        String              @unique(map: "admins_username_unique")
+  email                                                           String              @unique(map: "admins_email_unique")
+  password_hash                                                   String
+  status                                                          admin_status        @default(active)
+  last_login_at                                                   DateTime?           @db.Timestamptz(6)
+  created_by_admin_id                                             String?             @db.Uuid
+  created_at                                                      DateTime            @default(now()) @db.Timestamptz(6)
+  admin_audit_logs                                                admin_audit_logs[]
+  admin_invitations_admin_invitations_accepted_admin_idToadmins   admin_invitations[] @relation("admin_invitations_accepted_admin_idToadmins")
+  admin_invitations_admin_invitations_invited_by_admin_idToadmins admin_invitations[] @relation("admin_invitations_invited_by_admin_idToadmins")
+  admin_permissions_admin_permissions_admin_idToadmins            admin_permissions[] @relation("admin_permissions_admin_idToadmins")
+  admin_permissions_admin_permissions_granted_by_admin_idToadmins admin_permissions[] @relation("admin_permissions_granted_by_admin_idToadmins")
+  admin_roles_admin_roles_admin_idToadmins                        admin_roles[]       @relation("admin_roles_admin_idToadmins")
+  admin_roles_admin_roles_assigned_by_admin_idToadmins            admin_roles[]       @relation("admin_roles_assigned_by_admin_idToadmins")
+  admin_sessions                                                  admin_sessions[]
+  admins                                                          admins?             @relation("adminsToadmins", fields: [created_by_admin_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "admins_created_by_admin_id_admins_id_fk")
+  other_admins                                                    admins[]            @relation("adminsToadmins")
+  media_assets                                                    media_assets[]
+  role_permissions                                                role_permissions[]
+}
+
+model agent_notices {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  store_id     String?  @db.Uuid
+  title        String
+  content      String?
+  notice_type  String   @default("General")
+  notice_level String   @default("Normal")
+  publisher    String   @default("Platform")
+  published_at DateTime @default(now()) @db.Timestamptz(6)
+  agents       agents?  @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "agent_notices_store_id_agents_id_fk")
+}
+
+model agent_platform_mappings {
+  id                  String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agent_id            String         @db.Uuid
+  platform_id         String         @db.Uuid
+  created_at          DateTime       @default(now()) @db.Timestamptz(6)
+  available_from_time String?
+  available_to_time   String?
+  agents              agents         @relation(fields: [agent_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "agent_platform_mappings_agent_id_agents_id_fk")
+  game_platforms      game_platforms @relation(fields: [platform_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "agent_platform_mappings_platform_id_game_platforms_id_fk")
+
+  @@unique([agent_id, platform_id], map: "agent_platform_mappings_agent_platform_uq")
+}
+
+model agent_platforms {
+  id                  String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agent_id            String         @db.Uuid
+  platform_id         String         @db.Uuid
+  created_at          DateTime       @default(now()) @db.Timestamptz(6)
+  available_from_time String?
+  available_to_time   String?
+  agents              agents         @relation(fields: [agent_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "agent_platforms_agent_id_agents_id_fk")
+  game_platforms      game_platforms @relation(fields: [platform_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "agent_platforms_platform_id_game_platforms_id_fk")
+
+  @@unique([agent_id, platform_id], map: "agent_platforms_agent_platform_uq")
+}
+
+model agent_sessions {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agent_id   String    @db.Uuid
+  token      String    @unique(map: "agent_sessions_token_unique")
+  ip_address String?   @db.Inet
+  user_agent String?
+  expires_at DateTime  @db.Timestamptz(6)
+  revoked_at DateTime? @db.Timestamptz(6)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  agents     agents    @relation(fields: [agent_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "agent_sessions_agent_id_agents_id_fk")
+}
+
+model agent_transactions {
+  id                                                      String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agent_id                                                String           @db.Uuid
+  type                                                    agent_tx_type
+  method                                                  withdraw_method?
+  amount                                                  Decimal          @db.Decimal(14, 2)
+  fee                                                     Decimal          @default(0) @db.Decimal(14, 2)
+  address                                                 String?
+  counterparty_agent_id                                   String?          @db.Uuid
+  status                                                  agent_tx_status  @default(pending)
+  created_at                                              DateTime         @default(now()) @db.Timestamptz(6)
+  balance_before                                          Decimal?         @db.Decimal(14, 2)
+  balance_after                                           Decimal?         @db.Decimal(14, 2)
+  remark                                                  String?
+  commission_per                                          Decimal          @default(0) @db.Decimal(5, 2)
+  net_amount                                              Decimal?         @db.Decimal(14, 2)
+  agents_agent_transactions_agent_idToagents              agents           @relation("agent_transactions_agent_idToagents", fields: [agent_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "agent_transactions_agent_id_agents_id_fk")
+  agents_agent_transactions_counterparty_agent_idToagents agents?          @relation("agent_transactions_counterparty_agent_idToagents", fields: [counterparty_agent_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agent_transactions_counterparty_agent_id_agents_id_fk")
+
+  @@index([agent_id, created_at], map: "agent_tx_agent_time_idx")
+}
+
+model agents {
+  id                                                                  String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type                                                                agent_type
+  username                                                            String                    @unique(map: "agents_username_unique")
+  password_hash                                                       String
+  nickname                                                            String?
+  email                                                               String?
+  store_id                                                            String?                   @db.Uuid
+  parent_agent_id                                                     String?                   @db.Uuid
+  ratio_pct                                                           Decimal                   @default(0) @db.Decimal(6, 2)
+  invite_code                                                         String                    @unique(map: "agents_invite_code_unique")
+  online_balance                                                      Decimal                   @default(0) @db.Decimal(14, 2)
+  tips_balance                                                        Decimal                   @default(0) @db.Decimal(14, 2)
+  status                                                              agent_status              @default(active)
+  remark                                                              String?
+  last_login_at                                                       DateTime?                 @db.Timestamptz(6)
+  created_at                                                          DateTime                  @default(now()) @db.Timestamptz(6)
+  commission_per                                                      Decimal                   @default(0) @db.Decimal(6, 2)
+  agent_notices                                                       agent_notices[]
+  agent_platform_mappings                                             agent_platform_mappings[]
+  agent_platforms                                                     agent_platforms[]
+  agent_sessions                                                      agent_sessions[]
+  agent_transactions_agent_transactions_agent_idToagents              agent_transactions[]      @relation("agent_transactions_agent_idToagents")
+  agent_transactions_agent_transactions_counterparty_agent_idToagents agent_transactions[]      @relation("agent_transactions_counterparty_agent_idToagents")
+  agents_agents_parent_agent_idToagents                               agents?                   @relation("agents_parent_agent_idToagents", fields: [parent_agent_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agents_parent_agent_id_agents_id_fk")
+  other_agents_agents_parent_agent_idToagents                         agents[]                  @relation("agents_parent_agent_idToagents")
+  agents_agents_store_idToagents                                      agents?                   @relation("agents_store_idToagents", fields: [store_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "agents_store_id_agents_id_fk")
+  other_agents_agents_store_idToagents                                agents[]                  @relation("agents_store_idToagents")
+  cs_configs                                                          cs_configs?
+  kiosks                                                              kiosks[]
+  member_transactions                                                 member_transactions[]
+  members_members_sale_agent_idToagents                               members[]                 @relation("members_sale_agent_idToagents")
+  members_members_store_idToagents                                    members[]                 @relation("members_store_idToagents")
+  members_members_sub_agent_idToagents                                members[]                 @relation("members_sub_agent_idToagents")
+  promotions_promotions_assign_agent_idToagents                       promotions[]              @relation("promotions_assign_agent_idToagents")
+  promotions_promotions_store_idToagents                              promotions[]              @relation("promotions_store_idToagents")
+  redemption_audits_redemption_audits_reviewed_by_agent_idToagents    redemption_audits[]       @relation("redemption_audits_reviewed_by_agent_idToagents")
+  redemption_audits_redemption_audits_store_idToagents                redemption_audits[]       @relation("redemption_audits_store_idToagents")
+  store_administrators                                                store_administrators[]
+  store_platform_accounts                                             store_platform_accounts[]
+  store_settings                                                      store_settings?
+  store_terms                                                         store_terms[]
+
+  @@index([store_id], map: "agents_store_idx")
+}
+
+model banners {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  image_url String
+  link_url  String?
+  active    Boolean @default(true)
+  sort      Int     @default(0) @db.SmallInt
+}
+
+model bonuses {
+  id                         String              @id
+  title                      String
+  description                String
+  tags                       String[]            @default([])
+  active                     Boolean             @default(true)
+  banner_type                banner_type
+  banner_gradient            String?
+  banner_badge_icon          banner_badge_icon?
+  banner_badge_text          String?
+  schedule_icon              schedule_icon
+  schedule_text              String              @default("")
+  schedule_countdown_seconds Int?
+  sort                       Int                 @default(0) @db.SmallInt
+  deleted_at                 DateTime?           @db.Timestamptz(6)
+  user_bonus_claims          user_bonus_claims[]
+}
+
+model content_pages {
+  slug       String   @id
+  title      String
+  body       String
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model cs_configs {
+  store_id              String   @id @db.Uuid
+  enabled               Boolean  @default(true)
+  contact_phone_enabled Boolean  @default(false)
+  contact_phone         String?
+  platform              String   @default("Custom JS Widget")
+  js_url                String?
+  updated_at            DateTime @default(now()) @db.Timestamptz(6)
+  agents                agents   @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cs_configs_store_id_agents_id_fk")
+}
+
+model game_platforms {
+  id                       String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                     String                     @unique(map: "game_platforms_name_unique")
+  slug                     String                     @unique(map: "game_platforms_slug_unique")
+  icon_url                 String?
+  sort                     Int                        @default(0)
+  is_active                Boolean                    @default(true)
+  created_at               DateTime                   @default(now()) @db.Timestamptz(6)
+  external_id              Int?
+  provider_code            String?
+  provider_type            String?
+  launch_url               String?
+  synced_at                DateTime?                  @db.Timestamptz(6)
+  deleted_at               DateTime?                  @db.Timestamptz(6)
+  agent_platform_mappings  agent_platform_mappings[]
+  agent_platforms          agent_platforms[]
+  member_platform_accounts member_platform_accounts[]
+  member_transactions      member_transactions[]
+  redemption_audits        redemption_audits[]
+  store_platform_accounts  store_platform_accounts[]
+}
+
+model game_providers {
+  id                     Int                      @id
+  name                   String
+  provider_code          String
+  launch_url_template    String
+  icon_url               String
+  status                 Int                      @db.SmallInt
+  sort                   Int                      @default(0) @db.SmallInt
+  create_type            Int                      @db.SmallInt
+  operate                Int                      @db.SmallInt
+  need_init_balance      Int                      @db.SmallInt
+  can_manual_input       Int                      @db.SmallInt
+  provider_type          provider_type
+  iframe_supported       Boolean
+  is_machine_supported   Int                      @db.SmallInt
+  redeem_field           Int                      @db.SmallInt
+  invalid_password_state Int                      @db.SmallInt
+  can_change_password    Int                      @db.SmallInt
+  synced_at              DateTime                 @default(now()) @db.Timestamptz(6)
+  deleted_at             DateTime?                @db.Timestamptz(6)
+  provider_deposit_tiers provider_deposit_tiers[]
+  redemption_reviews     redemption_reviews[]
+  user_provider_accounts user_provider_accounts[]
+}
+
+model help_items {
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  section_id    String          @db.Uuid
+  title         String
+  icon          help_item_icon?
+  body          String?
+  sort          Int             @default(0) @db.SmallInt
+  help_sections help_sections   @relation(fields: [section_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "help_items_section_id_help_sections_id_fk")
+  help_steps    help_steps[]
+}
+
+model help_sections {
+  id         String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tab        help_tab
+  key        String
+  label      String
+  icon       help_section_icon
+  sort       Int               @default(0) @db.SmallInt
+  help_items help_items[]
+}
+
+model help_steps {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  item_id     String     @db.Uuid
+  title       String
+  description String
+  sort        Int        @default(0) @db.SmallInt
+  help_items  help_items @relation(fields: [item_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "help_steps_item_id_help_items_id_fk")
+}
+
+model kiosks {
+  id         String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  store_id   String       @db.Uuid
+  name       String
+  code       String
+  status     agent_status @default(active)
+  created_at DateTime     @default(now()) @db.Timestamptz(6)
+  agents     agents       @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "kiosks_store_id_agents_id_fk")
+}
+
+model media_assets {
+  id                   String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  r2_key               String     @unique(map: "media_assets_r2_key_unique")
+  bucket               String     @default("octanlink-media")
+  kind                 media_kind
+  content_type         String
+  size_bytes           Int
+  width                Int?
+  height               Int?
+  original_name        String?
+  uploaded_by_admin_id String?    @db.Uuid
+  uploaded_by_user_id  String?    @db.Uuid
+  is_private           Boolean    @default(false)
+  created_at           DateTime   @default(now()) @db.Timestamptz(6)
+  admins               admins?    @relation(fields: [uploaded_by_admin_id], references: [id], onUpdate: NoAction, map: "media_assets_uploaded_by_admin_id_admins_id_fk")
+  users                users?     @relation(fields: [uploaded_by_user_id], references: [id], onUpdate: NoAction, map: "media_assets_uploaded_by_user_id_users_id_fk")
+}
+
+model member_logins {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  member_id  String   @db.Uuid
+  ip_address String?  @db.Inet
+  device     String?
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  members    members  @relation(fields: [member_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "member_logins_member_id_members_id_fk")
+
+  @@index([member_id], map: "member_logins_member_idx")
+}
+
+model member_platform_accounts {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  member_id      String         @db.Uuid
+  platform_id    String         @db.Uuid
+  game_username  String?
+  game_password  String?
+  created_at     DateTime       @default(now()) @db.Timestamptz(6)
+  members        members        @relation(fields: [member_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "member_platform_accounts_member_id_members_id_fk")
+  game_platforms game_platforms @relation(fields: [platform_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "member_platform_accounts_platform_id_game_platforms_id_fk")
+
+  @@unique([member_id, platform_id], map: "mpa_member_platform_uq")
+}
+
+model member_transactions {
+  id                 String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  store_id           String            @db.Uuid
+  member_id          String?           @db.Uuid
+  platform_id        String?           @db.Uuid
+  type               member_tx_type
+  channel            member_tx_channel @default(online)
+  amount             Decimal           @default(0) @db.Decimal(14, 2)
+  online_sc_change   Decimal           @default(0) @db.Decimal(14, 2)
+  store_balance_vary Decimal           @default(0) @db.Decimal(14, 2)
+  in_score           Decimal           @default(0) @db.Decimal(14, 2)
+  out_score          Decimal           @default(0) @db.Decimal(14, 2)
+  bonus_score        Decimal           @default(0) @db.Decimal(14, 2)
+  game_deposit_fee   Decimal           @default(0) @db.Decimal(14, 2)
+  platform_fee       Decimal           @default(0) @db.Decimal(14, 2)
+  status             agent_tx_status   @default(completed)
+  created_at         DateTime          @default(now()) @db.Timestamptz(6)
+  members            members?          @relation(fields: [member_id], references: [id], onUpdate: NoAction, map: "member_transactions_member_id_members_id_fk")
+  game_platforms     game_platforms?   @relation(fields: [platform_id], references: [id], onUpdate: NoAction, map: "member_transactions_platform_id_game_platforms_id_fk")
+  agents             agents            @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "member_transactions_store_id_agents_id_fk")
+
+  @@index([store_id, platform_id], map: "member_tx_store_platform_idx")
+  @@index([store_id, created_at], map: "member_tx_store_time_idx")
+}
+
+model members {
+  id                                   String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  store_id                             String                     @db.Uuid
+  sale_agent_id                        String?                    @db.Uuid
+  sub_agent_id                         String?                    @db.Uuid
+  username                             String
+  password_hash                        String
+  phone                                String?
+  online_sc                            Decimal                    @default(0) @db.Decimal(14, 2)
+  sc_reward_enabled                    Boolean                    @default(true)
+  remark                               String?
+  status                               agent_status               @default(active)
+  created_at                           DateTime                   @default(now()) @db.Timestamptz(6)
+  member_logins                        member_logins[]
+  member_platform_accounts             member_platform_accounts[]
+  member_transactions                  member_transactions[]
+  agents_members_sale_agent_idToagents agents?                    @relation("members_sale_agent_idToagents", fields: [sale_agent_id], references: [id], onUpdate: NoAction, map: "members_sale_agent_id_agents_id_fk")
+  agents_members_store_idToagents      agents                     @relation("members_store_idToagents", fields: [store_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "members_store_id_agents_id_fk")
+  agents_members_sub_agent_idToagents  agents?                    @relation("members_sub_agent_idToagents", fields: [sub_agent_id], references: [id], onUpdate: NoAction, map: "members_sub_agent_id_agents_id_fk")
+  redemption_audits                    redemption_audits[]
+
+  @@unique([store_id, username], map: "members_store_username_uq")
+  @@index([store_id], map: "members_store_idx")
+}
+
+model orders {
+  id                    String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_no              String       @unique(map: "orders_order_no_unique")
+  user_id               String       @db.Uuid
+  amount                Decimal      @db.Decimal(18, 2)
+  pay_amount            Decimal      @db.Decimal(18, 2)
+  actual_deposit_amount Decimal      @default(0) @db.Decimal(18, 2)
+  payment_method        String
+  fee                   Decimal      @default(0) @db.Decimal(18, 2)
+  fee_mode              fee_mode
+  fee_waived            Boolean      @default(false)
+  sc_bonus              Decimal      @default(0) @db.Decimal(18, 2)
+  status                order_status
+  created_at            DateTime     @db.Timestamptz(6)
+  users                 users        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "orders_user_id_users_id_fk")
+}
+
+model otp_codes {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String?     @db.Uuid
+  destination String
+  code        String
+  purpose     otp_purpose
+  expires_at  DateTime    @db.Timestamptz(6)
+  consumed    Boolean     @default(false)
+  created_at  DateTime    @default(now()) @db.Timestamptz(6)
+  attempts    Int         @default(0) @db.SmallInt
+  users       users?      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "otp_codes_user_id_users_id_fk")
+}
+
+model permissions {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key               String              @unique(map: "permissions_key_unique")
+  resource          String
+  action            String
+  group             String              @default("general")
+  description       String?
+  is_system         Boolean             @default(true)
+  created_at        DateTime            @default(now()) @db.Timestamptz(6)
+  admin_permissions admin_permissions[]
+  role_permissions  role_permissions[]
+}
+
+model postal_requests {
+  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String?       @db.Uuid
+  code       String
+  status     postal_status @default(pending)
+  created_at DateTime      @default(now()) @db.Timestamptz(6)
+  users      users?        @relation(fields: [user_id], references: [id], onUpdate: NoAction, map: "postal_requests_user_id_users_id_fk")
+}
+
+model posters {
+  id         String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  category   poster_category
+  title      String?
+  image_url  String
+  sort       Int             @default(0)
+  created_at DateTime        @default(now()) @db.Timestamptz(6)
+}
+
+model profile_tasks {
+  key                      String                     @id
+  title                    String
+  description              String
+  reward_gc                Int
+  reward_sc                Int
+  sort                     Int                        @default(0) @db.SmallInt
+  user_profile_task_claims user_profile_task_claims[]
+}
+
+model promotions {
+  id                                        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  store_id                                  String           @db.Uuid
+  assign_agent_id                           String?          @db.Uuid
+  type                                      promotion_type
+  hidden_from_agent_ids                     Json             @default("[]")
+  bonus_percent                             Decimal          @default(100) @db.Decimal(6, 2)
+  min_deposit                               Decimal          @default(20) @db.Decimal(12, 2)
+  max_bonus                                 Decimal          @default(100) @db.Decimal(12, 2)
+  redemption_multiplier                     Decimal          @default(2) @db.Decimal(6, 2)
+  active_days                               Json             @default("[]")
+  timezone                                  String           @default("America/New_York")
+  hidden_from_players                       Boolean          @default(false)
+  online_only                               Boolean          @default(false)
+  status                                    promotion_status @default(enabled)
+  remark                                    String?
+  created_at                                DateTime         @default(now()) @db.Timestamptz(6)
+  agents_promotions_assign_agent_idToagents agents?          @relation("promotions_assign_agent_idToagents", fields: [assign_agent_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "promotions_assign_agent_id_agents_id_fk")
+  agents_promotions_store_idToagents        agents           @relation("promotions_store_idToagents", fields: [store_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "promotions_store_id_agents_id_fk")
+}
+
+model provider_deposit_tiers {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider_id    Int
+  amount         Decimal        @db.Decimal(18, 2)
+  bonus_amount   Decimal        @default(0) @db.Decimal(18, 2)
+  sort           Int            @default(0) @db.SmallInt
+  game_providers game_providers @relation(fields: [provider_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "provider_deposit_tiers_provider_id_game_providers_id_fk")
+}
+
+model redemption_audits {
+  id                                                    String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  store_id                                              String          @db.Uuid
+  member_id                                             String?         @db.Uuid
+  platform_id                                           String?         @db.Uuid
+  tx_ref                                                String?
+  amount                                                Decimal         @db.Decimal(14, 2)
+  status                                                audit_status    @default(pending)
+  reviewed_by_agent_id                                  String?         @db.Uuid
+  reviewed_at                                           DateTime?       @db.Timestamptz(6)
+  submitted_at                                          DateTime        @default(now()) @db.Timestamptz(6)
+  members                                               members?        @relation(fields: [member_id], references: [id], onUpdate: NoAction, map: "redemption_audits_member_id_members_id_fk")
+  game_platforms                                        game_platforms? @relation(fields: [platform_id], references: [id], onUpdate: NoAction, map: "redemption_audits_platform_id_game_platforms_id_fk")
+  agents_redemption_audits_reviewed_by_agent_idToagents agents?         @relation("redemption_audits_reviewed_by_agent_idToagents", fields: [reviewed_by_agent_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "redemption_audits_reviewed_by_agent_id_agents_id_fk")
+  agents_redemption_audits_store_idToagents             agents          @relation("redemption_audits_store_idToagents", fields: [store_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "redemption_audits_store_id_agents_id_fk")
+
+  @@index([store_id, status], map: "redemption_audits_store_status_idx")
+}
+
+model redemption_reviews {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_no       String
+  user_id        String          @db.Uuid
+  provider_id    Int?
+  provider_name  String
+  amount         Decimal         @db.Decimal(18, 2)
+  status         review_status   @default(reviewing)
+  visible        Boolean         @default(true)
+  submitted_at   DateTime        @db.Timestamptz(6)
+  game_providers game_providers? @relation(fields: [provider_id], references: [id], onUpdate: NoAction, map: "redemption_reviews_provider_id_game_providers_id_fk")
+  users          users           @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "redemption_reviews_user_id_users_id_fk")
+}
+
+model referral_commissions {
+  id                                                 String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  referrer_user_id                                   String          @db.Uuid
+  invitee_user_id                                    String?         @db.Uuid
+  invitee_display                                    String
+  reward                                             Decimal         @default(0) @db.Decimal(18, 2)
+  status                                             referral_status @default(pending)
+  joined_at                                          DateTime        @db.Timestamptz(6)
+  users_referral_commissions_invitee_user_idTousers  users?          @relation("referral_commissions_invitee_user_idTousers", fields: [invitee_user_id], references: [id], onUpdate: NoAction, map: "referral_commissions_invitee_user_id_users_id_fk")
+  users_referral_commissions_referrer_user_idTousers users           @relation("referral_commissions_referrer_user_idTousers", fields: [referrer_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "referral_commissions_referrer_user_id_users_id_fk")
+}
+
+model role_permissions {
+  role_id             String      @db.Uuid
+  permission_id       String      @db.Uuid
+  granted_by_admin_id String?     @db.Uuid
+  granted_at          DateTime    @default(now()) @db.Timestamptz(6)
+  admins              admins?     @relation(fields: [granted_by_admin_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "role_permissions_granted_by_admin_id_admins_id_fk")
+  permissions         permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "role_permissions_permission_id_permissions_id_fk")
+  roles               roles       @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "role_permissions_role_id_roles_id_fk")
+
+  @@id([role_id, permission_id], map: "role_permissions_role_id_permission_id_pk")
+}
+
+model roles {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String              @unique(map: "roles_name_unique")
+  slug              String              @unique(map: "roles_slug_unique")
+  description       String?
+  level             Int                 @default(0) @db.SmallInt
+  is_system         Boolean             @default(false)
+  created_at        DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime            @default(now()) @db.Timestamptz(6)
+  admin_invitations admin_invitations[]
+  admin_roles       admin_roles[]
+  role_permissions  role_permissions[]
+}
+
+model sessions {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String    @db.Uuid
+  token      String    @unique(map: "sessions_token_unique")
+  user_agent String?
+  expires_at DateTime  @db.Timestamptz(6)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  revoked_at DateTime? @db.Timestamptz(6)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "sessions_user_id_users_id_fk")
+}
+
+model site_settings {
+  key        String       @id
+  value      String
+  type       setting_type @default(string)
+  group      String       @default("general")
+  label      String?
+  is_public  Boolean      @default(false)
+  updated_at DateTime     @default(now()) @db.Timestamptz(6)
+}
+
+model social_links {
+  id         String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  platform   social_platform @unique(map: "social_links_platform_unique")
+  label      String
+  url        String
+  icon       String?
+  active     Boolean         @default(true)
+  sort       Int             @default(0) @db.SmallInt
+  updated_at DateTime        @default(now()) @db.Timestamptz(6)
+}
+
+model store_administrators {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  store_id      String       @db.Uuid
+  username      String       @unique(map: "store_administrators_username_unique")
+  password_hash String
+  nickname      String?
+  email         String?
+  status        agent_status @default(active)
+  created_at    DateTime     @default(now()) @db.Timestamptz(6)
+  agents        agents       @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "store_administrators_store_id_agents_id_fk")
+}
+
+model store_platform_accounts {
+  id                    String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  store_id              String         @db.Uuid
+  platform_id           String         @db.Uuid
+  enabled               Boolean        @default(false)
+  kiosk_id              String?
+  pos_account           String?
+  pos_password          String?
+  money_box             String?
+  remark                String?
+  score_cost_pct        Decimal        @default(20) @db.Decimal(6, 2)
+  min_deposit           Decimal        @default(10) @db.Decimal(12, 2)
+  min_redemption        Decimal        @default(10) @db.Decimal(12, 2)
+  redeem_daily_limit    Decimal        @default(3000) @db.Decimal(12, 2)
+  min_deposit_to_unlock Decimal        @default(0) @db.Decimal(12, 2)
+  score                 Decimal?       @db.Decimal(14, 2)
+  score_synced_at       DateTime?      @db.Timestamptz(6)
+  updated_at            DateTime       @default(now()) @db.Timestamptz(6)
+  game_platforms        game_platforms @relation(fields: [platform_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "store_platform_accounts_platform_id_game_platforms_id_fk")
+  agents                agents         @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "store_platform_accounts_store_id_agents_id_fk")
+
+  @@unique([store_id, platform_id], map: "spa_store_platform_uq")
+}
+
+model store_settings {
+  store_id                      String   @id @db.Uuid
+  store_name                    String   @default("")
+  daily_max_redeem              Decimal  @default(5000) @db.Decimal(12, 2)
+  daily_max_withdraw            Decimal  @default(500) @db.Decimal(12, 2)
+  phone_bind_reward_sc          Decimal  @default(3) @db.Decimal(10, 2)
+  logo_url                      String?
+  updated_at                    DateTime @default(now()) @db.Timestamptz(6)
+  agent_withdraw_commission_per Decimal  @default(0) @db.Decimal(5, 2)
+  agents                        agents   @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "store_settings_store_id_agents_id_fk")
+}
+
+model store_terms {
+  id         String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  store_id   String       @db.Uuid
+  locale     terms_locale
+  content    String?
+  updated_at DateTime     @default(now()) @db.Timestamptz(6)
+  agents     agents       @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "store_terms_store_id_agents_id_fk")
+
+  @@unique([store_id, locale], map: "store_terms_store_locale_uq")
+}
+
+model support_tickets {
+  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String?       @db.Uuid
+  email      String?
+  message    String
+  status     ticket_status @default(open)
+  created_at DateTime      @default(now()) @db.Timestamptz(6)
+  users      users?        @relation(fields: [user_id], references: [id], onUpdate: NoAction, map: "support_tickets_user_id_users_id_fk")
+}
+
+model transactions {
+  id           String         @id
+  user_id      String         @db.Uuid
+  address      String
+  method_label String
+  method       payment_method
+  status       tx_status
+  amount       Decimal        @db.Decimal(18, 2)
+  type         tx_type
+  created_at   DateTime       @db.Timestamptz(6)
+  users        users          @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "transactions_user_id_users_id_fk")
+}
+
+model user_bonus_claims {
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id           String       @db.Uuid
+  bonus_id          String
+  status            bonus_status @default(none)
+  claimed_at        DateTime?    @db.Timestamptz(6)
+  next_available_at DateTime?    @db.Timestamptz(6)
+  bonuses           bonuses      @relation(fields: [bonus_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_bonus_claims_bonus_id_bonuses_id_fk")
+  users             users        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_bonus_claims_user_id_users_id_fk")
+
+  @@unique([user_id, bonus_id], map: "user_bonus_claims_user_id_bonus_id_unique")
+}
+
+model user_profile_task_claims {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id        String        @db.Uuid
+  task_key       String
+  completed_at   DateTime?     @db.Timestamptz(6)
+  reward_claimed Boolean       @default(false)
+  profile_tasks  profile_tasks @relation(fields: [task_key], references: [key], onDelete: Cascade, onUpdate: NoAction, map: "user_profile_task_claims_task_key_profile_tasks_key_fk")
+  users          users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_profile_task_claims_user_id_users_id_fk")
+
+  @@unique([user_id, task_key], map: "user_profile_task_claims_user_id_task_key_unique")
+}
+
+model user_provider_accounts {
+  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id           String         @db.Uuid
+  provider_id       Int
+  game_username     String
+  game_password_enc String
+  balance           Decimal        @default(0) @db.Decimal(18, 2)
+  initialized       Boolean        @default(false)
+  created_at        DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime       @default(now()) @db.Timestamptz(6)
+  game_providers    game_providers @relation(fields: [provider_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_provider_accounts_provider_id_game_providers_id_fk")
+  users             users          @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_provider_accounts_user_id_users_id_fk")
+
+  @@unique([user_id, provider_id], map: "user_provider_accounts_user_id_provider_id_unique")
+}
+
+model users {
+  id                                                                String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username                                                          String                     @unique(map: "users_username_unique")
+  nickname                                                          String
+  password_hash                                                     String
+  phone                                                             String?
+  phone_bound                                                       Boolean                    @default(false)
+  email                                                             String?
+  avatar_url                                                        String?
+  avatar_emoji                                                      String                     @default("🎰")
+  kyc_status                                                        kyc_status                 @default(unverified)
+  pwa_installed                                                     Boolean                    @default(false)
+  invite_code                                                       String                     @unique(map: "users_invite_code_unique")
+  referred_by_user_id                                               String?                    @db.Uuid
+  agent_invite_code                                                 String?
+  created_at                                                        DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at                                                        DateTime                   @default(now()) @db.Timestamptz(6)
+  status                                                            user_status                @default(active)
+  media_assets                                                      media_assets[]
+  orders                                                            orders[]
+  otp_codes                                                         otp_codes[]
+  postal_requests                                                   postal_requests[]
+  redemption_reviews                                                redemption_reviews[]
+  referral_commissions_referral_commissions_invitee_user_idTousers  referral_commissions[]     @relation("referral_commissions_invitee_user_idTousers")
+  referral_commissions_referral_commissions_referrer_user_idTousers referral_commissions[]     @relation("referral_commissions_referrer_user_idTousers")
+  sessions                                                          sessions[]
+  support_tickets                                                   support_tickets[]
+  transactions                                                      transactions[]
+  user_bonus_claims                                                 user_bonus_claims[]
+  user_profile_task_claims                                          user_profile_task_claims[]
+  user_provider_accounts                                            user_provider_accounts[]
+  users                                                             users?                     @relation("usersTousers", fields: [referred_by_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "users_referred_by_user_id_users_id_fk")
+  other_users                                                       users[]                    @relation("usersTousers")
+  wallets                                                           wallets?
+}
+
+model wallets {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String   @unique(map: "wallets_user_id_unique") @db.Uuid
+  gold_coin  Decimal  @default(0) @db.Decimal(18, 2)
+  online_sc  Decimal  @default(0) @db.Decimal(18, 2)
+  store_sc   Decimal  @default(0) @db.Decimal(18, 2)
+  kiosk_sc   Decimal  @default(0) @db.Decimal(18, 2)
+  unwagered  Decimal  @default(0) @db.Decimal(18, 2)
+  free_bonus Decimal  @default(0) @db.Decimal(18, 2)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "wallets_user_id_users_id_fk")
+}
+
+enum admin_status {
+  active
+  suspended
+  invited
+}
+
+enum agent_status {
+  active
+  disabled
+}
+
+enum agent_tx_status {
+  pending
+  completed
+  failed
+  cancelled
+}
+
+enum agent_tx_type {
+  deposit
+  withdraw
+  transfer
+}
+
+enum agent_type {
+  store
+  sale
+  sub
+}
+
+enum audit_status {
+  pending
+  approved
+  rejected
+}
+
+enum banner_badge_icon {
+  coin
+  percent
+}
+
+enum banner_type {
+  placeholder
+  gradient
+}
+
+enum bonus_status {
+  claimable
+  claimed
+  locked
+  none
+}
+
+enum fee_mode {
+  standard
+  waiver
+}
+
+enum help_item_icon {
+  play
+  coins
+  btc
+  pyusd
+}
+
+enum help_section_icon {
+  video
+  faq
+  guide
+}
+
+enum help_tab {
+  general
+  deposit
+  withdraw
+}
+
+enum invitation_status {
+  pending
+  accepted
+  revoked
+  expired
+}
+
+enum kyc_status {
+  unverified
+  pending
+  verified
+  rejected
+}
+
+enum media_kind {
+  avatar
+  provider_icon
+  banner
+  logo
+  social_icon
+  content
+  kyc_doc
+  other
+}
+
+enum member_tx_channel {
+  online
+  kiosk
+}
+
+enum member_tx_type {
+  recharge
+  redeem
+  bonus
+  transfer
+}
+
+enum order_status {
+  pending
+  completed
+  failed
+  cancelled
+}
+
+enum otp_purpose {
+  register
+  login
+  bind_phone
+  reset_password
+}
+
+enum payment_method {
+  cashapp
+  btc
+  lightning
+  pyusd
+  ach
+  card
+  chime
+}
+
+enum permission_effect {
+  allow
+  deny
+}
+
+enum postal_status {
+  pending
+  completed
+  rejected
+}
+
+enum poster_category {
+  portrait
+  card
+}
+
+enum promotion_status {
+  enabled
+  disabled
+}
+
+enum promotion_type {
+  promotion_game
+  double_game
+  loyalty_drop
+}
+
+enum provider_type {
+  SC
+  GC
+}
+
+enum referral_status {
+  pending
+  claimed
+}
+
+enum review_status {
+  reviewing
+  approved
+  rejected
+}
+
+enum schedule_icon {
+  calendar
+  clock
+}
+
+enum setting_type {
+  string
+  number
+  boolean
+  json
+  url
+  color
+  image
+}
+
+enum social_platform {
+  facebook
+  instagram
+  twitter
+  telegram
+  whatsapp
+  youtube
+  tiktok
+  discord
+  email
+  livechat
+}
+
+enum terms_locale {
+  en
+  es
+}
+
+enum ticket_status {
+  open
+  answered
+  closed
+}
+
+enum tx_status {
+  pending
+  completed
+  failed
+  cancelled
+}
+
+enum tx_type {
+  deposit
+  withdraw
+}
+
+enum user_status {
+  active
+  blocked
+}
+
+enum withdraw_method {
+  paypal_pyusd
+  cashapp_usdc
+  bitcoin
+  bitcoin_lightning
+  bank_card
+  ach
+}

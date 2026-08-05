@@ -1,39 +1,43 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAgentFromRequest } from '@/lib/agent-auth';
+import { z } from 'zod';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+const passwordSchema = z.object({
+  current: z.string().min(1, 'Current password is required'),
+  next: z.string().min(6, 'Password must be at least 6 characters')
+});
 
-/** POST /api/agent/change-password — { current, next } (min 6 chars). */
+
 export async function POST(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const current = typeof body.current === 'string' ? body.current : '';
-  const next = typeof body.next === 'string' ? body.next : '';
-  if (!current || !next) {
-    return NextResponse.json({ error: 'Current and new password are required' }, { status: 400 });
-  }
-  if (next.length < 6) {
-    return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+  const parseResult = passwordSchema.safeParse(body);
+  
+  if (!parseResult.success) {
+    return NextResponse.json(
+      { error: parseResult.error.issues[0]?.message || 'Invalid input' },
+      { status: 400 }
+    );
   }
 
-  const [row] = await db
-    .select({ passwordHash: s.agents.passwordHash })
-    .from(s.agents)
-    .where(eq(s.agents.id, agent.id));
-  if (!row || !(await bcrypt.compare(current, row.passwordHash))) {
+  const { current, next } = parseResult.data;
+
+  const row = await db.agents.findUnique({
+    where: { id: agent.id },
+    select: { password_hash: true }
+  });
+  
+  if (!row || !(await bcrypt.compare(current, row.password_hash))) {
     return NextResponse.json({ error: 'Current password is incorrect' }, { status: 400 });
   }
 
-  await db
-    .update(s.agents)
-    .set({ passwordHash: await bcrypt.hash(next, 10) })
-    .where(eq(s.agents.id, agent.id));
+  await db.agents.update({
+    where: { id: agent.id },
+    data: { password_hash: await bcrypt.hash(next, 10) }
+  });
   return NextResponse.json({ ok: true });
 }

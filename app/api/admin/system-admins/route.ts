@@ -1,19 +1,15 @@
 import { NextResponse } from 'next/server';
-import { desc, or, ilike, sql } from 'drizzle-orm';
+import { z, ZodError } from 'zod';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { isSuperAdmin } from '@/lib/rbac-core';
 import bcrypt from 'bcryptjs';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   const adminId = await getAdminIdFromRequest(req);
   if (!adminId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // Only super admins can manage system admins
   if (!(await isSuperAdmin(adminId))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -25,88 +21,97 @@ export async function GET(req: Request) {
     100,
     Math.max(1, parseInt(url.searchParams.get('pageSize') || '20', 10))
   );
-  const offset = (page - 1) * pageSize;
 
-  let whereClause = sql`1=1`;
+  const where: any = {};
   if (search) {
-    const q = `%${search}%`;
-    whereClause = or(ilike(s.admins.username, q), ilike(s.admins.email, q)) as any;
+    where.OR = [
+      { username: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } },
+    ];
   }
 
-  const [countRes] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(s.admins)
-    .where(whereClause);
+  const [results, count] = await Promise.all([
+    db.admins.findMany({
+      where,
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        status: true,
+        last_login_at: true,
+        created_at: true,
+      },
+      orderBy: { created_at: 'desc' },
+      take: pageSize,
+      skip: (page - 1) * pageSize,
+    }),
+    db.admins.count({ where }),
+  ]);
 
-  const results = await db
-    .select({
-      id: s.admins.id,
-      username: s.admins.username,
-      email: s.admins.email,
-      status: s.admins.status,
-      lastLoginAt: s.admins.lastLoginAt,
-      createdAt: s.admins.createdAt,
-    })
-    .from(s.admins)
-    .where(whereClause)
-    .orderBy(desc(s.admins.createdAt))
-    .limit(pageSize)
-    .offset(offset);
+  const formatted = results.map(r => ({
+    id: r.id,
+    username: r.username,
+    email: r.email,
+    status: r.status,
+    lastLoginAt: r.last_login_at,
+    createdAt: r.created_at,
+  }));
 
   return NextResponse.json({
-    admins: results,
-    total: countRes?.count ?? 0,
+    admins: formatted,
+    total: count,
   });
 }
+
+const postSchema = z.object({
+  username: z.string().min(4, 'Username must be at least 4 characters'),
+  email: z.string().email('Invalid email format'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
 
 export async function POST(req: Request) {
   const adminId = await getAdminIdFromRequest(req);
   if (!adminId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // Only super admins can create new system admins
   if (!(await isSuperAdmin(adminId))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const body = await req.json().catch(() => ({}));
-  const { username, email, password } = body;
-
-  if (!username || !email || !password) {
-    return NextResponse.json(
-      { error: 'Username, email, and password are required' },
-      { status: 400 }
-    );
-  }
-
   try {
-    const passwordHash = await bcrypt.hash(password, 12);
-    const [newAdmin] = await db
-      .insert(s.admins)
-      .values({
-        username,
-        email,
-        passwordHash,
-        createdByAdminId: adminId,
-      })
-      .returning({
-        id: s.admins.id,
-        username: s.admins.username,
-        email: s.admins.email,
-      });
+    const body = await req.json();
+    const data = postSchema.parse(body);
 
-    // Log the creation
-    await db.insert(s.adminAuditLogs).values({
-      adminId,
-      action: 'create_admin',
-      entityType: 'admin',
-      entityId: newAdmin.id,
-      changes: { username, email },
+    const passwordHash = await bcrypt.hash(data.password, 12);
+    const newAdmin = await db.admins.create({
+      data: {
+        username: data.username,
+        email: data.email,
+        password_hash: passwordHash,
+        created_by_admin_id: adminId,
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+      }
+    });
+
+    await db.admin_audit_logs.create({
+      data: {
+        admin_id: adminId,
+        action: 'create_admin',
+        entity_type: 'admin',
+        entity_id: newAdmin.id,
+        changes: { username: data.username, email: data.email },
+      }
     });
 
     return NextResponse.json({ admin: newAdmin });
   } catch (e: any) {
-    if (e.code === '23505') {
-      // Unique violation
+    if (e instanceof ZodError) {
+      return NextResponse.json({ error: e.issues[0].message }, { status: 400 });
+    }
+    if (e.code === 'P2002') {
       return NextResponse.json({ error: 'Username or email already exists' }, { status: 409 });
     }
     console.error(e);

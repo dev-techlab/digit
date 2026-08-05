@@ -1,4 +1,5 @@
 import nodemailer, { type Transporter } from 'nodemailer';
+import { env } from '@/lib/env';
 
 /**
  * Nodemailer SMTP transport, configured from env. When SMTP_HOST is unset the
@@ -8,7 +9,7 @@ import nodemailer, { type Transporter } from 'nodemailer';
 const globalForMail = globalThis as unknown as { mailTransport?: Transporter };
 
 export function isSmtpConfigured(): boolean {
-  return !!process.env.SMTP_HOST;
+  return !!env.SMTP_HOST;
 }
 
 export function getTransport(): Transporter {
@@ -19,16 +20,16 @@ export function getTransport(): Transporter {
     return globalForMail.mailTransport;
   }
 
-  const user = process.env.SMTP_USER;
+  const user = env.SMTP_USER;
   globalForMail.mailTransport = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT ?? 587),
+    host: env.SMTP_HOST,
+    port: Number(env.SMTP_PORT ?? 587),
     // Implicit TLS only on 465; 587 upgrades via STARTTLS (secure=false).
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: user ? { user, pass: process.env.SMTP_PASS } : undefined,
+    secure: env.SMTP_SECURE === 'true',
+    auth: user ? { user, pass: env.SMTP_PASS } : undefined,
   });
   return globalForMail.mailTransport;
 }
 
-export const MAIL_FROM = process.env.MAIL_FROM || 'Octan Link <no-reply@octanlink.com>';
-export const MAIL_ADMIN = process.env.MAIL_ADMIN || 'admin@octanlink.com';
+export const MAIL_FROM = env.MAIL_FROM || 'Octan Link <no-reply@octanlink.com>';
+export const MAIL_ADMIN = env.MAIL_ADMIN || 'admin@octanlink.com';

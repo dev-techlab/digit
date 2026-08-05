@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import * as storage from '@/lib/storage';
+import { env } from '@/lib/env';
+import { media_kind } from '../lib/generated/prisma/client';
 
-type MediaKind = (typeof s.mediaKindEnum.enumValues)[number];
+type MediaKind = media_kind;
 
 // Note: image/svg+xml is intentionally excluded — SVG can carry executable
 // script and would be a stored-XSS vector when served same-origin.
@@ -26,7 +26,7 @@ function extFor(contentType: string): string {
   return EXT_BY_TYPE[contentType] ?? 'bin';
 }
 
-const BUCKET = process.env.R2_BUCKET ?? 'octanlink-media';
+const BUCKET = env.R2_BUCKET ?? 'octanlink-media';
 
 export interface UploadMediaInput {
   buffer: Buffer;
@@ -56,31 +56,30 @@ export async function uploadMedia(input: UploadMediaInput): Promise<MediaResult>
 
   await storage.put(r2Key, input.buffer, input.contentType);
 
-  const [row] = await db
-    .insert(s.mediaAssets)
-    .values({
+  const row = await db.media_assets.create({
+    data: {
       id,
-      r2Key,
+      r2_key: r2Key,
       bucket: BUCKET,
       kind: input.kind,
-      contentType: input.contentType,
-      sizeBytes: input.buffer.length,
+      content_type: input.contentType,
+      size_bytes: input.buffer.length,
       width: input.width ?? null,
       height: input.height ?? null,
-      originalName: input.filename ?? null,
-      uploadedByAdminId: input.uploadedByAdminId ?? null,
-      uploadedByUserId: input.uploadedByUserId ?? null,
-      isPrivate: input.isPrivate ?? false,
-    })
-    .returning();
+      original_name: input.filename ?? null,
+      uploaded_by_admin_id: input.uploadedByAdminId ?? null,
+      uploaded_by_user_id: input.uploadedByUserId ?? null,
+      is_private: input.isPrivate ?? false,
+    },
+  });
 
   return {
     id: row.id,
-    r2Key: row.r2Key,
-    url: await storage.readUrl(row.r2Key, { private: row.isPrivate }),
+    r2Key: row.r2_key,
+    url: await storage.readUrl(row.r2_key, { private: row.is_private }),
     kind: row.kind,
-    contentType: row.contentType,
-    sizeBytes: row.sizeBytes,
+    contentType: row.content_type,
+    sizeBytes: row.size_bytes,
   };
 }
 
@@ -89,40 +88,39 @@ export async function replaceMedia(
   id: string,
   input: { buffer: Buffer; contentType: string; filename?: string }
 ): Promise<MediaResult> {
-  const existing = await db.query.mediaAssets.findFirst({ where: (t, { eq }) => eq(t.id, id) });
+  const existing = await db.media_assets.findFirst({ where: { id } });
   if (!existing) throw new MediaNotFoundError(id);
 
   const newKey = storage.buildKey(existing.kind, id, extFor(input.contentType));
   await storage.put(newKey, input.buffer, input.contentType);
-  if (newKey !== existing.r2Key) await storage.remove(existing.r2Key);
+  if (newKey !== existing.r2_key) await storage.remove(existing.r2_key);
 
-  const [row] = await db
-    .update(s.mediaAssets)
-    .set({
-      r2Key: newKey,
-      contentType: input.contentType,
-      sizeBytes: input.buffer.length,
-      originalName: input.filename ?? existing.originalName,
-    })
-    .where(eq(s.mediaAssets.id, id))
-    .returning();
+  const row = await db.media_assets.update({
+    where: { id },
+    data: {
+      r2_key: newKey,
+      content_type: input.contentType,
+      size_bytes: input.buffer.length,
+      original_name: input.filename ?? existing.original_name,
+    },
+  });
 
   return {
     id: row.id,
-    r2Key: row.r2Key,
-    url: await storage.readUrl(row.r2Key, { private: row.isPrivate }),
+    r2Key: row.r2_key,
+    url: await storage.readUrl(row.r2_key, { private: row.is_private }),
     kind: row.kind,
-    contentType: row.contentType,
-    sizeBytes: row.sizeBytes,
+    contentType: row.content_type,
+    sizeBytes: row.size_bytes,
   };
 }
 
 /** Delete an asset from both storage and the registry. */
 export async function deleteMedia(id: string): Promise<void> {
-  const existing = await db.query.mediaAssets.findFirst({ where: (t, { eq }) => eq(t.id, id) });
+  const existing = await db.media_assets.findFirst({ where: { id } });
   if (!existing) throw new MediaNotFoundError(id);
-  await storage.remove(existing.r2Key);
-  await db.delete(s.mediaAssets).where(eq(s.mediaAssets.id, id));
+  await storage.remove(existing.r2_key);
+  await db.media_assets.delete({ where: { id } });
 }
 
 /**
@@ -131,11 +129,11 @@ export async function deleteMedia(id: string): Promise<void> {
  * the URL — private assets must never be handed to an unauthenticated request.
  */
 export async function getMediaUrl(id: string): Promise<{ url: string; isPrivate: boolean } | null> {
-  const row = await db.query.mediaAssets.findFirst({ where: (t, { eq }) => eq(t.id, id) });
+  const row = await db.media_assets.findFirst({ where: { id } });
   if (!row) return null;
   return {
-    url: await storage.readUrl(row.r2Key, { private: row.isPrivate }),
-    isPrivate: row.isPrivate,
+    url: await storage.readUrl(row.r2_key, { private: row.is_private }),
+    isPrivate: row.is_private,
   };
 }
 

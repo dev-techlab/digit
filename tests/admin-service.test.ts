@@ -9,8 +9,6 @@ import {
 } from '@/lib/admin-service';
 import { isSuperAdmin } from '@/lib/rbac-core';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
 import { cleanupTestAdmins } from './helpers';
 
 const EMAIL = 'vitest-svc@test.local';
@@ -41,14 +39,14 @@ describe('createAdmin', () => {
     const roles = await rolesForAdmin(id);
     expect(new Set(roles)).toEqual(new Set(['finance', 'support', 'content']));
     // exactly one admin row for this email
-    const rows = await db.select().from(s.admins).where(eq(s.admins.email, EMAIL));
+    const rows = await db.admins.findMany({ where: { email: EMAIL } });
     expect(rows).toHaveLength(1);
   });
 });
 
 describe('assignRole / removeRole', () => {
   it('assign is idempotent and remove works', async () => {
-    const admin = await db.query.admins.findFirst({ where: (t, { eq }) => eq(t.email, EMAIL) });
+    const admin = await db.admins.findFirst({ where: { email: EMAIL } });
     const id = admin!.id;
     await assignRole(id, 'admin');
     await assignRole(id, 'admin'); // no duplicate row
@@ -58,7 +56,7 @@ describe('assignRole / removeRole', () => {
   });
 
   it('assigning an unknown role throws', async () => {
-    const admin = await db.query.admins.findFirst({ where: (t, { eq }) => eq(t.email, EMAIL) });
+    const admin = await db.admins.findFirst({ where: { email: EMAIL } });
     await expect(assignRole(admin!.id, 'nope')).rejects.toThrow(/does not exist/);
   });
 });
@@ -80,7 +78,7 @@ describe('super_admin role → isSuperAdmin', () => {
 
 describe('password + login', () => {
   it('verifyAdminLogin succeeds with correct password, fails otherwise', async () => {
-    const admin = await db.query.admins.findFirst({ where: (t, { eq }) => eq(t.email, EMAIL) });
+    const admin = await db.admins.findFirst({ where: { email: EMAIL } });
     const id = admin!.id;
     await setPassword(id, 'newpass456');
     expect(await verifyAdminLogin(EMAIL, 'newpass456')).toBe(id);
@@ -89,9 +87,9 @@ describe('password + login', () => {
   });
 
   it('suspended admins cannot log in', async () => {
-    const admin = await db.query.admins.findFirst({ where: (t, { eq }) => eq(t.email, EMAIL) });
-    await db.update(s.admins).set({ status: 'suspended' }).where(eq(s.admins.id, admin!.id));
+    const admin = await db.admins.findFirst({ where: { email: EMAIL } });
+    await db.admins.update({ where: { id: admin!.id }, data: { status: 'suspended' } });
     expect(await verifyAdminLogin(EMAIL, 'newpass456')).toBeNull();
-    await db.update(s.admins).set({ status: 'active' }).where(eq(s.admins.id, admin!.id));
+    await db.admins.update({ where: { id: admin!.id }, data: { status: 'active' } });
   });
 });

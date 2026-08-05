@@ -22,6 +22,7 @@ async function fetchType(endpoint: string, providerType: 'SC' | 'GC') {
 
 async function main() {
   const endpoint = await getProviderApiBaseUrl();
+  if (!endpoint) throw new Error('Providers API URL not found in settings');
   await fetchType(endpoint, 'SC');
   await fetchType(endpoint, 'GC');
   process.exit(0);

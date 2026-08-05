@@ -1,23 +1,33 @@
 import { NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAgentFromRequest } from '@/lib/agent-auth';
+import { z } from 'zod';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+const putSchema = z.object({
+  enabled: z.boolean().optional(),
+  contactPhoneEnabled: z.boolean().optional(),
+  contactPhone: z.string().trim().optional(),
+  platform: z.string().trim().optional(),
+  jsUrl: z.string().trim().optional()
+});
 
-/** GET /api/agent/cs-config — customer-service widget config for this store. */
+
 export async function GET(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const [config] = await db
-    .select()
-    .from(s.csConfigs)
-    .where(eq(s.csConfigs.storeId, agent.storeId));
+  const config = await db.cs_configs.findUnique({
+    where: { store_id: agent.storeId }
+  });
+  
   return NextResponse.json({
-    config: config ?? {
+    config: config ? {
+      enabled: config.enabled,
+      contactPhoneEnabled: config.contact_phone_enabled,
+      contactPhone: config.contact_phone,
+      platform: config.platform,
+      jsUrl: config.js_url,
+    } : {
       enabled: true,
       contactPhoneEnabled: false,
       contactPhone: null,
@@ -27,23 +37,33 @@ export async function GET(req: Request) {
   });
 }
 
-/** PUT /api/agent/cs-config — upsert the config. */
 export async function PUT(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const set: Partial<typeof s.csConfigs.$inferInsert> = { updatedAt: new Date() };
-  if (typeof body.enabled === 'boolean') set.enabled = body.enabled;
-  if (typeof body.contactPhoneEnabled === 'boolean')
-    set.contactPhoneEnabled = body.contactPhoneEnabled;
-  if (typeof body.contactPhone === 'string') set.contactPhone = body.contactPhone;
-  if (typeof body.platform === 'string') set.platform = body.platform;
-  if (typeof body.jsUrl === 'string') set.jsUrl = body.jsUrl;
+  const body = await req.json().catch(() => ({}));
+  const parseResult = putSchema.safeParse(body);
 
-  await db
-    .insert(s.csConfigs)
-    .values({ storeId: agent.storeId, ...set })
-    .onConflictDoUpdate({ target: s.csConfigs.storeId, set });
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+  }
+
+  const data = parseResult.data;
+
+  const set: any = { updated_at: new Date() };
+  if (data.enabled !== undefined) set.enabled = data.enabled;
+  if (data.contactPhoneEnabled !== undefined) set.contact_phone_enabled = data.contactPhoneEnabled;
+  if (data.contactPhone !== undefined) set.contact_phone = data.contactPhone;
+  if (data.platform !== undefined) set.platform = data.platform;
+  if (data.jsUrl !== undefined) set.js_url = data.jsUrl;
+
+  await db.cs_configs.upsert({
+    where: { store_id: agent.storeId },
+    update: set,
+    create: {
+      store_id: agent.storeId,
+      ...set
+    }
+  });
   return NextResponse.json({ ok: true });
 }

@@ -39,3 +39,9 @@ yarn-error.log*
 
 
 /.playwright-mcp/*
+/lib/generated/prisma
+
+/.agents/*
+/.claude/*
+/.windsurf/*
+/.gemini/*  

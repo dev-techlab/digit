@@ -216,7 +216,6 @@ export function PromotionScreen() {
         }
       >
         <div className="space-y-5">
-          {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{err}</p>}
           <Field label="Promotion Type" required>
             <div className="space-y-2">
               {Object.entries(TYPE_LABEL).map(([k, l]) => (
@@ -336,6 +335,7 @@ export function PromotionScreen() {
               onChange={(e) => setForm({ ...form, remark: e.target.value })}
             />
           </Field>
+          {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{err}</p>}
         </div>
       </Drawer>
     </div>

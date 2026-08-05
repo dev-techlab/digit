@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
-import { getUserIdFromRequest } from '@/lib/user-auth';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+import { getUserIdFromRequest } from '@/lib/user-auth';
+import { z } from 'zod';
+
+const postSchema = z.object({
+  code: z.string().trim().max(100).min(1, 'A postal request code is required')
+});
+
 
 /**
  * POST /api/postal-requests — { code } — the sweepstakes "Alternate Method
@@ -13,16 +16,23 @@ export const dynamic = 'force-dynamic';
  * when a session happens to be present.
  */
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const code = typeof body.code === 'string' ? body.code.trim().slice(0, 100) : '';
-  if (!code)
-    return NextResponse.json({ error: 'A postal request code is required' }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+  const parseResult = postSchema.safeParse(body);
+
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+  }
+
+  const { code } = parseResult.data;
 
   const userId = await getUserIdFromRequest(req);
-  const [row] = await db
-    .insert(s.postalRequests)
-    .values({ userId, code })
-    .returning({ id: s.postalRequests.id });
+  const row = await db.postal_requests.create({
+    data: {
+      user_id: userId || null,
+      code
+    },
+    select: { id: true }
+  });
 
   return NextResponse.json({ ok: true, id: row.id }, { status: 201 });
 }

@@ -18,6 +18,7 @@ export function ProviderCard({ provider }: { provider: GameProvider }) {
   const { isAuthenticated } = useAuth();
   const { open: openAuth } = useAuthModal();
   const [action, setAction] = useState<Action>('idle');
+  const [imgError, setImgError] = useState(false);
 
   const launch = (kind: Exclude<Action, 'idle'>) => {
     if (!isAuthenticated) {
@@ -25,13 +26,17 @@ export function ProviderCard({ provider }: { provider: GameProvider }) {
       return;
     }
     setAction(kind);
+    window.open(provider.launchUrlTemplate, '_blank', 'noopener,noreferrer');
+    
+    // Keep the visual spinner for 800ms on the current page
     window.setTimeout(() => {
       setAction('idle');
-      window.open(provider.launchUrlTemplate, '_blank', 'noopener,noreferrer');
     }, 800);
   };
 
   const shortCode = provider.name.split(' ')[0].slice(0, 8).toUpperCase();
+  const localImg = getLocalImageUrl(provider.iconUrl);
+  const remoteImg = `https://octanlink.com${localImg.replace('/img/p/', '/providers/')}`;
 
   return (
     <Card className="flex flex-col gap-3 p-4">
@@ -56,12 +61,12 @@ export function ProviderCard({ provider }: { provider: GameProvider }) {
         <div className="flex w-16 shrink-0 flex-col items-center gap-1">
           <div className="relative h-12 w-12 overflow-hidden rounded-lg bg-white/5">
             <Image
-              src={getLocalImageUrl(provider.iconUrl)}
+              src={imgError ? remoteImg : localImg}
               alt={provider.name}
               fill
               sizes="48px"
               className="object-cover"
-              unoptimized
+              onError={() => setImgError(true)}
             />
           </div>
           <span className="line-clamp-1 text-center text-[9px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]">

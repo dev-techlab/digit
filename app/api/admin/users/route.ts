@@ -1,16 +1,13 @@
 import { NextResponse } from 'next/server';
-import { and, desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { z, ZodError } from 'zod';
+import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission, PermissionError } from '@/lib/rbac-core';
 import { clientIp, logAdminAction } from '@/lib/audit-log';
 import { blockUser, unblockUser } from '@/lib/user-service';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
-/** Resolve + permission-check the caller; returns the adminId or a ready-to-return error response. */
 async function authorize(
   req: Request,
   permKey: string
@@ -35,11 +32,6 @@ async function authorize(
   return { adminId, error: undefined };
 }
 
-/**
- * GET /api/admin/users?page=&pageSize=&search=&status= — every player who
- * self-registered on the site (home page / game lobby "Quick Register" or
- * manual sign-up), with their wallet balances.
- */
 export async function GET(req: Request) {
   const { error } = await authorize(req, 'users.read');
   if (error) return error;
@@ -50,73 +42,210 @@ export async function GET(req: Request) {
   const search = url.searchParams.get('search')?.trim();
   const status = url.searchParams.get('status');
 
-  const where = and(
-    search
-      ? or(
-          ilike(s.users.username, `%${search}%`),
-          ilike(s.users.nickname, `%${search}%`),
-          ilike(s.users.email, `%${search}%`),
-          ilike(s.users.phone, `%${search}%`)
-        )
-      : undefined,
-    status === 'active' || status === 'blocked' ? eq(s.users.status, status) : undefined
-  );
+  const where: any = {};
+  if (status === 'active' || status === 'blocked') {
+    where.status = status;
+  }
 
-  const [rows, [{ count }]] = await Promise.all([
-    db
-      .select({
-        id: s.users.id,
-        username: s.users.username,
-        nickname: s.users.nickname,
-        email: s.users.email,
-        phone: s.users.phone,
-        phoneBound: s.users.phoneBound,
-        kycStatus: s.users.kycStatus,
-        status: s.users.status,
-        inviteCode: s.users.inviteCode,
-        createdAt: s.users.createdAt,
-        goldCoin: s.wallets.goldCoin,
-        onlineSc: s.wallets.onlineSc,
-      })
-      .from(s.users)
-      .leftJoin(s.wallets, eq(s.wallets.userId, s.users.id))
-      .where(where)
-      .orderBy(desc(s.users.createdAt))
-      .limit(pageSize)
-      .offset((page - 1) * pageSize),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(s.users)
-      .where(where),
+  if (search) {
+    where.OR = [
+      { username: { contains: search, mode: 'insensitive' } },
+      { nickname: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } },
+      { phone: { contains: search, mode: 'insensitive' } },
+    ];
+  }
+
+  const [rows, count] = await Promise.all([
+    db.users.findMany({
+      where,
+      select: {
+        id: true,
+        username: true,
+        nickname: true,
+        email: true,
+        phone: true,
+        phone_bound: true,
+        kyc_status: true,
+        status: true,
+        invite_code: true,
+        created_at: true,
+        wallets: {
+          select: {
+            gold_coin: true,
+            online_sc: true,
+          }
+        }
+      },
+      orderBy: { created_at: 'desc' },
+      take: pageSize,
+      skip: (page - 1) * pageSize,
+    }),
+    db.users.count({ where }),
   ]);
 
-  return NextResponse.json({ users: rows, total: count });
+  const formattedRows = rows.map(r => ({
+    id: r.id,
+    username: r.username,
+    nickname: r.nickname,
+    email: r.email,
+    phone: r.phone,
+    phoneBound: r.phone_bound,
+    kycStatus: r.kyc_status,
+    status: r.status,
+    inviteCode: r.invite_code,
+    createdAt: r.created_at,
+    goldCoin: r.wallets?.gold_coin,
+    onlineSc: r.wallets?.online_sc,
+  }));
+
+  return NextResponse.json({ users: formattedRows, total: count });
 }
 
-/** PUT /api/admin/users — { id, status: 'active'|'blocked' } toggle a player's access. */
+const putSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(['active', 'blocked']).optional(),
+  nickname: z.string().optional(),
+  email: z.string().email().optional().or(z.literal('')),
+  phone: z.string().optional().or(z.literal('')),
+  password: z.string().min(6).optional().or(z.literal('')),
+});
+
 export async function PUT(req: Request) {
   const { error, adminId } = await authorize(req, 'users.write');
   if (error) return error;
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const id = typeof body.id === 'string' ? body.id : '';
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-  if (body.status !== 'active' && body.status !== 'blocked') {
-    return NextResponse.json({ error: 'status must be "active" or "blocked"' }, { status: 400 });
-  }
+  try {
+    const body = await req.json();
+    const data = putSchema.parse(body);
 
-  const [existing] = await db.select({ id: s.users.id }).from(s.users).where(eq(s.users.id, id));
+    const existing = await db.users.findUnique({ where: { id: data.id }, select: { id: true } });
+    if (!existing) return NextResponse.json({ error: 'not found' }, { status: 404 });
+
+    const set: any = {};
+    if (data.status) set.status = data.status;
+    if (data.nickname !== undefined) set.nickname = data.nickname.trim();
+    if (data.email !== undefined) set.email = data.email.trim() || null;
+    if (data.phone !== undefined) set.phone = data.phone.trim() || null;
+    if (data.password) {
+      set.password_hash = await bcrypt.hash(data.password, 10);
+    }
+
+    if (Object.keys(set).length === 0) {
+      return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
+    }
+
+    await db.users.update({
+      where: { id: data.id },
+      data: set,
+    });
+
+    if (set.status === 'blocked') await blockUser(data.id);
+    else if (set.status === 'active') await unblockUser(data.id);
+
+    const changes = { ...set };
+    if (changes.password_hash) changes.password_hash = '[redacted]';
+
+    await logAdminAction({
+      adminId,
+      action: 'user.update',
+      entityType: 'user',
+      entityId: data.id,
+      changes,
+      ipAddress: clientIp(req),
+    });
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    if (err instanceof ZodError) {
+      return NextResponse.json({ error: err.issues[0].message }, { status: 400 });
+    }
+    console.error('PUT /api/admin/users', err);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+const postSchema = z.object({
+  username: z.string().min(4, 'Username must be at least 4 characters').max(50),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  nickname: z.string().min(1, 'Nickname required'),
+  email: z.string().email().optional().or(z.literal('')),
+  phone: z.string().optional().or(z.literal('')),
+});
+
+export async function POST(req: Request) {
+  const { error, adminId } = await authorize(req, 'users.write');
+  if (error) return error;
+
+  try {
+    const body = await req.json();
+    const data = postSchema.parse(body);
+
+    const password_hash = await bcrypt.hash(data.password, 10);
+    const invite_code = Array.from(crypto.getRandomValues(new Uint8Array(6)))
+      .map(b => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[b % 36])
+      .join('');
+
+    const created = await db.users.create({
+      data: {
+        username: data.username.trim(),
+        password_hash,
+        nickname: data.nickname.trim(),
+        email: data.email?.trim() || null,
+        phone: data.phone?.trim() || null,
+        invite_code,
+      },
+    });
+
+    await logAdminAction({
+      adminId,
+      action: 'user.create',
+      entityType: 'user',
+      entityId: created.id,
+      ipAddress: clientIp(req),
+    });
+    return NextResponse.json(
+      { user: { id: created.id, username: data.username, password: data.password }, ok: true },
+      { status: 201 }
+    );
+  } catch (err: any) {
+    if (err instanceof ZodError) {
+      return NextResponse.json({ error: err.issues[0].message }, { status: 400 });
+    }
+    if (err.code === 'P2002') {
+      return NextResponse.json({ error: 'Username already exists' }, { status: 409 });
+    }
+    console.error('POST /api/admin/users', err);
+    return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  const { error, adminId } = await authorize(req, 'users.write');
+  if (error) return error;
+
+  const url = new URL(req.url);
+  const id = url.searchParams.get('id');
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+
+  const existing = await db.users.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: 'not found' }, { status: 404 });
 
-  if (body.status === 'blocked') await blockUser(id);
-  else await unblockUser(id);
+  try {
+    await db.users.delete({
+      where: { id }
+    });
 
-  await logAdminAction({
-    adminId,
-    action: body.status === 'blocked' ? 'user.block' : 'user.unblock',
-    entityType: 'user',
-    entityId: id,
-    ipAddress: clientIp(req),
-  });
-  return NextResponse.json({ ok: true });
+    await logAdminAction({
+      adminId,
+      action: 'user.delete',
+      entityType: 'user',
+      entityId: id,
+      ipAddress: clientIp(req),
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error('DELETE /api/admin/users', err);
+    return NextResponse.json({ error: 'Failed to delete user. It might be referenced by other records.' }, { status: 500 });
+  }
 }

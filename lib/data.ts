@@ -1,10 +1,10 @@
 import 'server-only';
+import { cache } from 'react';
 import { cookies } from 'next/headers';
-import { and, eq, asc, desc, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { userIdForToken } from '@/lib/user-service';
 import { USER_SESSION_COOKIE } from '@/lib/auth-tokens';
+import { env } from '@/lib/env';
 import type {
   GameProvider,
   WalletBalance,
@@ -26,10 +26,10 @@ async function currentUserId(): Promise<string | null> {
     const uid = await userIdForToken(token);
     if (uid) return uid;
   }
-  if (process.env.NODE_ENV !== 'production') {
-    const u = await db.query.users.findFirst({
-      where: (t, { eq }) => eq(t.username, 'player_2481'),
-      columns: { id: true },
+  if (env.NODE_ENV !== 'production') {
+    const u = await db.users.findFirst({
+      where: { username: 'player_2481' },
+      select: { id: true },
     });
     return u?.id ?? null;
   }
@@ -42,47 +42,67 @@ function add(...vals: string[]): number {
 
 // ── Game providers (replaces lib/providers.ts read) ──────────────────────────
 export async function getProviders(providerType: 'SC' | 'GC'): Promise<GameProvider[]> {
-  const rows = await db
-    .select()
-    .from(s.gameProviders)
-    .where(
-      and(
-        eq(s.gameProviders.providerType, providerType),
-        eq(s.gameProviders.status, 1),
-        isNull(s.gameProviders.deletedAt)
-      )
-    )
-    .orderBy(asc(s.gameProviders.sort));
+  const rows = await db.game_providers.findMany({
+    where: {
+      provider_type: providerType,
+      status: 1,
+      deleted_at: null,
+    },
+    orderBy: { sort: 'asc' },
+  });
 
-  const tiers = await db
-    .select()
-    .from(s.providerDepositTiers)
-    .orderBy(asc(s.providerDepositTiers.sort));
+  const tiers = await db.provider_deposit_tiers.findMany({
+    orderBy: { sort: 'asc' },
+  });
 
-  return rows.map((p) => {
+  const userId = await currentUserId();
+  
+  let allowedNames: Set<string> | null = null;
+  if (userId) {
+    const user = await db.users.findUnique({ where: { id: userId }, select: { agent_invite_code: true } });
+    if (user?.agent_invite_code) {
+      const agent = await db.agents.findFirst({
+        where: { invite_code: user.agent_invite_code },
+        select: { id: true }
+      });
+      if (agent) {
+        const enabledAccounts = await db.store_platform_accounts.findMany({
+          where: { store_id: agent.id, enabled: true },
+          include: { game_platforms: { select: { name: true } } },
+        });
+        allowedNames = new Set(enabledAccounts.map(a => a.game_platforms.name.toLowerCase()));
+      }
+    }
+  }
+
+  const finalRows = allowedNames 
+    ? rows.filter(r => allowedNames!.has(r.name.toLowerCase()))
+    : rows;
+
+  return finalRows.map((p: any) => {
     const t = tiers
-      .filter((x) => x.providerId === p.id)
-      .map((x) => ({ amount: x.amount, bonusAmount: x.bonusAmount }));
+      .filter((x: any) => x.provider_id === p.id)
+      .map((x: any) => ({ amount: Number(x.amount), bonusAmount: Number(x.bonus_amount) }));
     return {
       id: p.id,
       name: p.name,
-      providerCode: p.providerCode,
-      launchUrlTemplate: p.launchUrlTemplate,
-      iconUrl: p.iconUrl,
+      providerCode: p.provider_code,
+      launchUrlTemplate: p.launch_url_template,
+      iconUrl: p.icon_url,
       status: p.status,
       sort: p.sort,
-      createType: p.createType,
+      createType: p.create_type,
       depositTiers: t.length ? t : null,
       operate: p.operate,
-      needInitBalance: p.needInitBalance,
-      canManualInput: p.canManualInput,
-      providerType: p.providerType,
-      iframeSupported: p.iframeSupported,
-      isMachineSupported: p.isMachineSupported,
-      redeemField: p.redeemField,
-      invalidPasswordState: p.invalidPasswordState,
-      canChangePassword: p.canChangePassword,
-    };
+      needInitBalance: p.need_init_balance,
+      canManualInput: p.can_manual_input,
+      providerType: p.provider_type,
+      iframeSupported: p.iframe_supported,
+      isMachineSupported: p.is_machine_supported,
+      redeemField: p.redeem_field,
+      invalidPasswordState: p.invalid_password_state,
+      canChangePassword: p.can_change_password,
+    } as any;
   });
 }
 
@@ -101,19 +121,19 @@ const EMPTY_WALLET: WalletBalance = {
 export async function getWallet(): Promise<WalletBalance> {
   const userId = await currentUserId();
   if (!userId) return EMPTY_WALLET;
-  const w = await db.query.wallets.findFirst({ where: (t, { eq }) => eq(t.userId, userId) });
+  const w = await db.wallets.findFirst({ where: { user_id: userId } });
   if (!w) return EMPTY_WALLET;
-  const total = add(w.onlineSc, w.storeSc, w.kioskSc);
+  const total = add(w.online_sc.toString(), w.store_sc.toString(), w.kiosk_sc.toString());
   const withdrawable = total - Number(w.unwagered);
   return {
-    goldCoin: w.goldCoin,
-    onlineSC: w.onlineSc,
-    storeSC: w.storeSc,
-    kioskSC: w.kioskSc,
+    goldCoin: w.gold_coin.toString(),
+    onlineSC: w.online_sc.toString(),
+    storeSC: w.store_sc.toString(),
+    kioskSC: w.kiosk_sc.toString(),
     totalBalance: total.toFixed(2),
-    unwagered: w.unwagered,
+    unwagered: w.unwagered.toString(),
     withdrawable: withdrawable.toFixed(2),
-    freeBonus: w.freeBonus,
+    freeBonus: w.free_bonus.toString(),
   };
 }
 
@@ -121,28 +141,27 @@ export async function getWallet(): Promise<WalletBalance> {
 export async function getOrders(): Promise<OrderRecord[]> {
   const userId = await currentUserId();
   if (!userId) return [];
-  const user = await db.query.users.findFirst({
-    where: (t, { eq }) => eq(t.id, userId),
-    columns: { username: true },
+  const user = await db.users.findFirst({
+    where: { id: userId },
+    select: { username: true },
   });
-  const rows = await db
-    .select()
-    .from(s.orders)
-    .where(eq(s.orders.userId, userId))
-    .orderBy(desc(s.orders.createdAt));
-  return rows.map((o) => ({
-    orderNo: o.orderNo,
+  const rows = await db.orders.findMany({
+    where: { user_id: userId },
+    orderBy: { created_at: 'desc' },
+  });
+  return rows.map((o: any) => ({
+    orderNo: o.order_no,
     username: user?.username ?? '',
-    amount: o.amount,
-    payAmount: o.payAmount,
-    actualDepositAmount: o.actualDepositAmount,
-    paymentMethod: o.paymentMethod,
-    fee: o.fee,
-    feeMode: o.feeMode,
-    feeWaived: o.feeWaived,
-    scBonus: o.scBonus,
+    amount: o.amount.toString(),
+    payAmount: o.pay_amount.toString(),
+    actualDepositAmount: o.actual_deposit_amount.toString(),
+    paymentMethod: o.payment_method,
+    fee: o.fee.toString(),
+    feeMode: o.fee_mode,
+    feeWaived: o.fee_waived,
+    scBonus: o.sc_bonus.toString(),
     status: o.status,
-    createTime: o.createdAt.toISOString(),
+    createTime: o.created_at.toISOString(),
   }));
 }
 
@@ -150,45 +169,43 @@ export async function getOrders(): Promise<OrderRecord[]> {
 export async function getTransactions(): Promise<Transaction[]> {
   const userId = await currentUserId();
   if (!userId) return [];
-  const rows = await db
-    .select()
-    .from(s.transactions)
-    .where(eq(s.transactions.userId, userId))
-    .orderBy(desc(s.transactions.createdAt));
-  return rows.map((t) => ({
+  const rows = await db.transactions.findMany({
+    where: { user_id: userId },
+    orderBy: { created_at: 'desc' },
+  });
+  return rows.map((t: any) => ({
     id: t.id,
     address: t.address,
-    methodLabel: t.methodLabel,
+    methodLabel: t.method_label,
     method: t.method,
     status: t.status,
-    amount: t.amount,
+    amount: t.amount.toString(),
     type: t.type,
-    createTime: t.createdAt.toISOString(),
+    createTime: t.created_at.toISOString(),
   }));
 }
 
 // ── Bonuses (definition + this user's claim status) ──────────────────────────
 export async function getBonuses(): Promise<BonusReward[]> {
   const userId = await currentUserId();
-  const defs = await db
-    .select()
-    .from(s.bonuses)
-    .where(isNull(s.bonuses.deletedAt))
-    .orderBy(asc(s.bonuses.sort));
+  const defs = await db.bonuses.findMany({
+    where: { deleted_at: null },
+    orderBy: { sort: 'asc' },
+  });
   const claims = userId
-    ? await db.select().from(s.userBonusClaims).where(eq(s.userBonusClaims.userId, userId))
+    ? await db.user_bonus_claims.findMany({ where: { user_id: userId } })
     : [];
-  const claimByBonus = new Map(claims.map((c) => [c.bonusId, c]));
+  const claimByBonus = new Map(claims.map((c: any) => [c.bonus_id, c]));
 
   return defs.map((b) => {
     const status = claimByBonus.get(b.id)?.status ?? 'none';
     const banner: BonusReward['banner'] =
-      b.bannerType === 'gradient'
+      b.banner_type === 'gradient'
         ? {
             type: 'gradient',
-            gradient: b.bannerGradient ?? '',
-            badgeIcon: b.bannerBadgeIcon ?? undefined,
-            badgeText: b.bannerBadgeText ?? undefined,
+            gradient: b.banner_gradient ?? '',
+            badgeIcon: b.banner_badge_icon ?? undefined,
+            badgeText: b.banner_badge_text ?? undefined,
           }
         : { type: 'placeholder' };
     return {
@@ -199,9 +216,9 @@ export async function getBonuses(): Promise<BonusReward[]> {
       active: b.active,
       banner,
       schedule: {
-        icon: b.scheduleIcon,
-        text: b.scheduleText,
-        countdownSeconds: b.scheduleCountdownSeconds ?? undefined,
+        icon: b.schedule_icon,
+        text: b.schedule_text,
+        countdownSeconds: b.schedule_countdown_seconds ?? undefined,
       },
       status,
     };
@@ -221,12 +238,11 @@ export async function getReferral(): Promise<ReferralSummary> {
   };
   if (!userId) return empty;
 
-  const user = await db.query.users.findFirst({ where: (t, { eq }) => eq(t.id, userId) });
-  const rows = await db
-    .select()
-    .from(s.referralCommissions)
-    .where(eq(s.referralCommissions.referrerUserId, userId))
-    .orderBy(asc(s.referralCommissions.joinedAt));
+  const user = await db.users.findFirst({ where: { id: userId } });
+  const rows = await db.referral_commissions.findMany({
+    where: { referrer_user_id: userId },
+    orderBy: { joined_at: 'asc' },
+  });
 
   const totalCommission = rows
     .filter((r) => r.status === 'claimed')
@@ -234,18 +250,18 @@ export async function getReferral(): Promise<ReferralSummary> {
   const pendingCommission = rows
     .filter((r) => r.status === 'pending')
     .reduce((n, r) => n + Number(r.reward), 0);
-  const site = process.env.NEXT_PUBLIC_SITE_URL ?? '';
+  const site = env.NEXT_PUBLIC_SITE_URL || '';
 
   return {
-    inviteCode: user?.inviteCode ?? '',
-    inviteLink: user ? `${site}/?inviteCode=${user.inviteCode}` : '',
+    inviteCode: user?.invite_code ?? '',
+    inviteLink: user ? `${site}/?inviteCode=${user.invite_code}` : '',
     totalInvited: rows.length,
     totalCommission: totalCommission.toFixed(2),
     pendingCommission: pendingCommission.toFixed(2),
-    invitees: rows.map((r) => ({
-      username: r.inviteeDisplay,
-      joinedAt: r.joinedAt.toISOString(),
-      reward: r.reward,
+    invitees: rows.map((r: any) => ({
+      username: r.invitee_display,
+      joinedAt: r.joined_at.toISOString(),
+      reward: r.reward.toString(),
       status: r.status,
     })),
   };
@@ -255,18 +271,17 @@ export async function getReferral(): Promise<ReferralSummary> {
 export async function getRedemptionReviews(): Promise<RedemptionReview[]> {
   const userId = await currentUserId();
   if (!userId) return [];
-  const rows = await db
-    .select()
-    .from(s.redemptionReviews)
-    .where(eq(s.redemptionReviews.userId, userId))
-    .orderBy(desc(s.redemptionReviews.submittedAt));
-  return rows.map((r) => ({
+  const rows = await db.redemption_reviews.findMany({
+    where: { user_id: userId },
+    orderBy: { submitted_at: 'desc' },
+  });
+  return rows.map((r: any) => ({
     id: r.id,
-    orderNo: r.orderNo,
-    amount: r.amount,
-    provider: r.providerName,
+    orderNo: r.order_no,
+    amount: r.amount.toString(),
+    provider: r.provider_name,
     status: r.status,
     visible: r.visible,
-    submittedAt: r.submittedAt.toISOString(),
+    submittedAt: r.submitted_at.toISOString(),
   }));
 }

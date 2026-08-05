@@ -22,7 +22,7 @@ let adminId: string;
 
 beforeAll(async () => {
   await requireSeed();
-  const admin = await db.query.admins.findFirst();
+  const admin = await db.admins.findFirst();
   adminId = admin!.id;
 });
 

@@ -5,9 +5,10 @@ import {
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import type { mediaKindEnum } from '@/lib/db/schema';
+import { media_kind } from '@/lib/generated/prisma/client';
+type MediaKind = media_kind;
 
-type MediaKind = (typeof mediaKindEnum.enumValues)[number];
+import { env } from '@/lib/env';
 
 const {
   R2_ACCOUNT_ID,
@@ -15,7 +16,7 @@ const {
   R2_SECRET_ACCESS_KEY,
   R2_BUCKET = 'octanlink-media',
   R2_PUBLIC_BASE_URL = '',
-} = process.env;
+} = env;
 
 export function isR2Configured(): boolean {
   return Boolean(R2_ACCOUNT_ID && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY);

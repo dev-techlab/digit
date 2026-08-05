@@ -1,35 +1,32 @@
 import { NextResponse } from 'next/server';
-import { verifyOtp, type OtpPurpose } from '@/lib/otp';
+import { z } from 'zod';
+import { verifyOtp, type OtpPurpose, isValidOtpDestination } from '@/lib/otp';
 import { createUserSession, getUserProfile, userIdByPhone } from '@/lib/user-service';
-import { otpPurposeEnum } from '@/lib/db/schema';
+import { db } from '@/lib/db';
 import { USER_SESSION_COOKIE, USER_SESSION_TTL_S, sessionCookieOptions } from '@/lib/auth-tokens';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
-const PURPOSES = new Set<string>(otpPurposeEnum.enumValues);
+const PURPOSES = new Set<string>(['login', 'register', 'reset_password']);
 
-/**
- * POST /api/auth/otp/verify — { destination, purpose, code }.
- * For a `login` purpose that resolves to a phone-bound user, also starts a
- * session and sets the cookie.
- */
+const verifySchema = z.object({
+  destination: z.string().min(1, 'Destination (email/phone) is required').trim(),
+  purpose: z.string().refine(val => PURPOSES.has(val), { message: 'Invalid OTP purpose' }),
+  code: z.string().min(6, 'Verification code must be exactly 6 digits').max(6, 'Verification code must be exactly 6 digits'),
+});
+
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const destination = typeof body.destination === 'string' ? body.destination.trim() : '';
-  const purpose = typeof body.purpose === 'string' ? body.purpose : '';
-  const code = typeof body.code === 'string' ? body.code : '';
-  if (!destination || !PURPOSES.has(purpose) || !code) {
-    return NextResponse.json(
-      { error: 'destination, purpose and code are required' },
-      { status: 400 }
-    );
+  const body = await req.json().catch(() => ({}));
+  
+  const parseResult = verifySchema.safeParse(body);
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0].message }, { status: 400 });
   }
+
+  const { destination, purpose, code } = parseResult.data;
 
   const result = await verifyOtp(destination, purpose as OtpPurpose, code);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
 
-  // Phone-OTP login: resolve the phone to a user and start a session.
   if (purpose === 'login') {
     const userId = result.userId ?? (await userIdByPhone(destination));
     if (userId) {
@@ -37,6 +34,24 @@ export async function POST(req: Request) {
         userAgent: req.headers.get('user-agent') ?? undefined,
       });
       const res = NextResponse.json({ ok: true, user: await getUserProfile(userId) });
+      res.cookies.set(USER_SESSION_COOKIE, token, sessionCookieOptions(USER_SESSION_TTL_S));
+      return res;
+    }
+  } else if (purpose === 'register' && result.userId) {
+    const user = await db.users.findUnique({
+      where: { id: result.userId! }
+    });
+    if (user) {
+      if (user.phone === destination) {
+        await db.users.update({
+          where: { id: user.id },
+          data: { phone_bound: true }
+        });
+      }
+      const { token } = await createUserSession(user.id, {
+        userAgent: req.headers.get('user-agent') ?? undefined,
+      });
+      const res = NextResponse.json({ ok: true, user: await getUserProfile(user.id) });
       res.cookies.set(USER_SESSION_COOKIE, token, sessionCookieOptions(USER_SESSION_TTL_S));
       return res;
     }

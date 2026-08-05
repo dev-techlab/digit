@@ -92,6 +92,9 @@ export function ProfileView({ wallet }: { wallet: WalletBalance }) {
         <div>
           <p className="text-lg font-bold">{user.nickname}</p>
           <p className="text-sm text-[var(--text-secondary)]">@{user.username}</p>
+          {user.usedInviteCode && (
+            <p className="mt-1 text-xs text-brand">Agent: {user.usedInviteCode}</p>
+          )}
         </div>
       </button>
 

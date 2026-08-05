@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
+
 
 /** Best-effort client IP from standard proxy headers (no infra guarantees these are set). */
 export function clientIp(req: Request): string | null {
@@ -18,13 +18,15 @@ export async function logAdminAction(params: {
   ipAddress?: string | null;
 }): Promise<void> {
   try {
-    await db.insert(s.adminAuditLogs).values({
-      adminId: params.adminId,
-      action: params.action,
-      entityType: params.entityType ?? null,
-      entityId: params.entityId ?? null,
-      changes: params.changes == null ? null : (params.changes as object),
-      ipAddress: params.ipAddress ?? null,
+    await db.admin_audit_logs.create({
+      data: {
+        admin_id: params.adminId,
+        action: params.action,
+        entity_type: params.entityType ?? null,
+        entity_id: params.entityId ?? null,
+        changes: params.changes == null ? null : (params.changes as any),
+        ip_address: params.ipAddress ?? null,
+      }
     });
   } catch (err) {
     console.error('[audit-log] failed to record', params.action, err);

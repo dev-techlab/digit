@@ -1,12 +1,8 @@
 import { NextResponse } from 'next/server';
-import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission } from '@/lib/rbac-core';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const adminId = await getAdminIdFromRequest(req);
@@ -22,45 +18,55 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
   const agentId = params.id;
 
-  const [agent] = await db
-    .select({
-      id: s.agents.id,
-      username: s.agents.username,
-      nickname: s.agents.nickname,
-      email: s.agents.email,
-      inviteCode: s.agents.inviteCode,
-      commissionPer: s.agents.commissionPer,
-      onlineBalance: s.agents.onlineBalance,
-      status: s.agents.status,
-      remark: s.agents.remark,
-      lastLoginAt: s.agents.lastLoginAt,
-      createdAt: s.agents.createdAt,
-      agentWithdrawCommissionPer: s.storeSettings.agentWithdrawCommissionPer,
-    })
-    .from(s.agents)
-    .leftJoin(s.storeSettings, eq(s.agents.id, s.storeSettings.storeId))
-    .where(and(eq(s.agents.id, agentId), eq(s.agents.type, 'store')))
-    .limit(1);
+  const agent = await db.agents.findFirst({
+    where: { id: agentId, type: 'store' },
+    select: {
+      id: true,
+      username: true,
+      nickname: true,
+      email: true,
+      invite_code: true,
+      commission_per: true,
+      online_balance: true,
+      status: true,
+      remark: true,
+      last_login_at: true,
+      created_at: true,
+      store_settings: {
+        select: { agent_withdraw_commission_per: true }
+      }
+    }
+  });
 
   if (!agent) {
     return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
   }
 
-  const [{ count: totalUsers }] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(s.members)
-    .where(eq(s.members.storeId, agentId));
+  const totalUsers = await db.members.count({
+    where: { store_id: agentId }
+  });
 
-  const [{ count: totalTransactions }] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(s.agentTransactions)
-    .where(eq(s.agentTransactions.agentId, agentId));
+  const totalTransactions = await db.agent_transactions.count({
+    where: { agent_id: agentId }
+  });
 
   return NextResponse.json({
     agent: {
-      ...agent,
+      id: agent.id,
+      username: agent.username,
+      nickname: agent.nickname,
+      email: agent.email,
+      inviteCode: agent.invite_code,
+      commissionPer: agent.commission_per,
+      onlineBalance: agent.online_balance,
+      status: agent.status,
+      remark: agent.remark,
+      lastLoginAt: agent.last_login_at,
+      createdAt: agent.created_at,
+      agentWithdrawCommissionPer: agent.store_settings?.agent_withdraw_commission_per || 0,
       totalUsers,
       totalTransactions,
     },
   });
 }
+

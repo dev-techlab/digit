@@ -1,5 +1,5 @@
-import { sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
+import { Prisma } from '../lib/generated/prisma/client';
 
 /** Slug of the built-in role that grants full access. */
 export const SUPER_ADMIN_ROLE = 'super_admin';
@@ -10,12 +10,12 @@ export const SUPER_ADMIN_ROLE = 'super_admin';
  * grant/revoke, via lib/admin-service.
  */
 export async function isSuperAdmin(adminId: string): Promise<boolean> {
-  const rows = await db.execute<{ ok: boolean }>(sql`
+  const rows = await db.$queryRaw<{ ok: boolean }[]>(Prisma.sql`
     SELECT EXISTS (
       SELECT 1 FROM admin_roles ar
       JOIN roles r ON r.id = ar.role_id
       JOIN admins a ON a.id = ar.admin_id
-      WHERE ar.admin_id = ${adminId} AND a.status = 'active' AND r.slug = ${SUPER_ADMIN_ROLE}
+      WHERE ar.admin_id = ${adminId}::uuid AND a.status = 'active' AND r.slug = ${SUPER_ADMIN_ROLE}
     ) AS ok
   `);
   return rows[0]?.ok === true;
@@ -27,9 +27,9 @@ export async function isSuperAdmin(adminId: string): Promise<boolean> {
  * granted by a role OR a direct allow, and NOT directly denied (deny wins).
  */
 export async function can(adminId: string, permKey: string): Promise<boolean> {
-  const rows = await db.execute<{ ok: boolean }>(sql`
+  const rows = await db.$queryRaw<{ ok: boolean }[]>(Prisma.sql`
     SELECT EXISTS (
-      SELECT 1 FROM admins a WHERE a.id = ${adminId} AND a.status = 'active' AND (
+      SELECT 1 FROM admins a WHERE a.id = ${adminId}::uuid AND a.status = 'active' AND (
         EXISTS (
           SELECT 1 FROM admin_roles ar
           JOIN roles r ON r.id = ar.role_id
@@ -76,16 +76,16 @@ export class PermissionError extends Error {
 
 /** All effective permission keys for an admin (for building the UI / a token). */
 export async function effectivePermissions(adminId: string): Promise<string[]> {
-  const rows = await db.execute<{ key: string }>(sql`
+  const rows = await db.$queryRaw<{ key: string }[]>(Prisma.sql`
     WITH me AS (
       SELECT
         EXISTS (
-          SELECT 1 FROM admins a WHERE a.id = ${adminId} AND a.status = 'active'
+          SELECT 1 FROM admins a WHERE a.id = ${adminId}::uuid AND a.status = 'active'
         ) AS is_active,
         EXISTS (
           SELECT 1 FROM admin_roles ar
           JOIN roles r ON r.id = ar.role_id
-          WHERE ar.admin_id = ${adminId} AND r.slug = ${SUPER_ADMIN_ROLE}
+          WHERE ar.admin_id = ${adminId}::uuid AND r.slug = ${SUPER_ADMIN_ROLE}
         ) AS is_super
     )
     SELECT p.key
@@ -97,17 +97,17 @@ export async function effectivePermissions(adminId: string): Promise<string[]> {
            p.id IN (
              SELECT rp.permission_id FROM admin_roles ar
              JOIN role_permissions rp ON rp.role_id = ar.role_id
-             WHERE ar.admin_id = ${adminId}
+             WHERE ar.admin_id = ${adminId}::uuid
            ) OR p.id IN (
              SELECT ap.permission_id FROM admin_permissions ap
-             WHERE ap.admin_id = ${adminId} AND ap.effect = 'allow'
+             WHERE ap.admin_id = ${adminId}::uuid AND ap.effect = 'allow'
            )
          ) AND p.id NOT IN (
            SELECT ap.permission_id FROM admin_permissions ap
-           WHERE ap.admin_id = ${adminId} AND ap.effect = 'deny'
+           WHERE ap.admin_id = ${adminId}::uuid AND ap.effect = 'deny'
          )
        )
     )
   `);
-  return rows.map((r) => r.key);
+  return rows.map((r: any) => r.key);
 }

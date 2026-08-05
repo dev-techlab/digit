@@ -1,34 +1,45 @@
 import { NextResponse } from 'next/server';
+import { z, ZodError } from 'zod';
 import bcrypt from 'bcryptjs';
-import { and, desc, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAgentFromRequest } from '@/lib/agent-auth';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
-/** GET /api/agent/store-admins — staff logins for this store. */
 export async function GET(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const rows = await db
-    .select({
-      id: s.storeAdministrators.id,
-      username: s.storeAdministrators.username,
-      nickname: s.storeAdministrators.nickname,
-      email: s.storeAdministrators.email,
-      status: s.storeAdministrators.status,
-      createdAt: s.storeAdministrators.createdAt,
-    })
-    .from(s.storeAdministrators)
-    .where(eq(s.storeAdministrators.storeId, agent.storeId))
-    .orderBy(desc(s.storeAdministrators.createdAt));
-  return NextResponse.json({ admins: rows });
+  const rows = await db.store_administrators.findMany({
+    where: { store_id: agent.storeId },
+    select: {
+      id: true,
+      username: true,
+      nickname: true,
+      email: true,
+      status: true,
+      created_at: true,
+    },
+    orderBy: { created_at: 'desc' }
+  });
+  
+  return NextResponse.json({ admins: rows.map(r => ({
+    id: r.id,
+    username: r.username,
+    nickname: r.nickname,
+    email: r.email,
+    status: r.status,
+    createdAt: r.created_at,
+  })) });
 }
 
-/** POST /api/agent/store-admins — add a store administrator. */
+const postSchema = z.object({
+  username: z.string().min(4, 'Username must be at least 4 characters'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  nickname: z.string().optional().or(z.literal('')),
+  email: z.string().email().optional().or(z.literal('')),
+  status: z.enum(['active', 'disabled']).optional().default('active'),
+});
+
 export async function POST(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -39,32 +50,42 @@ export async function POST(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const username = typeof body.username === 'string' ? body.username.trim() : '';
-  const password = typeof body.password === 'string' ? body.password : '';
-  if (!username || !password) {
-    return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
-  }
-
   try {
-    const [created] = await db
-      .insert(s.storeAdministrators)
-      .values({
-        storeId: agent.storeId,
-        username,
-        passwordHash: await bcrypt.hash(password, 10),
-        nickname: typeof body.nickname === 'string' ? body.nickname : null,
-        email: typeof body.email === 'string' ? body.email : null,
-        status: body.status === 'disabled' ? 'disabled' : 'active',
-      })
-      .returning({ id: s.storeAdministrators.id });
+    const body = await req.json();
+    const data = postSchema.parse(body);
+
+    const created = await db.store_administrators.create({
+      data: {
+        store_id: agent.storeId,
+        username: data.username.trim(),
+        password_hash: await bcrypt.hash(data.password, 10),
+        nickname: data.nickname?.trim() || null,
+        email: data.email?.trim() || null,
+        status: data.status,
+      },
+      select: { id: true }
+    });
     return NextResponse.json({ ok: true, id: created.id });
-  } catch {
-    return NextResponse.json({ error: 'Username already exists' }, { status: 409 });
+  } catch (e: any) {
+    if (e instanceof ZodError) {
+      return NextResponse.json({ error: e.issues[0].message }, { status: 400 });
+    }
+    if (e.code === 'P2002') {
+      return NextResponse.json({ error: 'Username already exists' }, { status: 409 });
+    }
+    console.error(e);
+    return NextResponse.json({ error: 'Failed to create store administrator' }, { status: 500 });
   }
 }
 
-/** PUT /api/agent/store-admins — update status/nickname/email. */
+const putSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(['active', 'disabled']).optional(),
+  nickname: z.string().optional().or(z.literal('')),
+  email: z.string().email().optional().or(z.literal('')),
+  password: z.string().min(6).optional().or(z.literal('')),
+});
+
 export async function PUT(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -75,21 +96,35 @@ export async function PUT(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const id = typeof body.id === 'string' ? body.id : '';
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+  try {
+    const body = await req.json();
+    const data = putSchema.parse(body);
 
-  const set: Partial<typeof s.storeAdministrators.$inferInsert> = {};
-  if (body.status === 'active' || body.status === 'disabled') set.status = body.status;
-  if (typeof body.nickname === 'string') set.nickname = body.nickname;
-  if (typeof body.email === 'string') set.email = body.email;
-  if (typeof body.password === 'string' && body.password.length >= 6) {
-    set.passwordHash = await bcrypt.hash(body.password, 10);
+    const set: any = {};
+    if (data.status) set.status = data.status;
+    if (data.nickname !== undefined) set.nickname = data.nickname.trim() || null;
+    if (data.email !== undefined) set.email = data.email.trim() || null;
+    if (data.password) {
+      set.password_hash = await bcrypt.hash(data.password, 10);
+    }
+
+    if (Object.keys(set).length === 0) {
+      return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
+    }
+
+    await db.store_administrators.updateMany({
+      where: {
+        id: data.id,
+        store_id: agent.storeId
+      },
+      data: set
+    });
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    if (err instanceof ZodError) {
+      return NextResponse.json({ error: err.issues[0].message }, { status: 400 });
+    }
+    console.error('PUT /api/agent/store-admins', err);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-
-  await db
-    .update(s.storeAdministrators)
-    .set(set)
-    .where(and(eq(s.storeAdministrators.id, id), eq(s.storeAdministrators.storeId, agent.storeId)));
-  return NextResponse.json({ ok: true });
 }

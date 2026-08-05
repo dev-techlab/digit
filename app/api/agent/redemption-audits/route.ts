@@ -1,49 +1,53 @@
 import { NextResponse } from 'next/server';
-import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { getAgentFromRequest } from '@/lib/agent-auth';
+import { Prisma } from '@/lib/generated/prisma/client';
+import { z } from 'zod';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-
+const putSchema = z.object({
+  id: z.string().min(1, 'id and decision required'),
+  decision: z.enum(['approved', 'rejected'], { message: "Invalid input" })
+});
 class InsufficientBalanceError extends Error {}
 
-/** GET /api/agent/redemption-audits?status=pending — audit queue. */
 export async function GET(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const status = new URL(req.url).searchParams.get('status');
   const statuses = ['pending', 'approved', 'rejected'] as const;
 
-  const rows = await db
-    .select({
-      id: s.redemptionAudits.id,
-      player: s.members.username,
-      platform: s.gamePlatforms.name,
-      amount: s.redemptionAudits.amount,
-      txRef: s.redemptionAudits.txRef,
-      status: s.redemptionAudits.status,
-      submittedAt: s.redemptionAudits.submittedAt,
-      reviewedAt: s.redemptionAudits.reviewedAt,
-    })
-    .from(s.redemptionAudits)
-    .leftJoin(s.members, eq(s.members.id, s.redemptionAudits.memberId))
-    .leftJoin(s.gamePlatforms, eq(s.gamePlatforms.id, s.redemptionAudits.platformId))
-    .where(
-      and(
-        eq(s.redemptionAudits.storeId, agent.storeId),
-        status && statuses.includes(status as (typeof statuses)[number])
-          ? eq(s.redemptionAudits.status, status as (typeof statuses)[number])
-          : undefined
-      )
-    )
-    .orderBy(desc(s.redemptionAudits.submittedAt))
-    .limit(100);
-  return NextResponse.json({ audits: rows });
+  const where: any = { store_id: agent.storeId };
+  if (status && statuses.includes(status as any)) {
+    where.status = status;
+  }
+
+  const rows = await db.redemption_audits.findMany({
+    where,
+    select: {
+      id: true,
+      members: { select: { username: true } },
+      game_platforms: { select: { name: true } },
+      amount: true,
+      tx_ref: true,
+      status: true,
+      submitted_at: true,
+      reviewed_at: true,
+    },
+    orderBy: { submitted_at: 'desc' },
+    take: 100
+  });
+  return NextResponse.json({ audits: rows.map(r => ({
+    id: r.id,
+    player: r.members?.username || null,
+    platform: r.game_platforms?.name || null,
+    amount: r.amount,
+    txRef: r.tx_ref,
+    status: r.status,
+    submittedAt: r.submitted_at,
+    reviewedAt: r.reviewed_at,
+  })) });
 }
 
-/** PUT /api/agent/redemption-audits — { id, decision: 'approved'|'rejected' }. */
 export async function PUT(req: Request) {
   const agent = await getAgentFromRequest(req);
   if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -54,60 +58,65 @@ export async function PUT(req: Request) {
     );
   }
 
-  const body = await req.json().catch(() => ({}) as Record<string, unknown>);
-  const id = typeof body.id === 'string' ? body.id : '';
-  const decision = body.decision;
-  if (!id || (decision !== 'approved' && decision !== 'rejected')) {
-    return NextResponse.json({ error: 'id and decision required' }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+  const parseResult = putSchema.safeParse(body);
+
+  if (!parseResult.success) {
+    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
   }
 
+  const { id, decision } = parseResult.data;
+
   try {
-    await db.transaction(async (tx) => {
-      const [audit] = await tx
-        .select()
-        .from(s.redemptionAudits)
-        .where(
-          and(
-            eq(s.redemptionAudits.id, id),
-            eq(s.redemptionAudits.storeId, agent.storeId),
-            eq(s.redemptionAudits.status, 'pending')
-          )
-        )
-        .for('update');
+    await db.$transaction(async (tx) => {
+      const audits = await tx.$queryRaw<any[]>`
+        SELECT id, member_id, platform_id, amount
+        FROM redemption_audits
+        WHERE id = ${id} AND store_id = ${agent.storeId} AND status = 'pending'
+        FOR UPDATE
+      `;
+      const audit = audits[0];
       if (!audit) throw new Error('AUDIT_NOT_FOUND');
 
-      await tx
-        .update(s.redemptionAudits)
-        .set({ status: decision, reviewedByAgentId: agent.id, reviewedAt: new Date() })
-        .where(eq(s.redemptionAudits.id, id));
+      await tx.redemption_audits.update({
+        where: { id },
+        data: {
+          status: decision,
+          reviewed_by_agent_id: agent.id,
+          reviewed_at: new Date()
+        }
+      });
 
-      // Approving settles the redemption for real: score comes off the
-      // member's balance and it's booked as a `redeem` transaction — mirrors
-      // the same lock-then-debit pattern used for wallet withdraw/transfer.
-      if (decision === 'approved' && audit.memberId) {
+      if (decision === 'approved' && audit.member_id) {
         const amount = Number(audit.amount);
-        const [member] = await tx
-          .select({ onlineSc: s.members.onlineSc })
-          .from(s.members)
-          .where(eq(s.members.id, audit.memberId))
-          .for('update');
-        if (!member || Number(member.onlineSc) < amount) throw new InsufficientBalanceError();
+        const members = await tx.$queryRaw<any[]>`
+          SELECT online_sc
+          FROM members
+          WHERE id = ${audit.member_id}
+          FOR UPDATE
+        `;
+        const member = members[0];
+        if (!member || Number(member.online_sc) < amount) throw new InsufficientBalanceError();
 
-        await tx
-          .update(s.members)
-          .set({ onlineSc: sql`${s.members.onlineSc} - ${amount}` })
-          .where(eq(s.members.id, audit.memberId));
+        await tx.members.update({
+          where: { id: audit.member_id },
+          data: {
+            online_sc: { decrement: amount }
+          }
+        });
 
-        await tx.insert(s.memberTransactions).values({
-          storeId: agent.storeId,
-          memberId: audit.memberId,
-          platformId: audit.platformId,
-          type: 'redeem',
-          amount: String(amount),
-          onlineScChange: String(-amount),
-          storeBalanceVary: String(-amount),
-          outScore: String(amount),
-          status: 'completed',
+        await tx.member_transactions.create({
+          data: {
+            store_id: agent.storeId,
+            member_id: audit.member_id,
+            platform_id: audit.platform_id,
+            type: 'redeem',
+            amount: String(amount),
+            online_sc_change: String(-amount),
+            store_balance_vary: String(-amount),
+            out_score: String(amount),
+            status: 'completed',
+          }
         });
       }
     });

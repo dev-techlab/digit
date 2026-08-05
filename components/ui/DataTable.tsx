@@ -128,8 +128,9 @@ export function DataTable<T>({
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex flex-1 items-center gap-4">
+      {/* Toolbar */}
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+        <div className="flex w-full flex-1 flex-col items-start gap-4 sm:flex-row sm:items-center">
           <div className="relative w-full max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
@@ -142,7 +143,7 @@ export function DataTable<T>({
           </div>
           {extraToolbar}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
           <span className="text-sm text-slate-500">Show</span>
           <select
             value={limit}

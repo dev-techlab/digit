@@ -1,18 +1,9 @@
-/**
- * Seed the database from the committed mock fixtures + reference data.
- *
- * Idempotent-ish: uses onConflictDoNothing on natural keys so re-running won't
- * duplicate. Run with: `pnpm db:seed` (after `pnpm db:migrate`).
- *
- * Mapping source of truth: DB_DIAGRAM.md §5 (mock → table) and §7 (RBAC seed).
- */
 import './load-env';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
-import * as s from '@/lib/db/schema';
 import { HELP_CONTENT } from '@/lib/help-content';
 import { PROFILE_TASKS } from '@/lib/profile-tasks';
 import { createAdmin } from '@/lib/admin-service';
@@ -20,12 +11,6 @@ import { createAdmin } from '@/lib/admin-service';
 const ROOT = process.cwd();
 const readJson = (p: string) => JSON.parse(readFileSync(join(ROOT, p), 'utf-8'));
 
-/**
- * Resolve the seed admin password. `SEED_ADMIN_PASSWORD` (if set) is used and
- * ROTATES existing accounts. In production with none set, a strong random one
- * is generated and printed once (still rotates). In dev, falls back to a
- * well-known default that does NOT rotate an already-created admin.
- */
 function seedAdminPassword(): { password: string; rotate: boolean } {
   const fromEnv = process.env.SEED_ADMIN_PASSWORD;
   if (fromEnv) return { password: fromEnv, rotate: true };
@@ -40,7 +25,6 @@ function seedAdminPassword(): { password: string; rotate: boolean } {
   return { password: 'admin1234', rotate: false }; // dev only
 }
 
-/** Parse "2026-06-27 16:31:16" (no tz) and ISO strings alike. */
 function parseDate(v: string): Date {
   return new Date(v.includes('T') ? v : v.replace(' ', 'T') + 'Z');
 }
@@ -52,44 +36,43 @@ async function seedProviders() {
   ];
   for (const [, file] of files) {
     const rows = readJson(file) as any[];
-    for (const p of rows) {
-      await db
-        .insert(s.gameProviders)
-        .values({
+    await db.game_providers.createMany({
+      data: rows.map(p => ({
           id: p.id,
           name: p.name,
-          providerCode: p.providerCode,
-          launchUrlTemplate: p.launchUrlTemplate,
-          iconUrl: p.iconUrl,
+          provider_code: p.providerCode,
+          launch_url_template: p.launchUrlTemplate,
+          icon_url: p.iconUrl,
           status: p.status,
           sort: p.sort,
-          createType: p.createType,
+          create_type: p.createType,
           operate: p.operate,
-          needInitBalance: p.needInitBalance,
-          canManualInput: p.canManualInput,
-          providerType: p.providerType,
-          iframeSupported: p.iframeSupported,
-          isMachineSupported: p.isMachineSupported,
-          redeemField: p.redeemField,
-          invalidPasswordState: p.invalidPasswordState,
-          canChangePassword: p.canChangePassword,
-        })
-        .onConflictDoNothing();
+          need_init_balance: p.needInitBalance,
+          can_manual_input: p.canManualInput,
+          provider_type: p.providerType,
+          iframe_supported: p.iframeSupported,
+          is_machine_supported: p.isMachineSupported,
+          redeem_field: p.redeemField,
+          invalid_password_state: p.invalidPasswordState,
+          can_change_password: p.canChangePassword,
+      })),
+      skipDuplicates: true
+    });
 
-      // Tiers have only a random-uuid PK, so onConflict can't dedupe — guard on
-      // "already seeded for this provider" to keep re-runs idempotent.
-      const existingTiers = await db.query.providerDepositTiers.findFirst({
-        where: (t, { eq: e }) => e(t.providerId, p.id),
+    for (const p of rows) {
+      const existingTiers = await db.provider_deposit_tiers.findFirst({
+        where: { provider_id: p.id },
       });
-      if (!existingTiers) {
-        for (const [i, tier] of (p.depositTiers ?? []).entries()) {
-          await db.insert(s.providerDepositTiers).values({
-            providerId: p.id,
+      if (!existingTiers && p.depositTiers?.length > 0) {
+        await db.provider_deposit_tiers.createMany({
+          data: (p.depositTiers as any[]).map((tier, i) => ({
+            provider_id: p.id,
             amount: tier.amount,
-            bonusAmount: tier.bonusAmount,
+            bonus_amount: tier.bonusAmount,
             sort: i,
-          });
-        }
+          })),
+          skipDuplicates: true
+        });
       }
     }
     console.log(`  providers[${file}]: ${rows.length}`);
@@ -101,146 +84,146 @@ async function seedDemoUserAndData() {
   const wallet = readJson('data/mock/wallet.json');
 
   const passwordHash = await bcrypt.hash('demo1234', 10);
-  const [user] = await db
-    .insert(s.users)
-    .values({
-      username: 'player_2481',
-      nickname: 'Lucky Player',
-      passwordHash,
-      avatarEmoji: '🎰',
-      phoneBound: false,
-      kycStatus: 'unverified',
-      pwaInstalled: false,
-      inviteCode: referral.inviteCode,
-    })
-    .onConflictDoNothing()
-    .returning();
+  
+  let user = await db.users.findUnique({ where: { username: 'player_2481' } });
+  if (!user) {
+    user = await db.users.create({
+      data: {
+        username: 'player_2481',
+        nickname: 'Lucky Player',
+        password_hash: passwordHash,
+        avatar_emoji: '🎰',
+        phone_bound: false,
+        kyc_status: 'unverified',
+        pwa_installed: false,
+        invite_code: referral.inviteCode,
+      }
+    });
+  }
+  const userId = user.id;
 
-  const userId =
-    user?.id ??
-    (await db.query.users.findFirst({ where: (u, { eq }) => eq(u.username, 'player_2481') }))!.id;
-
-  await db
-    .insert(s.wallets)
-    .values({
-      userId,
-      goldCoin: wallet.goldCoin,
-      onlineSc: wallet.onlineSC,
-      storeSc: wallet.storeSC,
-      kioskSc: wallet.kioskSC,
-      unwagered: wallet.unwagered,
-      freeBonus: wallet.freeBonus,
-    })
-    .onConflictDoNothing();
-
-  // Orders
-  for (const o of readJson('data/mock/orders.json') as any[]) {
-    await db
-      .insert(s.orders)
-      .values({
-        orderNo: o.orderNo,
-        userId,
-        amount: o.amount,
-        payAmount: o.payAmount,
-        actualDepositAmount: o.actualDepositAmount,
-        paymentMethod: o.paymentMethod,
-        fee: o.fee,
-        feeMode: o.feeMode,
-        feeWaived: o.feeWaived,
-        scBonus: o.scBonus,
-        status: o.status,
-        createdAt: parseDate(o.createTime),
-      })
-      .onConflictDoNothing();
+  const w = await db.wallets.findUnique({ where: { user_id: userId } });
+  if (!w) {
+    await db.wallets.create({
+      data: {
+        user_id: userId,
+        gold_coin: wallet.goldCoin,
+        online_sc: wallet.onlineSC,
+        store_sc: wallet.storeSC,
+        kiosk_sc: wallet.kioskSC,
+        unwagered: wallet.unwagered,
+        free_bonus: wallet.freeBonus,
+      }
+    });
   }
 
+  // Orders
+  await db.orders.createMany({
+    data: (readJson('data/mock/orders.json') as any[]).map(o => ({
+        order_no: o.orderNo,
+        user_id: userId,
+        amount: o.amount,
+        pay_amount: o.payAmount,
+        actual_deposit_amount: o.actualDepositAmount,
+        payment_method: o.paymentMethod,
+        fee: o.fee,
+        fee_mode: o.feeMode,
+        fee_waived: o.feeWaived,
+        sc_bonus: o.scBonus,
+        status: o.status,
+        created_at: parseDate(o.createTime),
+    })),
+    skipDuplicates: true
+  });
+
   // Transactions
-  for (const t of readJson('data/mock/transactions.json') as any[]) {
-    await db
-      .insert(s.transactions)
-      .values({
+  await db.transactions.createMany({
+    data: (readJson('data/mock/transactions.json') as any[]).map(t => ({
         id: t.id,
-        userId,
+        user_id: userId,
         address: t.address,
-        methodLabel: t.methodLabel,
+        method_label: t.methodLabel,
         method: t.method,
         status: t.status,
         amount: t.amount,
         type: t.type,
-        createdAt: parseDate(t.createTime),
-      })
-      .onConflictDoNothing();
-  }
+        created_at: parseDate(t.createTime),
+    })),
+    skipDuplicates: true
+  });
 
-  // Bonuses (definition) + per-user claim state
-  for (const b of readJson('data/mock/bonus.json') as any[]) {
-    await db
-      .insert(s.bonuses)
-      .values({
+  // Bonuses
+  await db.bonuses.createMany({
+    data: (readJson('data/mock/bonus.json') as any[]).map(b => ({
         id: b.id,
         title: b.title,
         description: b.description,
         tags: b.tags,
         active: b.active,
-        bannerType: b.banner.type,
-        bannerGradient: b.banner.gradient ?? null,
-        bannerBadgeIcon: b.banner.badgeIcon ?? null,
-        bannerBadgeText: b.banner.badgeText ?? null,
-        scheduleIcon: b.schedule.icon,
-        scheduleText: b.schedule.text ?? '',
-        scheduleCountdownSeconds: b.schedule.countdownSeconds ?? null,
-      })
-      .onConflictDoNothing();
-
-    if (b.status && b.status !== 'none') {
-      await db
-        .insert(s.userBonusClaims)
-        .values({
-          userId,
-          bonusId: b.id,
-          status: b.status,
-          claimedAt: b.status === 'claimed' ? new Date() : null,
-        })
-        .onConflictDoNothing();
-    }
-  }
-
-  // Referral commissions (invitees) — these tables have no natural unique key,
-  // so guard on "already seeded for this user" to stay idempotent.
-  const hasReferrals = await db.query.referralCommissions.findFirst({
-    where: (t, { eq }) => eq(t.referrerUserId, userId),
+        banner_type: b.banner.type,
+        banner_gradient: b.banner.gradient ?? null,
+        banner_badge_icon: b.banner.badgeIcon ?? null,
+        banner_badge_text: b.banner.badgeText ?? null,
+        schedule_icon: b.schedule.icon,
+        schedule_text: b.schedule.text ?? '',
+        schedule_countdown_seconds: b.schedule.countdownSeconds ?? null,
+    })),
+    skipDuplicates: true
   });
-  if (!hasReferrals) {
-    for (const inv of referral.invitees as any[]) {
-      await db.insert(s.referralCommissions).values({
-        referrerUserId: userId,
-        inviteeDisplay: inv.username,
-        reward: inv.reward,
-        status: inv.status,
-        joinedAt: parseDate(inv.joinedAt),
+
+  const bonusClaims = (readJson('data/mock/bonus.json') as any[]).filter(b => b.status && b.status !== 'none');
+  if (bonusClaims.length > 0) {
+    const existingClaims = await db.user_bonus_claims.findFirst({ where: { user_id: userId } });
+    if (!existingClaims) {
+      await db.user_bonus_claims.createMany({
+        data: bonusClaims.map(b => ({
+            user_id: userId,
+            bonus_id: b.id,
+            status: b.status,
+            claimed_at: b.status === 'claimed' ? new Date() : null,
+        })),
+        skipDuplicates: true
       });
     }
   }
 
-  // Redemption reviews (resolve provider name → id where possible). Guard by
-  // orderNo so re-seeding doesn't duplicate.
+  // Referral commissions
+  const hasReferrals = await db.referral_commissions.findFirst({
+    where: { referrer_user_id: userId },
+  });
+  if (!hasReferrals) {
+    await db.referral_commissions.createMany({
+      data: (referral.invitees as any[]).map(inv => ({
+        referrer_user_id: userId,
+        invitee_display: inv.username,
+        reward: inv.reward,
+        status: inv.status,
+        joined_at: parseDate(inv.joinedAt),
+      })),
+      skipDuplicates: true
+    });
+  }
+
+  // Redemption reviews
   for (const r of readJson('data/mock/redemption-reviews.json') as any[]) {
-    const exists = await db.query.redemptionReviews.findFirst({
-      where: (t, { eq }) => eq(t.orderNo, r.orderNo),
+    const exists = await db.redemption_reviews.findFirst({
+      where: { order_no: r.orderNo },
     });
     if (exists) continue;
-    const provider = await db.query.gameProviders.findFirst({
-      where: (g, { eq }) => eq(g.name, r.provider),
+    const provider = await db.game_providers.findFirst({
+      where: { name: r.provider },
     });
-    await db.insert(s.redemptionReviews).values({
-      orderNo: r.orderNo,
-      userId,
-      providerId: provider?.id ?? null,
-      providerName: r.provider,
-      amount: r.amount,
-      status: r.status,
-      visible: r.visible,
-      submittedAt: parseDate(r.submittedAt),
+    await db.redemption_reviews.create({
+      data: {
+        order_no: r.orderNo,
+        user_id: userId,
+        provider_id: provider?.id ?? null,
+        provider_name: r.provider,
+        amount: r.amount,
+        status: r.status,
+        visible: r.visible,
+        submitted_at: parseDate(r.submittedAt),
+      }
     });
   }
 
@@ -248,57 +231,54 @@ async function seedDemoUserAndData() {
 }
 
 async function seedProfileTasks() {
-  for (const [i, t] of PROFILE_TASKS.entries()) {
-    await db
-      .insert(s.profileTasks)
-      .values({
+  await db.profile_tasks.createMany({
+    data: PROFILE_TASKS.map((t, i) => ({
         key: t.key,
         title: t.title,
         description: t.description,
-        rewardGc: t.rewardGc,
-        rewardSc: t.rewardSc,
+        reward_gc: t.rewardGc,
+        reward_sc: t.rewardSc,
         sort: i,
-      })
-      .onConflictDoNothing();
-  }
+    })),
+    skipDuplicates: true
+  });
   console.log(`  profile_tasks: ${PROFILE_TASKS.length}`);
 }
 
 async function seedHelp() {
-  // help_* rows have no natural key — skip entirely if already seeded.
-  if (await db.query.helpSections.findFirst()) {
+  if (await db.help_sections.findFirst()) {
     console.log('  help_sections/items/steps: already seeded, skipped');
     return;
   }
   for (const [tab, sections] of Object.entries(HELP_CONTENT)) {
     for (const [si, section] of sections.entries()) {
-      const [sec] = await db
-        .insert(s.helpSections)
-        .values({
-          tab: tab as any,
-          key: section.key,
-          label: section.label,
-          icon: section.icon as any,
-          sort: si,
-        })
-        .returning();
+      const sec = await db.help_sections.create({
+          data: {
+            tab: tab as any,
+            key: section.key,
+            label: section.label,
+            icon: section.icon as any,
+            sort: si,
+          }
+      });
       for (const [ii, item] of section.items.entries()) {
-        const [it] = await db
-          .insert(s.helpItems)
-          .values({
-            sectionId: sec.id,
+        const it = await db.help_items.create({
+          data: {
+            section_id: sec.id,
             title: item.title,
             icon: (item as any).icon ?? null,
             body: (item as any).body ?? null,
             sort: ii,
-          })
-          .returning();
-        for (const [pi, step] of ((item as any).steps ?? []).entries()) {
-          await db.insert(s.helpSteps).values({
-            itemId: it.id,
-            title: step.title,
-            description: step.description,
-            sort: pi,
+          }
+        });
+        if ((item as any).steps?.length) {
+          await db.help_steps.createMany({
+            data: ((item as any).steps ?? []).map((step: any, pi: number) => ({
+              item_id: it.id,
+              title: step.title,
+              description: step.description,
+              sort: pi,
+            }))
           });
         }
       }
@@ -315,36 +295,33 @@ async function seedContentPages() {
     ['responsible-gaming', 'Responsible Social Gameplay'],
     ['deposit-guide', 'How to Deposit'],
   ];
-  for (const [slug, title] of pages) {
-    await db
-      .insert(s.contentPages)
-      .values({
+  await db.content_pages.createMany({
+    data: pages.map(([slug, title]) => ({
         slug,
         title,
         body: `> TODO: migrate the real copy from the ${slug} page component into this field.`,
-      })
-      .onConflictDoNothing();
-  }
+    })),
+    skipDuplicates: true
+  });
   console.log(`  content_pages: ${pages.length}`);
 }
 
 async function seedBanners() {
-  // banners have only a random-uuid PK, so onConflict can't dedupe — guard instead.
-  if (await db.query.banners.findFirst()) {
+  if (await db.banners.findFirst()) {
     console.log('  banners: already seeded, skipped');
     return;
   }
   const rows = [
-    { imageUrl: '/banners/weekend-reload.png', sort: 0 },
-    { imageUrl: '/banners/refer-friend.png', sort: 1 },
-    { imageUrl: '/banners/vip-loyalty.png', sort: 2 },
+    { image_url: '/banners/weekend-reload.png', sort: 0 },
+    { image_url: '/banners/refer-friend.png', sort: 1 },
+    { image_url: '/banners/vip-loyalty.png', sort: 2 },
   ];
-  await db.insert(s.banners).values(rows);
+  await db.banners.createMany({ data: rows });
   console.log(`  banners: ${rows.length}`);
 }
 
 async function seedSettings() {
-  const rows: (typeof s.siteSettings.$inferInsert)[] = [
+  const rows = [
     { key: 'site.name', value: 'Octan Link', type: 'string', group: 'branding' },
     {
       key: 'site.logo_url',
@@ -358,19 +335,11 @@ async function seedSettings() {
     { key: 'currency.gc_label', value: 'Gold Coins', type: 'string', group: 'branding' },
     { key: 'currency.sc_label', value: 'Sweepstakes Coins', type: 'string', group: 'branding' },
     { key: 'referral.reward_sc', value: '5.00', type: 'number', group: 'feature' },
-  ];
-  // These seeded settings are all safe for the public site; mark them explicitly
-  // now that is_public defaults to false (fail-closed).
-  for (const r of rows) {
-    await db
-      .insert(s.siteSettings)
-      .values({ ...r, isPublic: true })
-      .onConflictDoNothing();
-  }
+  ].map((r: any) => ({ ...r, is_public: true }));
 
-  // Internal/integration settings — admin-managed but never exposed via the
-  // public getSettings() (is_public stays false).
-  const internalRows: (typeof s.siteSettings.$inferInsert)[] = [
+  await db.site_settings.createMany({ data: rows, skipDuplicates: true });
+
+  const internalRows = [
     {
       key: 'provider.api_base_url',
       value: '/member/game/available-providers',
@@ -378,16 +347,15 @@ async function seedSettings() {
       group: 'integration',
       label: 'Provider catalog API base URL',
     },
-  ];
-  for (const r of internalRows) {
-    await db.insert(s.siteSettings).values(r).onConflictDoNothing();
-  }
+  ].map((r: any) => ({ ...r, is_public: false }));
+  
+  await db.site_settings.createMany({ data: internalRows, skipDuplicates: true });
 
   console.log(`  site_settings: ${rows.length + internalRows.length}`);
 }
 
 async function seedSocialLinks() {
-  const rows: (typeof s.socialLinks.$inferInsert)[] = [
+  const rows = [
     { platform: 'telegram', label: 'Telegram', url: 'https://t.me/octanlink', sort: 0 },
     { platform: 'facebook', label: 'Facebook', url: 'https://facebook.com/octanlink', sort: 1 },
     { platform: 'instagram', label: 'Instagram', url: 'https://instagram.com/octanlink', sort: 2 },
@@ -397,12 +365,11 @@ async function seedSocialLinks() {
     { platform: 'whatsapp', label: 'WhatsApp', url: 'https://wa.me/10000000000', sort: 6 },
     { platform: 'email', label: 'Email', url: 'mailto:support@octanlink.mobi', sort: 7 },
   ];
-  for (const r of rows) await db.insert(s.socialLinks).values(r).onConflictDoNothing();
+  await db.social_links.createMany({ data: rows as any, skipDuplicates: true });
   console.log(`  social_links: ${rows.length}`);
 }
 
 async function seedRbac() {
-  // Permissions (DB_DIAGRAM §7.4)
   const matrix: Record<string, { group: string; actions: string[] }> = {
     users: { group: 'Players', actions: ['read', 'write'] },
     wallets: { group: 'Players', actions: ['read', 'write'] },
@@ -428,18 +395,16 @@ async function seedRbac() {
   };
 
   const allKeys: string[] = [];
+  const permsToInsert = [];
   for (const [resource, { group, actions }] of Object.entries(matrix)) {
     for (const action of actions) {
       const key = `${resource}.${action}`;
       allKeys.push(key);
-      await db
-        .insert(s.permissions)
-        .values({ key, resource, action, group, isSystem: true })
-        .onConflictDoNothing();
+      permsToInsert.push({ key, resource, action, group, is_system: true });
     }
   }
+  await db.permissions.createMany({ data: permsToInsert, skipDuplicates: true });
 
-  // Roles (DB_DIAGRAM §7.5)
   const roleDefs: {
     slug: string;
     name: string;
@@ -508,43 +473,35 @@ async function seedRbac() {
     },
   ];
 
-  const permByKey = new Map((await db.select().from(s.permissions)).map((p) => [p.key, p.id]));
+  const permRecords = await db.permissions.findMany();
+  const permByKey = new Map(permRecords.map((p) => [p.key, p.id]));
 
   for (const def of roleDefs) {
-    const [role] = await db
-      .insert(s.roles)
-      .values({
-        slug: def.slug,
-        name: def.name,
-        level: def.level,
-        isSystem: def.isSystem,
-      })
-      .onConflictDoNothing()
-      .returning();
-    const roleId =
-      role?.id ??
-      (await db.query.roles.findFirst({ where: (r, { eq }) => eq(r.slug, def.slug) }))!.id;
+    let role = await db.roles.findUnique({ where: { slug: def.slug } });
+    if (!role) {
+      role = await db.roles.create({
+        data: {
+          slug: def.slug,
+          name: def.name,
+          level: def.level,
+          is_system: def.isSystem,
+        }
+      });
+    }
 
-    // super_admin gets no explicit rows (implicit '*' via the role slug in RBAC)
     const keys = def.keys === '*' ? [] : def.keys;
     for (const key of keys) {
       const pid = permByKey.get(key);
       if (pid) {
-        await db
-          .insert(s.rolePermissions)
-          .values({ roleId, permissionId: pid })
-          .onConflictDoNothing();
+        await db.role_permissions.upsert({
+          where: { role_id_permission_id: { role_id: role.id, permission_id: pid } },
+          create: { role_id: role.id, permission_id: pid },
+          update: {}
+        });
       }
     }
   }
 
-  // Seed admin *users* as data, each with role(s) assigned via admin_roles —
-  // no static super flag. Super-admin = the super_admin role.
-  //
-  // Password source (see seedAdminPassword): SEED_ADMIN_PASSWORD if set (and it
-  // ROTATES existing accounts); otherwise a random one in production (printed
-  // once); otherwise the dev-only default 'admin1234'. Never ships a fixed
-  // credential to production.
   const { password, rotate } = seedAdminPassword();
   const seedAdmins = [
     { username: 'superadmin', email: 'admin@octanlink.com', roles: ['super_admin'] },

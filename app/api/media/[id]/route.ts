@@ -9,8 +9,6 @@ import {
   MediaNotFoundError,
 } from '@/lib/media';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB — matches POST /api/media
 

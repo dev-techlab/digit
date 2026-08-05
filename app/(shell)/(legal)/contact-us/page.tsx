@@ -5,7 +5,6 @@ import { getSettings } from '@/lib/settings';
 import { APP_NAME } from '@/lib/constants';
 
 export const metadata = { title: `Contact Us · ${APP_NAME}` };
-export const dynamic = 'force-dynamic';
 
 export default async function ContactUsPage() {
   const settings = await getSettings();

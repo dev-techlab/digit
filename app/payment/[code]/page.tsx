@@ -9,14 +9,14 @@ type Status = 'success' | 'failed' | 'pending' | 'unknown';
 
 /** Resolve the real order/transaction behind this reference — never guess from the URL text. */
 async function resolveStatus(code: string): Promise<Status> {
-  const order = await db.query.orders.findFirst({ where: (t, { eq }) => eq(t.orderNo, code) });
+  const order = await db.orders.findFirst({ where: { order_no: code } });
   if (order) {
     if (order.status === 'completed') return 'success';
     if (order.status === 'pending') return 'pending';
     return 'failed'; // failed | cancelled
   }
 
-  const tx = await db.query.transactions.findFirst({ where: (t, { eq }) => eq(t.id, code) });
+  const tx = await db.transactions.findFirst({ where: { id: code } });
   if (tx) {
     if (tx.status === 'completed') return 'success';
     if (tx.status === 'pending') return 'pending';
