@@ -66,6 +66,7 @@ export function ProviderCard({ provider }: { provider: GameProvider }) {
               fill
               sizes="48px"
               className="object-cover"
+              unoptimized
               onError={() => setImgError(true)}
             />
           </div>

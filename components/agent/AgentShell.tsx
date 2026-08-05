@@ -195,7 +195,7 @@ export function AgentShell({ children }: { children: React.ReactNode }) {
       </button>
       {accountOpen && (
         <div className="space-y-0.5">
-          <NavItem indent icon={Gamepad2} label="Game Setting" href="/agent/game-setting" />
+          {/* <NavItem indent icon={Gamepad2} label="Game Setting" href="/agent/game-setting" /> */}
           <NavItem indent icon={LayoutGrid} label="Game Platforms" href="/agent/game-platforms" />
           <NavItem indent icon={UserRound} label="Sale Agent List" href="/agent/sale-agents" />
           <NavItem indent icon={Wine} label="Member List" href="/agent/members" />
