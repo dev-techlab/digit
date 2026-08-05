@@ -55,12 +55,14 @@ function TransactionRow({ tx }: { tx: Transaction }) {
       </span>
       <div className="min-w-0 flex-1">
         <p className="truncate font-mono text-sm font-semibold text-[var(--text-primary)]">
-          {maskAddress(tx.address)}
+          {tx.address ? maskAddress(tx.address) : `Order #${tx.id}`}
         </p>
         <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
           {tx.methodLabel} - {STATUS_LABEL[tx.status]}
         </p>
-        <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{tx.createTime}</p>
+        <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+          {new Date(tx.createTime).toLocaleString()}
+        </p>
       </div>
       <p
         className={cn(

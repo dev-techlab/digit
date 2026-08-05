@@ -5,6 +5,7 @@ import { CheckCircle2, Coins, Crown, Flame, Gift, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/cn';
+import { useRouter } from 'next/navigation';
 
 type ShopTab = 'packages' | 'firstDeposit';
 type Stage = 'browse' | 'processing' | 'success';
@@ -48,6 +49,7 @@ export function ShopModal({
   const [tab, setTab] = useState<ShopTab>(defaultTab);
   const [stage, setStage] = useState<Stage>('browse');
   const [selected, setSelected] = useState<Pkg | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     if (open) {
@@ -61,10 +63,27 @@ export function ShopModal({
   const bonusFor = (pkg: Pkg) =>
     isFirstDeposit ? Math.round(pkg.baseSc * FIRST_DEPOSIT_BONUS_RATE) : 0;
 
-  const buy = (pkg: Pkg) => {
+  const buy = async (pkg: Pkg) => {
     setSelected(pkg);
     setStage('processing');
-    window.setTimeout(() => setStage('success'), 900);
+    try {
+      const res = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'deposit',
+          amount: pkg.price,
+          method: 'card', // default mock method for shop purchases
+        }),
+      });
+      if (!res.ok) throw new Error('Purchase failed');
+      setStage('success');
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+      setStage('browse');
+      alert('Failed to process purchase. Please try again.');
+    }
   };
 
   if (stage !== 'browse' && selected) {
@@ -89,7 +108,7 @@ export function ShopModal({
                 plus <span className="font-semibold text-brand">{totalSc.toLocaleString()} SC</span>{' '}
                 free.
               </p>
-              <Button fullWidth className="mt-2" onClick={onClose}>
+              <Button fullWidth className="mt-2" onClick={() => { onClose(); router.refresh(); }}>
                 Done
               </Button>
             </>

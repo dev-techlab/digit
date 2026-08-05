@@ -208,6 +208,7 @@ export function AgentShell({ children }: { children: React.ReactNode }) {
       <NavItem icon={Gift} label="Promotion Config" href="/agent/promotions" />
       <NavItem icon={UserCircle} label="Store Administrator" href="/agent/store-admins" />
       <NavItem icon={FolderClosed} label="Transaction List" href="/agent/transactions" />
+      <NavItem icon={FolderClosed} label="Customer Orders" href="/agent/customer-orders" />
       <NavItem icon={Settings} label="CS Config" href="/agent/cs-config" />
       <NavItem icon={FileText} label="Terms" href="/agent/terms" />
       <NavItem icon={Camera} label="Download posters" href="/agent/posters" />

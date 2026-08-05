@@ -136,7 +136,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <NavItem icon={Home} label="Dashboard" href="/admin/dashboard" />
       <NavItem icon={Gamepad2} label="Platforms" href="/admin/platforms" />
       {(me.isSuperAdmin || me.permissions.includes('users.read')) && (
-        <NavItem icon={Users} label="Users" href="/admin/users" />
+        <>
+          <NavItem icon={Users} label="Users" href="/admin/users" />
+          <NavItem icon={Wallet} label="Member Orders" href="/admin/member-orders" />
+        </>
       )}
       {(me.isSuperAdmin || me.permissions.includes('agents.read')) && (
         <NavItem icon={Store} label="Agents" href="/admin/agents" />

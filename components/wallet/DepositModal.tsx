@@ -5,6 +5,7 @@ import { CheckCircle2, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/cn';
+import { useRouter } from 'next/navigation';
 
 const METHODS = ['Debit Card', 'Bitcoin On-Chain', 'Bitcoin Lightning Network', 'PYUSD'] as const;
 const TIERS = [
@@ -21,14 +22,35 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
   const [method, setMethod] = useState<(typeof METHODS)[number]>(METHODS[0]);
   const [tierIndex, setTierIndex] = useState(1);
   const [stage, setStage] = useState<Stage>('form');
+  const router = useRouter();
 
   useEffect(() => {
     if (open) setStage('form');
   }, [open]);
 
-  const submit = () => {
+  const submit = async () => {
     setStage('processing');
-    window.setTimeout(() => setStage('success'), 900);
+    try {
+      const amount = Number(TIERS[tierIndex].amount);
+      const res = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'deposit',
+          amount,
+          method: method === 'Debit Card' ? 'card' : method === 'Bitcoin On-Chain' ? 'btc' : method === 'Bitcoin Lightning Network' ? 'lightning' : 'pyusd',
+        })
+      });
+      if (!res.ok) {
+        throw new Error('Deposit failed');
+      }
+      setStage('success');
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+      setStage('form');
+      alert('Failed to process deposit. Please try again.');
+    }
   };
 
   if (stage !== 'form') {
@@ -51,7 +73,7 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
                 )}{' '}
                 SC.
               </p>
-              <Button fullWidth className="mt-2" onClick={onClose}>
+              <Button fullWidth className="mt-2" onClick={() => { onClose(); router.refresh(); }}>
                 Done
               </Button>
             </>

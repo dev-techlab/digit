@@ -25,12 +25,14 @@ export function WithdrawModal({
   const [method, setMethod] = useState<(typeof METHODS)[number]>(METHODS[0]);
   const [feeMode, setFeeMode] = useState<'standard' | 'waiver'>('waiver');
   const [amount, setAmount] = useState('');
+  const [address, setAddress] = useState('');
   const [stage, setStage] = useState<Stage>('form');
 
   useEffect(() => {
     if (open) {
       setStage('form');
       setAmount('');
+      setAddress('');
     }
   }, [open]);
 
@@ -38,10 +40,35 @@ export function WithdrawModal({
   const exceedsBalance = numericAmount > Number(wallet.withdrawable);
   const invalid = !amount || numericAmount <= 0 || exceedsBalance;
 
-  const submit = () => {
+  const submit = async () => {
     if (invalid) return;
     setStage('processing');
-    window.setTimeout(() => setStage('success'), 900);
+    try {
+      let mappedMethod = 'ach';
+      if (method === 'Debit Card') mappedMethod = 'card';
+      if (method === 'Cash App') mappedMethod = 'cashapp';
+      if (method === 'Chime') mappedMethod = 'chime';
+      if (method === 'Crypto Wallet') mappedMethod = 'btc';
+
+      const res = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'withdraw',
+          amount: numericAmount,
+          method: mappedMethod,
+          address
+        })
+      });
+      if (!res.ok) {
+        throw new Error('Withdrawal failed');
+      }
+      setStage('success');
+    } catch (err) {
+      console.error(err);
+      setStage('form');
+      alert('Failed to process withdrawal. Please try again.');
+    }
   };
 
   if (stage !== 'form') {
@@ -118,13 +145,12 @@ export function WithdrawModal({
 
         {method === 'ACH Bank Transfer' && (
           <div className="space-y-3">
-            <Input placeholder="ACH Routing Number" />
-            <Input placeholder="Account Number" />
+            <Input placeholder="Account/Routing details (e.g. 123456789)" value={address} onChange={(e) => setAddress(e.target.value)} />
           </div>
         )}
-        {method === 'Crypto Wallet' && <Input placeholder="Wallet address" />}
+        {method === 'Crypto Wallet' && <Input placeholder="Wallet address" value={address} onChange={(e) => setAddress(e.target.value)} />}
         {(method === 'Cash App' || method === 'Chime') && (
-          <Input placeholder="$Cashtag or username" />
+          <Input placeholder="$Cashtag or username" value={address} onChange={(e) => setAddress(e.target.value)} />
         )}
 
         <div>
