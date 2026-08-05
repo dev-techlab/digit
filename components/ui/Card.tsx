@@ -17,3 +17,9 @@ export function Card({ className, variant = 'glass', ...props }: CardProps) {
     />
   );
 }
+
+interface CardContentProps extends HTMLAttributes<HTMLDivElement> {}
+
+export function CardContent({ className, ...props }: CardContentProps) {
+  return <div className={cn('', className)} {...props} />;
+}

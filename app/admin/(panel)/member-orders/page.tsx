@@ -165,7 +165,7 @@ export default function MemberOrdersPage() {
                 page={page}
                 pageSize={pageSize}
                 total={data.total}
-                onChange={setPage}
+                onPageChange={setPage}
               />
             </div>
           )}

@@ -116,7 +116,7 @@ export default function CustomerOrdersPage() {
                 page={page}
                 pageSize={pageSize}
                 total={data.total}
-                onChange={setPage}
+                onPageChange={setPage}
               />
             </div>
           )}

@@ -6,7 +6,14 @@ type Variant = 'primary' | 'secondary' | 'outline' | 'phoneRegister';
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   fullWidth?: boolean;
+  size?: 'sm' | 'md' | 'lg';
 }
+
+const sizeClasses: Record<string, string> = {
+  sm: 'px-3 py-1.5 text-xs',
+  md: 'px-6 py-3 text-[15px]',
+  lg: 'px-8 py-4 text-base',
+};
 
 const variantClasses: Record<Variant, string> = {
   primary:
@@ -19,12 +26,13 @@ const variantClasses: Record<Variant, string> = {
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', fullWidth, ...props }, ref) => {
+  ({ className, variant = 'primary', fullWidth, size = 'md', ...props }, ref) => {
     return (
       <button
         ref={ref}
         className={cn(
-          'inline-flex items-center justify-center gap-2 rounded-pill px-6 py-3 text-[15px] font-semibold transition-all duration-150 disabled:cursor-not-allowed',
+          'inline-flex items-center justify-center gap-2 rounded-pill font-semibold transition-all duration-150 disabled:cursor-not-allowed',
+          sizeClasses[size],
           variantClasses[variant],
           fullWidth && 'w-full',
           className
