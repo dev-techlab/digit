@@ -109,6 +109,11 @@ const putSchema = z.object({
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().optional().or(z.literal('')),
   password: z.string().min(6).optional().or(z.literal('')),
+  username: z.string().min(4).optional(),
+  kycStatus: z.enum(['unverified', 'pending', 'verified', 'rejected']).optional(),
+  inviteCode: z.string().optional(),
+  goldCoin: z.number().min(0).optional(),
+  onlineSc: z.number().min(0).optional(),
 });
 
 export async function PUT(req: Request) {
@@ -127,23 +132,40 @@ export async function PUT(req: Request) {
     if (data.nickname !== undefined) set.nickname = data.nickname.trim();
     if (data.email !== undefined) set.email = data.email.trim() || null;
     if (data.phone !== undefined) set.phone = data.phone.trim() || null;
+    if (data.username !== undefined) set.username = data.username.trim();
+    if (data.kycStatus !== undefined) set.kyc_status = data.kycStatus;
+    if (data.inviteCode !== undefined) set.invite_code = data.inviteCode.trim();
     if (data.password) {
       set.password_hash = await bcrypt.hash(data.password, 10);
     }
 
-    if (Object.keys(set).length === 0) {
-      return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
+    if (Object.keys(set).length > 0) {
+      await db.users.update({
+        where: { id: data.id },
+        data: set,
+      });
     }
 
-    await db.users.update({
-      where: { id: data.id },
-      data: set,
-    });
+    if (data.goldCoin !== undefined || data.onlineSc !== undefined) {
+      const walletUpdate: any = {};
+      if (data.goldCoin !== undefined) walletUpdate.gold_coin = data.goldCoin;
+      if (data.onlineSc !== undefined) walletUpdate.online_sc = data.onlineSc;
+      
+      await db.wallets.upsert({
+        where: { user_id: data.id },
+        update: walletUpdate,
+        create: {
+          user_id: data.id,
+          gold_coin: data.goldCoin || 0,
+          online_sc: data.onlineSc || 0,
+        }
+      });
+    }
 
     if (set.status === 'blocked') await blockUser(data.id);
     else if (set.status === 'active') await unblockUser(data.id);
 
-    const changes = { ...set };
+    const changes = { ...set, goldCoin: data.goldCoin, onlineSc: data.onlineSc };
     if (changes.password_hash) changes.password_hash = '[redacted]';
 
     await logAdminAction({
@@ -170,6 +192,10 @@ const postSchema = z.object({
   nickname: z.string().min(1, 'Nickname required'),
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().optional().or(z.literal('')),
+  kycStatus: z.enum(['unverified', 'pending', 'verified', 'rejected']).optional(),
+  inviteCode: z.string().optional(),
+  goldCoin: z.number().min(0).optional(),
+  onlineSc: z.number().min(0).optional(),
 });
 
 export async function POST(req: Request) {
@@ -181,7 +207,7 @@ export async function POST(req: Request) {
     const data = postSchema.parse(body);
 
     const password_hash = await bcrypt.hash(data.password, 10);
-    const invite_code = Array.from(crypto.getRandomValues(new Uint8Array(6)))
+    const invite_code = data.inviteCode?.trim() || Array.from(crypto.getRandomValues(new Uint8Array(6)))
       .map(b => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[b % 36])
       .join('');
 
@@ -192,7 +218,14 @@ export async function POST(req: Request) {
         nickname: data.nickname.trim(),
         email: data.email?.trim() || null,
         phone: data.phone?.trim() || null,
+        kyc_status: data.kycStatus || 'unverified',
         invite_code,
+        wallets: {
+          create: {
+            gold_coin: data.goldCoin || 0,
+            online_sc: data.onlineSc || 0,
+          }
+        }
       },
     });
 

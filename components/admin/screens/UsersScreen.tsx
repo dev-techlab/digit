@@ -22,13 +22,23 @@ interface UserRow {
   onlineSc: string | null;
 }
 
-const emptyForm = () => ({
-  username: '',
-  password: '',
-  nickname: '',
-  email: '',
-  phone: '',
-});
+const emptyForm = () => {
+  const randomChars = Array.from(crypto.getRandomValues(new Uint8Array(3)))
+    .map((b) => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[b % 36])
+    .join('');
+
+  return {
+    username: '',
+    password: '',
+    nickname: '',
+    email: '',
+    phone: '',
+    kycStatus: 'unverified',
+    inviteCode: randomChars,
+    goldCoin: '',
+    onlineSc: '',
+  };
+};
 
 /** Every player who self-registered on the home page / game lobby, with wallet + access controls. */
 export function UsersScreen() {
@@ -43,9 +53,14 @@ export function UsersScreen() {
 
   const editModal = useActionModal<UserRow>();
   const [editForm, setEditForm] = useState({
+    username: '',
     nickname: '',
     email: '',
     phone: '',
+    kycStatus: '',
+    inviteCode: '',
+    goldCoin: '',
+    onlineSc: '',
   });
 
   const deleteModal = useActionModal<UserRow>();
@@ -54,9 +69,22 @@ export function UsersScreen() {
     createModal.setErr(null);
     createModal.setBusy(true);
     try {
+      const payload: any = {
+        username: form.username,
+        password: form.password,
+        nickname: form.nickname,
+        email: form.email,
+        phone: form.phone,
+        kycStatus: form.kycStatus,
+        inviteCode: form.inviteCode,
+      };
+      
+      if (form.goldCoin !== '') payload.goldCoin = Number(form.goldCoin);
+      if (form.onlineSc !== '') payload.onlineSc = Number(form.onlineSc);
+
       const res = await api<{ user: { username: string; password: string } }>('/api/admin/users', {
         method: 'POST',
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       setForm(emptyForm());
       void table.reload();
@@ -74,14 +102,22 @@ export function UsersScreen() {
     editModal.setErr(null);
     editModal.setBusy(true);
     try {
+      const payload: any = {
+        id: editModal.item.id,
+        username: editForm.username,
+        nickname: editForm.nickname,
+        email: editForm.email,
+        phone: editForm.phone,
+        kycStatus: editForm.kycStatus,
+        inviteCode: editForm.inviteCode,
+      };
+      
+      if (editForm.goldCoin !== '') payload.goldCoin = Number(editForm.goldCoin);
+      if (editForm.onlineSc !== '') payload.onlineSc = Number(editForm.onlineSc);
+
       await api('/api/admin/users', {
         method: 'PUT',
-        body: JSON.stringify({
-          id: editModal.item.id,
-          nickname: editForm.nickname,
-          email: editForm.email,
-          phone: editForm.phone,
-        }),
+        body: JSON.stringify(payload),
       });
       void table.reload();
       editModal.closeModal();
@@ -241,9 +277,14 @@ export function UsersScreen() {
                     disabled={editModal.busy && editModal.item?.id === r.id}
                     onClick={() => {
                       setEditForm({
+                        username: r.username,
                         nickname: r.nickname ?? '',
                         email: r.email ?? '',
                         phone: r.phone ?? '',
+                        kycStatus: r.kycStatus,
+                        inviteCode: r.inviteCode,
+                        goldCoin: r.goldCoin ? String(r.goldCoin) : '0',
+                        onlineSc: r.onlineSc ? String(r.onlineSc) : '0',
                       });
                       editModal.openModal(r);
                     }}
@@ -325,6 +366,39 @@ export function UsersScreen() {
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
               />
             </Field>
+            <Field label="KYC Status">
+              <Select
+                value={form.kycStatus}
+                onChange={(e) => setForm({ ...form, kycStatus: e.target.value })}
+              >
+                <option value="unverified">Unverified</option>
+                <option value="pending">Pending</option>
+                <option value="verified">Verified</option>
+                <option value="rejected">Rejected</option>
+              </Select>
+            </Field>
+            <Field label="Invite Code">
+              <TextInput
+                value={form.inviteCode}
+                onChange={(e) => setForm({ ...form, inviteCode: e.target.value })}
+              />
+            </Field>
+            <Field label="Gold Coin">
+              <TextInput
+                type="number"
+                step="0.01"
+                value={form.goldCoin}
+                onChange={(e) => setForm({ ...form, goldCoin: e.target.value })}
+              />
+            </Field>
+            <Field label="Online SC">
+              <TextInput
+                type="number"
+                step="0.01"
+                value={form.onlineSc}
+                onChange={(e) => setForm({ ...form, onlineSc: e.target.value })}
+              />
+            </Field>
           </div>
         </div>
       </Modal>
@@ -384,6 +458,12 @@ export function UsersScreen() {
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{editModal.err}</p>
           )}
           <div className="grid grid-cols-2 gap-4">
+            <Field label="Username">
+              <TextInput
+                value={editForm.username}
+                onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+              />
+            </Field>
             <Field label="Nickname">
               <TextInput
                 value={editForm.nickname}
@@ -400,6 +480,39 @@ export function UsersScreen() {
               <TextInput
                 value={editForm.phone}
                 onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+              />
+            </Field>
+            <Field label="KYC Status">
+              <Select
+                value={editForm.kycStatus}
+                onChange={(e) => setEditForm({ ...editForm, kycStatus: e.target.value })}
+              >
+                <option value="unverified">Unverified</option>
+                <option value="pending">Pending</option>
+                <option value="verified">Verified</option>
+                <option value="rejected">Rejected</option>
+              </Select>
+            </Field>
+            <Field label="Invite Code">
+              <TextInput
+                value={editForm.inviteCode}
+                onChange={(e) => setEditForm({ ...editForm, inviteCode: e.target.value })}
+              />
+            </Field>
+            <Field label="Gold Coin">
+              <TextInput
+                type="number"
+                step="0.01"
+                value={editForm.goldCoin}
+                onChange={(e) => setEditForm({ ...editForm, goldCoin: e.target.value })}
+              />
+            </Field>
+            <Field label="Online SC">
+              <TextInput
+                type="number"
+                step="0.01"
+                value={editForm.onlineSc}
+                onChange={(e) => setEditForm({ ...editForm, onlineSc: e.target.value })}
               />
             </Field>
           </div>

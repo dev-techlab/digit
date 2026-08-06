@@ -1,34 +1,19 @@
 import { LegalPageLayout } from '@/components/legal/LegalPageLayout';
 import { APP_NAME } from '@/lib/constants';
+import { db } from '@/lib/db';
 
 export const metadata = { title: `Anti-Fraud Policy · ${APP_NAME}` };
 
-export default function AntiFraudPage() {
+export default async function AntiFraudPage() {
+  const page = await db.content_pages.findUnique({ where: { slug: 'anti-fraud' } });
+
   return (
     <LegalPageLayout title="Anti-Fraud Policy">
-      <p>
-        {APP_NAME} is committed to protecting our players and platform from fraud, including account
-        takeover, payment fraud, bonus abuse, and the use of multiple accounts.
-      </p>
-      <h2 className="font-semibold text-[var(--text-primary)]">Identity Verification</h2>
-      <p>
-        We may require identity verification (KYC) at any time, particularly before processing a
-        withdrawal, to confirm you are the rightful owner of an account.
-      </p>
-      <h2 className="font-semibold text-[var(--text-primary)]">One Account Per Person</h2>
-      <p>
-        Each individual, household, and device is permitted one account. Duplicate accounts may be
-        suspended and any associated balances forfeited.
-      </p>
-      <h2 className="font-semibold text-[var(--text-primary)]">Reporting Suspicious Activity</h2>
-      <p>
-        If you suspect fraudulent activity on your account or believe someone is misusing the
-        platform, contact our support team immediately via the{' '}
-        <a href="/contact-us" className="text-brand">
-          Contact Us
-        </a>{' '}
-        page.
-      </p>
+      {page?.body ? (
+        <div dangerouslySetInnerHTML={{ __html: page.body }} />
+      ) : (
+        <p>Content not found.</p>
+      )}
     </LegalPageLayout>
   );
 }

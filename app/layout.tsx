@@ -8,6 +8,7 @@ import { SidebarProvider } from '@/lib/sidebar-context';
 import { SplashScreen } from '@/components/shell/SplashScreen';
 import { AuthModals } from '@/components/auth/AuthModals';
 import { APP_NAME } from '@/lib/constants';
+import { QueryProvider } from '@/components/shell/QueryProvider';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -30,17 +31,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <ThemeProvider>
-          <AuthProvider>
-            <AuthModalProvider>
-              <SidebarProvider>
-                <SplashScreen />
-                {children}
-                <AuthModals />
-              </SidebarProvider>
-            </AuthModalProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        <QueryProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <AuthModalProvider>
+                <SidebarProvider>
+                  <SplashScreen />
+                  {children}
+                  <AuthModals />
+                </SidebarProvider>
+              </AuthModalProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   );

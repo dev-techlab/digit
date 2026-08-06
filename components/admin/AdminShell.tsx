@@ -17,6 +17,7 @@ import {
   Gift,
   Banknote,
   Wallet,
+  FileText,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -38,6 +39,7 @@ const TITLES: Record<string, string> = {
   withdrawals: 'Withdrawals',
   bonuses: 'Bonuses',
   'system-admins': 'System Admins',
+  'content-pages': 'Content Pages',
 };
 
 const AdminCtx = createContext<{ me: AdminMe } | null>(null);
@@ -155,6 +157,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       )}
       {me.isSuperAdmin && (
         <NavItem icon={ShieldCheck} label="System Admins" href="/admin/system-admins" />
+      )}
+      {(me.isSuperAdmin || me.permissions.includes('content_pages.read')) && (
+        <NavItem icon={FileText} label="Content Pages" href="/admin/content-pages" />
       )}
       <div className="my-3 border-t border-slate-100" />
       <NavItem icon={Lock} label="Change Password" href="/admin/change-password" />

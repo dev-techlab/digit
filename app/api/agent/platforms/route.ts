@@ -1,57 +1,61 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAgentFromRequest } from '@/lib/agent-auth';
-
+import { getAdminIdFromRequest } from '@/lib/admin-auth';
 
 export async function GET(req: Request) {
   const agent = await getAgentFromRequest(req);
-  if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const adminId = await getAdminIdFromRequest(req);
 
-  const rawPlatforms = await db.agent_platform_mappings.findMany({
-    where: {
-      agent_id: agent.storeId,
-      game_platforms: {
-        deleted_at: null
-      }
-    },
-    select: {
-      game_platforms: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          icon_url: true,
-          external_id: true,
-          provider_code: true,
-          provider_type: true,
-          launch_url: true,
-          sort: true,
-          is_active: true,
-          synced_at: true,
-          created_at: true,
+  if (!agent && !adminId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  let rawPlatforms = [];
+
+  if (agent) {
+    const mappings = await db.agent_platform_mappings.findMany({
+      where: {
+        agent_id: agent.storeId,
+        game_platforms: {
+          deleted_at: null
         }
-      }
-    },
-    orderBy: [
-      { game_platforms: { sort: 'asc' } },
-      { game_platforms: { name: 'asc' } }
-    ]
-  });
+      },
+      select: {
+        game_platforms: true
+      },
+      orderBy: [
+        { game_platforms: { sort: 'asc' } },
+        { game_platforms: { name: 'asc' } }
+      ]
+    });
+    rawPlatforms = mappings.map(m => m.game_platforms);
+  } else {
+    // Admin sees all platforms
+    rawPlatforms = await db.game_platforms.findMany({
+      where: {
+        deleted_at: null
+      },
+      orderBy: [
+        { sort: 'asc' },
+        { name: 'asc' }
+      ]
+    });
+  }
 
-  const platforms = rawPlatforms.map(mapping => ({
-    id: mapping.game_platforms.id,
-    name: mapping.game_platforms.name,
-    slug: mapping.game_platforms.slug,
-    iconUrl: mapping.game_platforms.icon_url,
-    externalId: mapping.game_platforms.external_id,
-    providerCode: mapping.game_platforms.provider_code,
-    providerType: mapping.game_platforms.provider_type,
-    launchUrl: mapping.game_platforms.launch_url,
-    sort: mapping.game_platforms.sort,
-    isActive: mapping.game_platforms.is_active,
-    syncedAt: mapping.game_platforms.synced_at,
-    createdAt: mapping.game_platforms.created_at,
+  const platforms = rawPlatforms.map(p => ({
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    iconUrl: p.icon_url,
+    externalId: p.external_id,
+    providerCode: p.provider_code,
+    providerType: p.provider_type,
+    launchUrl: p.launch_url,
+    sort: p.sort,
+    isActive: p.is_active,
+    syncedAt: p.synced_at,
+    createdAt: p.created_at,
   }));
 
   return NextResponse.json({ platforms });
 }
+

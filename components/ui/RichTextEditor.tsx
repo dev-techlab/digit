@@ -15,6 +15,7 @@ import {
   Undo,
   Redo,
   RemoveFormatting,
+  Code,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -52,6 +53,7 @@ export function RichTextEditor({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [focused, setFocused] = useState(false);
+  const [isHtmlMode, setIsHtmlMode] = useState(false);
 
   // Keep the DOM in sync with external value changes (e.g. switching locale
   // or "use inherited version") without clobbering the cursor while typing.
@@ -113,8 +115,23 @@ export function RichTextEditor({
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => exec('removeFormat')}
           className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+          disabled={isHtmlMode}
         >
           <RemoveFormatting size={15} />
+        </button>
+        <span className="mx-1 h-4 w-px bg-slate-200" />
+        <button
+          type="button"
+          title="Toggle HTML Source"
+          aria-label="Toggle HTML Source"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => setIsHtmlMode(!isHtmlMode)}
+          className={cn(
+            'rounded-md p-1.5 hover:bg-slate-100 hover:text-slate-700',
+            isHtmlMode ? 'bg-slate-200 text-slate-800' : 'text-slate-500'
+          )}
+        >
+          <Code size={15} />
         </button>
         <span className="mx-1 h-4 w-px bg-slate-200" />
         <button
@@ -138,25 +155,34 @@ export function RichTextEditor({
           <Redo size={15} />
         </button>
       </div>
-      <div
-        ref={ref}
-        contentEditable
-        suppressContentEditableWarning
-        onFocus={() => setFocused(true)}
-        onBlur={(e) => {
-          setFocused(false);
-          onChange(e.currentTarget.innerHTML);
-        }}
-        onInput={(e) => onChange(e.currentTarget.innerHTML)}
-        data-placeholder={placeholder}
-        className={cn(
-          'min-h-[22rem] max-w-none px-4 py-3 text-sm leading-relaxed text-slate-700 outline-none',
-          '[&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:mt-3 [&_h3]:text-base [&_h3]:font-semibold',
-          '[&_blockquote]:border-l-4 [&_blockquote]:border-slate-200 [&_blockquote]:pl-3 [&_blockquote]:text-slate-500',
-          '[&_a]:text-blue-500 [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6',
-          'empty:before:text-slate-300 empty:before:content-[attr(data-placeholder)]'
-        )}
-      />
+      {isHtmlMode ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="min-h-[22rem] w-full resize-y px-4 py-3 font-mono text-sm leading-relaxed text-slate-700 outline-none"
+        />
+      ) : (
+        <div
+          ref={ref}
+          contentEditable
+          suppressContentEditableWarning
+          onFocus={() => setFocused(true)}
+          onBlur={(e) => {
+            setFocused(false);
+            onChange(e.currentTarget.innerHTML);
+          }}
+          onInput={(e) => onChange(e.currentTarget.innerHTML)}
+          data-placeholder={placeholder}
+          className={cn(
+            'min-h-[22rem] max-w-none px-4 py-3 text-sm leading-relaxed text-slate-700 outline-none',
+            '[&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:mt-3 [&_h3]:text-base [&_h3]:font-semibold',
+            '[&_blockquote]:border-l-4 [&_blockquote]:border-slate-200 [&_blockquote]:pl-3 [&_blockquote]:text-slate-500',
+            '[&_a]:text-blue-500 [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6',
+            'empty:before:text-slate-300 empty:before:content-[attr(data-placeholder)]'
+          )}
+        />
+      )}
     </div>
   );
 }

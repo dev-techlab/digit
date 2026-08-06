@@ -19,7 +19,7 @@ export function LegalPageLayout({ title, children }: { title: string; children: 
         </button>
         <h1 className="text-base font-bold">{title}</h1>
       </div>
-      <div className="space-y-4 px-4 py-5 text-sm leading-relaxed text-[var(--text-secondary)]">
+      <div className="space-y-4 px-4 py-5 text-sm leading-relaxed text-[var(--text-secondary)] [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-bold [&_h3]:mt-3 [&_h3]:text-base [&_h3]:font-semibold [&_blockquote]:border-l-4 [&_blockquote]:border-slate-200 [&_blockquote]:pl-3 [&_blockquote]:text-slate-500 [&_a]:text-blue-500 [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6">
         {children}
       </div>
     </div>

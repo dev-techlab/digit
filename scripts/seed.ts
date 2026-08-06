@@ -289,18 +289,34 @@ async function seedHelp() {
 
 async function seedContentPages() {
   const pages = [
-    ['terms', 'Terms & Conditions'],
-    ['privacy', 'Privacy Policy'],
-    ['sweeps-rules', 'Official Sweepstakes Rules'],
-    ['responsible-gaming', 'Responsible Social Gameplay'],
-    ['deposit-guide', 'How to Deposit'],
+    {
+      slug: 'terms',
+      title: 'Terms & Conditions',
+      body: `<p>These Terms & Conditions ("Terms") govern your access to and use of Octan Link (the "Platform"). By creating an account or using the Platform, you agree to be bound by these Terms.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">1. Eligibility</h2>\n<p>You must be at least 18 years old (or the age of majority in your jurisdiction) and a legal resident of a jurisdiction where use of the Platform is permitted to create an account.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">2. Virtual Currencies</h2>\n<p>Gold Coins (GC) have no monetary value and are for entertainment purposes only. Sweepstakes Coins (SC) may be redeemed for cash prizes subject to these Terms and the <a href="/sweeps-rules" class="text-brand">Sweeps Rules</a>.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">3. Account Responsibility</h2>\n<p>You are responsible for maintaining the confidentiality of your account credentials and for all activity that occurs under your account.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">4. Changes to These Terms</h2>\n<p>We may update these Terms from time to time. Continued use of the Platform after changes take effect constitutes acceptance of the revised Terms.</p>`
+    },
+    {
+      slug: 'privacy',
+      title: 'Privacy Policy',
+      body: `<p>This Privacy Policy explains how Octan Link collects, uses, and protects your personal information when you use the Platform.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">1. Information We Collect</h2>\n<p>We collect information you provide directly (account details, contact information, identity verification documents) and information collected automatically (device information, usage data, approximate location for geo-compliance).</p>\n<h2 class="font-semibold text-[var(--text-primary)]">2. How We Use Information</h2>\n<p>We use your information to operate the Platform, process transactions, verify your identity, comply with legal obligations, and communicate with you about your account.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">3. Data Sharing</h2>\n<p>We share information with service providers who help us operate the Platform (payment processors, identity verification providers) and as required by law.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">4. Your Rights</h2>\n<p>You may request access to, correction of, or deletion of your personal information by contacting our support team through the Help Center.</p>`
+    },
+    {
+      slug: 'sweeps-rules',
+      title: 'Official Sweepstakes Rules',
+      body: `<p>NO PURCHASE OR PAYMENT NECESSARY TO ENTER OR WIN. A purchase will not improve your chances of winning. Void where prohibited by law.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">1. Eligibility</h2>\n<p>Open to legal residents of eligible jurisdictions who are at least 18 years old. Employees of Octan Link and their immediate family members are not eligible to participate.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">2. Free Entry (AMOE)</h2>\n<p>You may obtain Sweepstakes Coins without purchase via the <a href="/postal-request" class="text-brand">Postal Request</a> method described on the Platform, subject to the same redemption requirements as purchased entries.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">3. Redemption</h2>\n<p>Sweepstakes Coins may be redeemed for cash prizes once applicable wagering and verification requirements have been met. Gold Coins have no cash value and cannot be redeemed.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">4. Odds</h2>\n<p>Odds of winning depend on the number of eligible entries received and game outcomes.</p>`
+    },
+    {
+      slug: 'responsible-gaming',
+      title: 'Responsible Social Gameplay',
+      body: `<p>Octan Link is committed to promoting responsible social gameplay. Our games are intended for entertainment purposes and should never be viewed as a way to make money.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">Play Within Your Means</h2>\n<p>Only use funds you can comfortably afford. Set personal time and spending limits before you start playing.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">Warning Signs</h2>\n<p>If gameplay is affecting your relationships, finances, or wellbeing, take a break and seek support. Warning signs include chasing losses, hiding play from loved ones, and playing longer than intended.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">Self-Exclusion & Support</h2>\n<p>Contact our Help Center to set deposit limits, take a cooling-off period, or self-exclude from the Platform. If you or someone you know needs help, contact the National Council on Problem Gambling at 1-800-522-4700.</p>`
+    },
+    {
+      slug: 'anti-fraud',
+      title: 'Anti-Fraud Policy',
+      body: `<p>Octan Link is committed to protecting our players and platform from fraud, including account takeover, payment fraud, bonus abuse, and the use of multiple accounts.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">Identity Verification</h2>\n<p>We may require identity verification (KYC) at any time, particularly before processing a withdrawal, to confirm you are the rightful owner of an account.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">One Account Per Person</h2>\n<p>Each individual, household, and device is permitted one account. Duplicate accounts may be suspended and any associated balances forfeited.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">Reporting Suspicious Activity</h2>\n<p>If you suspect fraudulent activity on your account or believe someone is misusing the platform, contact our support team immediately via the <a href="/contact-us" class="text-brand">Contact Us</a> page.</p>`
+    }
   ];
   await db.content_pages.createMany({
-    data: pages.map(([slug, title]) => ({
-        slug,
-        title,
-        body: `> TODO: migrate the real copy from the ${slug} page component into this field.`,
-    })),
+    data: pages,
     skipDuplicates: true
   });
   console.log(`  content_pages: ${pages.length}`);

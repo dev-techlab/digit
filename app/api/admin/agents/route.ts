@@ -98,6 +98,8 @@ const postSchema = z.object({
   remark: z.string().max(300).optional().or(z.literal('')),
   commissionPer: z.union([z.string(), z.number()]).optional().transform(v => Number(v)),
   platformIds: z.array(z.string()).optional(),
+  inviteCode: z.string().optional(),
+  onlineBalance: z.number().min(0).optional(),
 });
 
 export async function POST(req: Request) {
@@ -118,8 +120,9 @@ export async function POST(req: Request) {
         commission_per: Number.isFinite(data.commissionPer)
           ? String(data.commissionPer)
           : '0',
-        invite_code: `MC${randomBytes(8).toString('hex').toUpperCase()}`,
+        invite_code: data.inviteCode?.trim() || `MC${randomBytes(8).toString('hex').toUpperCase()}`,
         remark: data.remark?.trim() || null,
+        online_balance: data.onlineBalance || 0,
       }
     });
 
@@ -168,6 +171,9 @@ const putSchema = z.object({
   nickname: z.string().optional().or(z.literal('')),
   email: z.string().email().optional().or(z.literal('')),
   remark: z.string().max(300).optional().or(z.literal('')),
+  username: z.string().min(4).optional(),
+  inviteCode: z.string().optional(),
+  onlineBalance: z.number().min(0).optional(),
 });
 
 export async function PUT(req: Request) {
@@ -188,6 +194,9 @@ export async function PUT(req: Request) {
     if (data.nickname !== undefined) set.nickname = data.nickname.trim() || null;
     if (data.email !== undefined) set.email = data.email.trim() || null;
     if (data.remark !== undefined) set.remark = data.remark.trim() || null;
+    if (data.username !== undefined) set.username = data.username.trim();
+    if (data.inviteCode !== undefined) set.invite_code = data.inviteCode.trim();
+    if (data.onlineBalance !== undefined) set.online_balance = data.onlineBalance;
 
     if (Object.keys(set).length === 0) {
       return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
@@ -217,6 +226,9 @@ export async function PUT(req: Request) {
     if (set.email !== undefined) changes.email = set.email;
     if (set.remark !== undefined) changes.remark = set.remark;
     if (set.commission_per !== undefined) changes.commissionPer = set.commission_per;
+    if (set.username !== undefined) changes.username = set.username;
+    if (set.invite_code !== undefined) changes.inviteCode = set.invite_code;
+    if (set.online_balance !== undefined) changes.onlineBalance = set.online_balance;
     if (set.password_hash !== undefined) changes.password = '[redacted]';
     if (set.status !== undefined) changes.status = set.status;
 

@@ -39,31 +39,45 @@ interface PlatformOption {
   availableToTime?: string;
 }
 
-const emptyForm = () => ({
-  username: '',
-  password: '',
-  nickname: '',
-  email: '',
-  commissionPer: '0.00',
-  remark: '',
-});
-
 /** Top-level store/agent accounts — the B2B side that resells game credits to members. */
 export function AgentsScreen() {
   const table = useDataTable<AgentRow>('/api/admin/agents', 'agents');
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  const emptyForm = () => {
+    const randomChars = Array.from(crypto.getRandomValues(new Uint8Array(4)))
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join('')
+      .toUpperCase();
+
+    return {
+      username: '',
+      password: '',
+      nickname: '',
+      email: '',
+      commissionPer: '0.00',
+      inviteCode: `MC${randomChars}`,
+      onlineBalance: '0',
+      remark: '',
+    };
+  };
+
   const createModal = useActionModal<null>();
   const [form, setForm] = useState(emptyForm());
+
+
   const [created, setCreated] = useState<{ username: string; password: string } | null>(null);
 
   const deleteModal = useActionModal<AgentRow>();
 
   const editModal = useActionModal<AgentRow>();
   const [editForm, setEditForm] = useState({
+    username: '',
     nickname: '',
     email: '',
     commissionPer: '0',
+    inviteCode: '',
+    onlineBalance: '0',
     remark: '',
   });
 
@@ -108,11 +122,23 @@ export function AgentsScreen() {
     }
     createModal.setBusy(true);
     try {
+      const payload: any = {
+        username: form.username,
+        password: form.password,
+        nickname: form.nickname,
+        email: form.email,
+        commissionPer: form.commissionPer,
+        inviteCode: form.inviteCode,
+        remark: form.remark,
+      };
+
+      if (form.onlineBalance !== '') payload.onlineBalance = Number(form.onlineBalance);
+
       const agentData = await api<{ agent: { id: string; username: string; password: string } }>(
         '/api/admin/agents',
         {
           method: 'POST',
-          body: JSON.stringify({ ...form }),
+          body: JSON.stringify(payload),
         }
       );
 
@@ -144,15 +170,21 @@ export function AgentsScreen() {
     editModal.setErr(null);
     editModal.setBusy(true);
     try {
+      const payload: any = {
+        id: editModal.item.id,
+        username: editForm.username,
+        nickname: editForm.nickname,
+        email: editForm.email,
+        commissionPer: editForm.commissionPer,
+        inviteCode: editForm.inviteCode,
+        remark: editForm.remark,
+      };
+
+      if (editForm.onlineBalance !== '') payload.onlineBalance = Number(editForm.onlineBalance);
+
       await api('/api/admin/agents', {
         method: 'PUT',
-        body: JSON.stringify({
-          id: editModal.item.id,
-          nickname: editForm.nickname,
-          email: editForm.email,
-          commissionPer: editForm.commissionPer,
-          remark: editForm.remark,
-        }),
+        body: JSON.stringify(payload),
       });
       await api('/api/admin/agent-platforms', {
         method: 'PUT',
@@ -364,9 +396,12 @@ export function AgentsScreen() {
                     disabled={editModal.busy && editModal.item?.id === r.id}
                     onClick={() => {
                       setEditForm({
+                        username: r.username,
                         nickname: r.nickname ?? '',
                         email: r.email ?? '',
                         commissionPer: r.commissionPer,
+                        inviteCode: r.inviteCode,
+                        onlineBalance: r.onlineBalance ? String(r.onlineBalance) : '0',
                         remark: r.remark ?? '',
                       });
                       void loadPlatforms(r.id);
@@ -444,11 +479,31 @@ export function AgentsScreen() {
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
               />
             </Field>
-            <Field label="Withdraw Comm." hint="%">
+            <Field label="Withdraw Comm.">
+              <div className="relative">
+                <TextInput
+                  type="number"
+                  value={form.commissionPer}
+                  onChange={(e) => setForm({ ...form, commissionPer: e.target.value })}
+                  className="pr-8"
+                />
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                  <span className="text-sm text-slate-400">%</span>
+                </div>
+              </div>
+            </Field>
+            <Field label="Invite Code">
+              <TextInput
+                value={form.inviteCode}
+                onChange={(e) => setForm({ ...form, inviteCode: e.target.value })}
+              />
+            </Field>
+            <Field label="Online Balance">
               <TextInput
                 type="number"
-                value={form.commissionPer}
-                onChange={(e) => setForm({ ...form, commissionPer: e.target.value })}
+                step="0.01"
+                value={form.onlineBalance}
+                onChange={(e) => setForm({ ...form, onlineBalance: e.target.value })}
               />
             </Field>
           </div>
@@ -518,6 +573,12 @@ export function AgentsScreen() {
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{editModal.err}</p>
           )}
           <div className="grid grid-cols-2 gap-4">
+            <Field label="Username">
+              <TextInput
+                value={editForm.username}
+                onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+              />
+            </Field>
             <Field label="Nickname">
               <TextInput
                 value={editForm.nickname}
@@ -530,11 +591,31 @@ export function AgentsScreen() {
                 onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
               />
             </Field>
-            <Field label="Withdraw Comm." hint="%">
+            <Field label="Withdraw Comm.">
+              <div className="relative">
+                <TextInput
+                  type="number"
+                  value={editForm.commissionPer}
+                  onChange={(e) => setEditForm({ ...editForm, commissionPer: e.target.value })}
+                  className="pr-8"
+                />
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                  <span className="text-sm text-slate-400">%</span>
+                </div>
+              </div>
+            </Field>
+            <Field label="Invite Code">
+              <TextInput
+                value={editForm.inviteCode}
+                onChange={(e) => setEditForm({ ...editForm, inviteCode: e.target.value })}
+              />
+            </Field>
+            <Field label="Online Balance">
               <TextInput
                 type="number"
-                value={editForm.commissionPer}
-                onChange={(e) => setEditForm({ ...editForm, commissionPer: e.target.value })}
+                step="0.01"
+                value={editForm.onlineBalance}
+                onChange={(e) => setEditForm({ ...editForm, onlineBalance: e.target.value })}
               />
             </Field>
           </div>

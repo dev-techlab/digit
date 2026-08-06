@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Info } from 'lucide-react';
 import { api, Btn, Card } from '../ui';
-import { RichTextEditor } from '../RichTextEditor';
+import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import { cn } from '@/lib/cn';
 import { sanitizeHtml } from '@/lib/sanitize-html';
 
