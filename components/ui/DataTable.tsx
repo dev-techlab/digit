@@ -30,6 +30,7 @@ export interface DataTableProps<T> {
   globalSearch?: string;
   onSearchChange?: (search: string) => void;
   extraToolbar?: React.ReactNode;
+  loading?: boolean;
 }
 
 export function DataTable<T>({
@@ -47,6 +48,7 @@ export function DataTable<T>({
   globalSearch,
   onSearchChange,
   extraToolbar,
+  loading,
 }: DataTableProps<T>) {
   const [internalGlobalFilter, setInternalGlobalFilter] = useState('');
   const [sorting, setSorting] = useState<{ id: string; desc: boolean } | null>(null);
@@ -206,7 +208,15 @@ export function DataTable<T>({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50 text-slate-600">
-            {paginatedData.length === 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan={columns.length}>
+                  <div className="flex flex-col items-center gap-2 py-12 text-slate-300">
+                    <p className="text-sm text-slate-400">Loading...</p>
+                  </div>
+                </td>
+              </tr>
+            ) : paginatedData.length === 0 ? (
               <tr>
                 <td colSpan={columns.length}>
                   <div className="flex flex-col items-center gap-2 py-12 text-slate-300">

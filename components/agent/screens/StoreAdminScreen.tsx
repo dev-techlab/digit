@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
-import { api, Btn, Card, Field, fmtDateTime, Modal, Table, TextInput } from '../ui';
+import { api, Btn, Card, Field, fmtDateTime, Modal, TextInput } from '../ui';
+import { DataTable } from '@/components/ui/DataTable';
 
 interface AdminRow {
   id: string;
@@ -57,28 +58,50 @@ export function StoreAdminScreen() {
         <Btn variant="success" className="mb-4" onClick={() => setOpen(true)}>
           <Plus size={16} /> Add store administrator
         </Btn>
-        <Table
-          headers={['Username', 'Nickname', 'Email', 'Status', 'Created', 'Operations']}
-          empty={rows.length === 0}
-        >
-          {rows.map((r) => (
-            <tr key={r.id}>
-              <td className="px-4 py-3 font-medium text-slate-700">{r.username}</td>
-              <td className="px-4 py-3">{r.nickname ?? '-'}</td>
-              <td className="px-4 py-3">{r.email ?? '-'}</td>
-              <td className="px-4 py-3 capitalize">{r.status}</td>
-              <td className="px-4 py-3">{fmtDateTime(r.createdAt)}</td>
-              <td className="px-4 py-3">
+        <DataTable
+          data={rows}
+          rowKey={(r) => r.id}
+          manualPagination={false}
+          columns={[
+            {
+              header: 'Username',
+              accessorKey: 'username',
+              cell: (r) => <span className="font-medium text-slate-700">{r.username}</span>,
+            },
+            {
+              header: 'Nickname',
+              accessorKey: 'nickname',
+              cell: (r) => r.nickname ?? '-',
+            },
+            {
+              header: 'Email',
+              accessorKey: 'email',
+              cell: (r) => r.email ?? '-',
+            },
+            {
+              header: 'Status',
+              accessorKey: 'status',
+              cell: (r) => <span className="capitalize">{r.status}</span>,
+            },
+            {
+              header: 'Created',
+              accessorKey: 'createdAt',
+              cell: (r) => fmtDateTime(r.createdAt),
+            },
+            {
+              header: 'Operations',
+              enableSorting: false,
+              cell: (r) => (
                 <button
                   className="text-blue-500 hover:underline"
                   onClick={() => void toggleStatus(r)}
                 >
                   {r.status === 'active' ? 'Disable' : 'Activate'}
                 </button>
-              </td>
-            </tr>
-          ))}
-        </Table>
+              ),
+            },
+          ]}
+        />
       </Card>
 
       <Modal

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { api, Card, Btn, Field, TextInput, fmtMoney } from '@/components/agent/ui';
+import { DataTable } from '@/components/ui/DataTable';
 
 interface AgentDetails {
   id: string;
@@ -311,56 +312,60 @@ export function AgentDetailsScreen({ agentId }: { agentId: string }) {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full whitespace-nowrap text-left text-sm">
-              <thead className="border-y border-slate-200 bg-slate-50 text-slate-500">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Order No</th>
-                  <th className="px-4 py-3 font-medium">Requested Amount</th>
-                  <th className="px-4 py-3 font-medium">Commission %</th>
-                  <th className="px-4 py-3 font-medium">Commission Amount</th>
-                  <th className="px-4 py-3 font-medium">Net Payable Amount</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {withdrawals.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
-                      No withdrawals found.
-                    </td>
-                  </tr>
-                ) : (
-                  withdrawals.map((w) => (
-                    <tr key={w.id} className="transition-colors hover:bg-slate-50/50">
-                      <td className="px-4 py-3 font-mono text-xs">
-                        {w.id.slice(0, 16).toUpperCase()}
-                      </td>
-                      <td className="px-4 py-3">{fmtMoney(w.amount)}</td>
-                      <td className="px-4 py-3">{w.commissionPer ? `${w.commissionPer}%` : '-'}</td>
-                      <td className="px-4 py-3 font-medium text-amber-500">{fmtMoney(w.fee)}</td>
-                      <td className="px-4 py-3 font-semibold text-green-600">
-                        {w.netAmount != null ? fmtMoney(w.netAmount) : '-'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`rounded px-2 py-1 text-xs font-medium capitalize ${
-                            w.status === 'completed'
-                              ? 'bg-green-100 text-green-700'
-                              : w.status === 'pending'
-                                ? 'bg-amber-100 text-amber-700'
-                                : 'bg-slate-100 text-slate-600'
-                          }`}
-                        >
-                          {w.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">{new Date(w.createdAt).toLocaleString()}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            <DataTable
+              data={withdrawals}
+              rowKey={(w) => w.id}
+              manualPagination={false}
+              columns={[
+                {
+                  header: 'Order No',
+                  accessorKey: 'id',
+                  cell: (w) => <span className="font-mono text-xs">{w.id.slice(0, 16).toUpperCase()}</span>,
+                },
+                {
+                  header: 'Requested Amount',
+                  accessorKey: 'amount',
+                  cell: (w) => fmtMoney(w.amount),
+                },
+                {
+                  header: 'Commission %',
+                  accessorKey: 'commissionPer',
+                  cell: (w) => w.commissionPer ? `${w.commissionPer}%` : '-',
+                },
+                {
+                  header: 'Commission Amount',
+                  accessorKey: 'fee',
+                  cell: (w) => <span className="font-medium text-amber-500">{fmtMoney(w.fee)}</span>,
+                },
+                {
+                  header: 'Net Payable Amount',
+                  accessorKey: 'netAmount',
+                  cell: (w) => <span className="font-semibold text-green-600">{w.netAmount != null ? fmtMoney(w.netAmount) : '-'}</span>,
+                },
+                {
+                  header: 'Status',
+                  accessorKey: 'status',
+                  cell: (w) => (
+                    <span
+                      className={`rounded px-2 py-1 text-xs font-medium capitalize ${
+                        w.status === 'completed'
+                          ? 'bg-green-100 text-green-700'
+                          : w.status === 'pending'
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {w.status}
+                    </span>
+                  ),
+                },
+                {
+                  header: 'Date',
+                  accessorKey: 'createdAt',
+                  cell: (w) => new Date(w.createdAt).toLocaleString(),
+                },
+              ]}
+            />
           </div>
         </Card>
       )}

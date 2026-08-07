@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
-import { api, Btn, Card, Field, fmtDateTime, Modal, Table, TextInput } from '../ui';
+import { api, Btn, Card, Field, fmtDateTime, Modal, TextInput } from '../ui';
+import { DataTable } from '@/components/ui/DataTable';
 
 interface KioskRow {
   id: string;
@@ -49,16 +50,33 @@ export function KioskScreen() {
         >
           <Plus size={16} /> Add Kiosk
         </Btn>
-        <Table headers={['Name', 'Code', 'Status', 'Created']} empty={rows.length === 0}>
-          {rows.map((r) => (
-            <tr key={r.id}>
-              <td className="px-4 py-3 font-medium text-slate-700">{r.name}</td>
-              <td className="px-4 py-3 font-mono">{r.code}</td>
-              <td className="px-4 py-3 capitalize">{r.status}</td>
-              <td className="px-4 py-3">{fmtDateTime(r.createdAt)}</td>
-            </tr>
-          ))}
-        </Table>
+        <DataTable
+          data={rows}
+          rowKey={(r) => r.id}
+          manualPagination={false}
+          columns={[
+            {
+              header: 'Name',
+              accessorKey: 'name',
+              cell: (r) => <span className="font-medium text-slate-700">{r.name}</span>,
+            },
+            {
+              header: 'Code',
+              accessorKey: 'code',
+              cell: (r) => <span className="font-mono">{r.code}</span>,
+            },
+            {
+              header: 'Status',
+              accessorKey: 'status',
+              cell: (r) => <span className="capitalize">{r.status}</span>,
+            },
+            {
+              header: 'Created',
+              accessorKey: 'createdAt',
+              cell: (r) => fmtDateTime(r.createdAt),
+            },
+          ]}
+        />
       </Card>
 
       <Modal

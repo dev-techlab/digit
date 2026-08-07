@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
-import { api, Btn, Field, Modal, Select, Table, TextInput, Toggle } from '@/components/agent/ui';
+import { api, Btn, Field, Modal, Select, TextInput, Toggle } from '@/components/agent/ui';
 import { useActionModal } from '@/hooks/useActionModal';
+import { DataTable } from '@/components/ui/DataTable';
 
 interface Provider {
   id: number;
@@ -244,28 +245,50 @@ export function ProvidersScreen() {
         </Btn>
       </div>
 
-      <Table
-        headers={['#', 'Provider', 'Code', 'Type', 'Sort', 'Active', 'Actions']}
-        empty={!loading && providers.length === 0}
-      >
-        {providers.map((p, i) => (
-          <tr key={p.id} className="hover:bg-slate-50/60">
-            <td className="px-4 py-2.5 text-slate-400">{p.id}</td>
-            <td className="px-4 py-2.5">
+      <DataTable
+        data={providers}
+        rowKey={(p) => p.id.toString()}
+        manualPagination={false}
+        columns={[
+          {
+            header: '#',
+            accessorKey: 'id',
+            cell: (p) => <span className="text-slate-400">{p.id}</span>,
+          },
+          {
+            header: 'Provider',
+            accessorKey: 'name',
+            cell: (p) => (
               <div className="flex items-center gap-2.5">
                 <ProviderIcon name={p.name} iconUrl={p.iconUrl} />
                 <div className="min-w-0">
                   <div className="font-medium text-slate-800">{p.name}</div>
                 </div>
               </div>
-            </td>
-            <td className="px-4 py-2.5 font-mono text-xs text-slate-500">{p.providerCode}</td>
-            <td className="px-4 py-2.5">{p.providerType}</td>
-            <td className="px-4 py-2.5">{p.sort}</td>
-            <td className="px-4 py-2.5">
-              <Toggle checked={p.status === 1} onChange={(v) => void toggleActive(p, v)} />
-            </td>
-            <td className="px-4 py-2.5">
+            ),
+          },
+          {
+            header: 'Code',
+            accessorKey: 'providerCode',
+            cell: (p) => <span className="font-mono text-xs text-slate-500">{p.providerCode}</span>,
+          },
+          {
+            header: 'Type',
+            accessorKey: 'providerType',
+          },
+          {
+            header: 'Sort',
+            accessorKey: 'sort',
+          },
+          {
+            header: 'Active',
+            accessorKey: 'status',
+            cell: (p) => <Toggle checked={p.status === 1} onChange={(v) => void toggleActive(p, v)} />,
+          },
+          {
+            header: 'Actions',
+            enableSorting: false,
+            cell: (p) => (
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => openEdit(p)}
@@ -282,10 +305,10 @@ export function ProvidersScreen() {
                   <Trash2 size={15} />
                 </button>
               </div>
-            </td>
-          </tr>
-        ))}
-      </Table>
+            ),
+          },
+        ]}
+      />
 
       <Modal
         title={draft?.isNew ? 'Add Provider' : 'Edit Provider'}

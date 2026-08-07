@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
-import { api, Btn, Field, Modal, Select, Table, TextInput, Toggle } from '@/components/agent/ui';
+import { api, Btn, Field, Modal, Select, TextInput, Toggle } from '@/components/agent/ui';
+import { DataTable } from '@/components/ui/DataTable';
 
 interface Bonus {
   id: string;
@@ -178,17 +179,26 @@ export function BonusesScreen() {
         </Btn>
       </div>
 
-      <Table
-        headers={['Title', 'Tags', 'Banner', 'Schedule', 'Sort', 'Active', 'Actions']}
-        empty={!loading && bonuses.length === 0}
-      >
-        {bonuses.map((b) => (
-          <tr key={b.id} className="hover:bg-slate-50/60">
-            <td className="px-4 py-2.5">
-              <div className="font-medium text-slate-800">{b.title}</div>
-              <div className="truncate text-xs text-slate-400">{b.id}</div>
-            </td>
-            <td className="px-4 py-2.5">
+      <DataTable
+        data={bonuses}
+        rowKey={(b) => b.id}
+        manualPagination={false}
+        columns={[
+          {
+            header: 'Title',
+            accessorKey: 'title',
+            cell: (b) => (
+              <div>
+                <div className="font-medium text-slate-800">{b.title}</div>
+                <div className="truncate text-xs text-slate-400">{b.id}</div>
+              </div>
+            ),
+          },
+          {
+            header: 'Tags',
+            accessorKey: 'tags',
+            enableSorting: false,
+            cell: (b) => (
               <div className="flex flex-wrap gap-1">
                 {b.tags.map((t) => (
                   <span
@@ -199,23 +209,44 @@ export function BonusesScreen() {
                   </span>
                 ))}
               </div>
-            </td>
-            <td className="px-4 py-2.5 text-xs text-slate-500">
-              {b.bannerType === 'gradient'
-                ? `Gradient${b.bannerBadgeText ? ` · ${b.bannerBadgeText}` : ''}`
-                : 'Placeholder'}
-            </td>
-            <td className="px-4 py-2.5 text-xs text-slate-500">
-              {b.scheduleText ||
-                (b.scheduleCountdownSeconds != null
-                  ? `Countdown ${b.scheduleCountdownSeconds}s`
-                  : '-')}
-            </td>
-            <td className="px-4 py-2.5">{b.sort}</td>
-            <td className="px-4 py-2.5">
-              <Toggle checked={b.active} onChange={(v) => void toggleActive(b, v)} />
-            </td>
-            <td className="px-4 py-2.5">
+            ),
+          },
+          {
+            header: 'Banner',
+            accessorKey: 'bannerType',
+            cell: (b) => (
+              <span className="text-xs text-slate-500">
+                {b.bannerType === 'gradient'
+                  ? `Gradient${b.bannerBadgeText ? ` · ${b.bannerBadgeText}` : ''}`
+                  : 'Placeholder'}
+              </span>
+            ),
+          },
+          {
+            header: 'Schedule',
+            accessorKey: 'scheduleText',
+            cell: (b) => (
+              <span className="text-xs text-slate-500">
+                {b.scheduleText ||
+                  (b.scheduleCountdownSeconds != null
+                    ? `Countdown ${b.scheduleCountdownSeconds}s`
+                    : '-')}
+              </span>
+            ),
+          },
+          {
+            header: 'Sort',
+            accessorKey: 'sort',
+          },
+          {
+            header: 'Active',
+            accessorKey: 'active',
+            cell: (b) => <Toggle checked={b.active} onChange={(v) => void toggleActive(b, v)} />,
+          },
+          {
+            header: 'Actions',
+            enableSorting: false,
+            cell: (b) => (
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => openEdit(b)}
@@ -232,10 +263,10 @@ export function BonusesScreen() {
                   <Trash2 size={15} />
                 </button>
               </div>
-            </td>
-          </tr>
-        ))}
-      </Table>
+            ),
+          },
+        ]}
+      />
 
       <Modal
         title={draft?.id ? 'Edit Bonus' : 'Add Bonus'}

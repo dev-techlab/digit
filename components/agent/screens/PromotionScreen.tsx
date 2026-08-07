@@ -12,10 +12,10 @@ import {
   ResetBtn,
   SearchBtn,
   Select,
-  Table,
   TextInput,
   Toggle,
 } from '../ui';
+import { DataTable } from '@/components/ui/DataTable';
 
 interface PromoRow {
   id: string;
@@ -150,30 +150,44 @@ export function PromotionScreen() {
         >
           <Plus size={16} /> Add Promotion
         </Btn>
-        <Table
-          headers={[
-            '#',
-            'User',
-            'Promotion Type',
-            'Threshold',
-            'Reward',
-            'Condition',
-            'Status',
-            'Operations',
-          ]}
-          empty={filtered.length === 0}
-        >
-          {filtered.map((r, i) => (
-            <tr key={r.id}>
-              <td className="px-4 py-3">{i + 1}</td>
-              <td className="px-4 py-3">{r.assignUsername ?? 'Store Account'}</td>
-              <td className="px-4 py-3">{TYPE_LABEL[r.type] ?? r.type}</td>
-              <td className="px-4 py-3">{fmtMoney(r.minDeposit)}</td>
-              <td className="px-4 py-3">
-                {Number(r.bonusPercent)}% (max {fmtMoney(r.maxBonus)})
-              </td>
-              <td className="px-4 py-3">{Number(r.redemptionMultiplier)}x playthrough</td>
-              <td className="px-4 py-3">
+        <DataTable
+          data={filtered}
+          rowKey={(r) => r.id}
+          manualPagination={false}
+          columns={[
+            {
+              header: '#',
+              cell: (_, idx) => <span className="text-slate-400">{idx + 1}</span>,
+            },
+            {
+              header: 'User',
+              accessorKey: 'assignUsername',
+              cell: (r) => r.assignUsername ?? 'Store Account',
+            },
+            {
+              header: 'Promotion Type',
+              accessorKey: 'type',
+              cell: (r) => TYPE_LABEL[r.type] ?? r.type,
+            },
+            {
+              header: 'Threshold',
+              accessorKey: 'minDeposit',
+              cell: (r) => fmtMoney(r.minDeposit),
+            },
+            {
+              header: 'Reward',
+              accessorKey: 'bonusPercent',
+              cell: (r) => `${Number(r.bonusPercent)}% (max ${fmtMoney(r.maxBonus)})`,
+            },
+            {
+              header: 'Condition',
+              accessorKey: 'redemptionMultiplier',
+              cell: (r) => `${Number(r.redemptionMultiplier)}x playthrough`,
+            },
+            {
+              header: 'Status',
+              accessorKey: 'status',
+              cell: (r) => (
                 <span
                   className={
                     r.status === 'enabled'
@@ -183,8 +197,12 @@ export function PromotionScreen() {
                 >
                   {r.status}
                 </span>
-              </td>
-              <td className="px-4 py-3">
+              ),
+            },
+            {
+              header: 'Operations',
+              enableSorting: false,
+              cell: (r) => (
                 <div className="flex gap-3 whitespace-nowrap text-sm">
                   <button
                     className="text-blue-500 hover:underline"
@@ -196,10 +214,10 @@ export function PromotionScreen() {
                     Delete
                   </button>
                 </div>
-              </td>
-            </tr>
-          ))}
-        </Table>
+              ),
+            },
+          ]}
+        />
       </Card>
 
       <Drawer

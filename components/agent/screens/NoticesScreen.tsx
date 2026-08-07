@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { api, Card, fmtDateTime, ResetBtn, SearchBtn, Table, TextInput } from '../ui';
+import { api, Card, fmtDateTime, ResetBtn, SearchBtn, TextInput } from '../ui';
+import { DataTable } from '@/components/ui/DataTable';
 
 interface NoticeRow {
   id: string;
@@ -48,32 +49,44 @@ export function NoticesScreen() {
       </Card>
 
       <Card>
-        <Table
-          headers={[
-            'Index',
-            'Notice Title',
-            'Notice Type',
-            'Notice Level',
-            'Publish Time',
-            'Publisher',
-            'Action',
+        <DataTable
+          data={rows}
+          rowKey={(n) => n.id}
+          manualPagination={false}
+          columns={[
+            {
+              header: 'Index',
+              cell: (_, idx) => <span className="text-slate-400">{idx + 1}</span>,
+            },
+            {
+              header: 'Notice Title',
+              accessorKey: 'title',
+              cell: (n) => <span className="font-medium text-slate-700">{n.title}</span>,
+            },
+            {
+              header: 'Notice Type',
+              accessorKey: 'noticeType',
+            },
+            {
+              header: 'Notice Level',
+              accessorKey: 'noticeLevel',
+            },
+            {
+              header: 'Publish Time',
+              accessorKey: 'publishedAt',
+              cell: (n) => fmtDateTime(n.publishedAt),
+            },
+            {
+              header: 'Publisher',
+              accessorKey: 'publisher',
+            },
+            {
+              header: 'Action',
+              enableSorting: false,
+              cell: () => <button className="text-blue-500 hover:underline">View</button>,
+            },
           ]}
-          empty={rows.length === 0}
-        >
-          {rows.map((n, i) => (
-            <tr key={n.id}>
-              <td className="px-4 py-3">{i + 1}</td>
-              <td className="px-4 py-3 font-medium text-slate-700">{n.title}</td>
-              <td className="px-4 py-3">{n.noticeType}</td>
-              <td className="px-4 py-3">{n.noticeLevel}</td>
-              <td className="px-4 py-3">{fmtDateTime(n.publishedAt)}</td>
-              <td className="px-4 py-3">{n.publisher}</td>
-              <td className="px-4 py-3">
-                <button className="text-blue-500 hover:underline">View</button>
-              </td>
-            </tr>
-          ))}
-        </Table>
+        />
       </Card>
     </div>
   );

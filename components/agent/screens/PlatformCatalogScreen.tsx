@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { api, Table, Toggle } from '../ui';
+import { api, Toggle } from '../ui';
 import { cn } from '@/lib/cn';
+import { DataTable } from '@/components/ui/DataTable';
 
 import { getLocalImageUrl } from '@/lib/image';
 
@@ -84,11 +85,19 @@ export function PlatformCatalogScreen() {
         Game Setting to configure which of these platforms your store has enabled.
       </p>
 
-      <Table headers={['#', 'Platform', 'Code', 'Type']} empty={!loading && platforms.length === 0}>
-        {platforms.map((p, i) => (
-          <tr key={p.id} className="hover:bg-slate-50/60">
-            <td className="px-4 py-2.5 text-slate-400">{i + 1}</td>
-            <td className="px-4 py-2.5">
+      <DataTable
+        data={platforms}
+        rowKey={(p) => p.id}
+        manualPagination={false}
+        columns={[
+          {
+            header: '#',
+            cell: (_, idx) => <span className="text-slate-400">{idx + 1}</span>,
+          },
+          {
+            header: 'Platform',
+            accessorKey: 'name',
+            cell: (p) => (
               <div className="flex items-center gap-2.5">
                 <PlatformIcon name={p.name} iconUrl={p.iconUrl} />
                 <div className="min-w-0">
@@ -96,14 +105,20 @@ export function PlatformCatalogScreen() {
                   <div className="truncate text-xs text-slate-400">{p.slug}</div>
                 </div>
               </div>
-            </td>
-            <td className="px-4 py-2.5 font-mono text-xs text-slate-500">
-              {p.providerCode || '--'}
-            </td>
-            <td className="px-4 py-2.5">{p.providerType || '--'}</td>
-          </tr>
-        ))}
-      </Table>
+            ),
+          },
+          {
+            header: 'Code',
+            accessorKey: 'providerCode',
+            cell: (p) => <span className="font-mono text-xs text-slate-500">{p.providerCode || '--'}</span>,
+          },
+          {
+            header: 'Type',
+            accessorKey: 'providerType',
+            cell: (p) => p.providerType || '--',
+          },
+        ]}
+      />
     </div>
   );
 }

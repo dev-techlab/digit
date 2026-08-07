@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { api, Card, fmtMoney, SearchBtn, ResetBtn, EmptyState, Table } from '../ui';
+import { api, Card, fmtMoney, SearchBtn, ResetBtn, EmptyState } from '../ui';
+import { DataTable } from '@/components/ui/DataTable';
 
 interface Stats {
   totalIn: { total: number; online: number; kiosk: number };
@@ -144,19 +145,32 @@ export function DashboardScreen() {
 
           <Card>
             <h3 className="mb-4 text-lg font-semibold text-slate-800">Top Games by Net</h3>
-            <Table
-              headers={['#', 'Game', 'Total In', 'Total Net']}
-              empty={stats.topGames.length === 0}
-            >
-              {stats.topGames.map((g, i) => (
-                <tr key={g.game}>
-                  <td className="px-4 py-3">{i + 1}</td>
-                  <td className="px-4 py-3 font-medium text-slate-700">{g.game}</td>
-                  <td className="px-4 py-3">{fmtMoney(g.totalIn)}</td>
-                  <td className="px-4 py-3 font-semibold text-green-600">{fmtMoney(g.totalNet)}</td>
-                </tr>
-              ))}
-            </Table>
+            <DataTable
+              data={stats.topGames}
+              rowKey={(g) => g.game}
+              manualPagination={false}
+              columns={[
+                {
+                  header: '#',
+                  cell: (_, idx) => <span className="text-slate-400">{idx + 1}</span>,
+                },
+                {
+                  header: 'Game',
+                  accessorKey: 'game',
+                  cell: (g) => <span className="font-medium text-slate-700">{g.game}</span>,
+                },
+                {
+                  header: 'Total In',
+                  accessorKey: 'totalIn',
+                  cell: (g) => fmtMoney(g.totalIn),
+                },
+                {
+                  header: 'Total Net',
+                  accessorKey: 'totalNet',
+                  cell: (g) => <span className="font-semibold text-green-600">{fmtMoney(g.totalNet)}</span>,
+                },
+              ]}
+            />
           </Card>
         </>
       )}
