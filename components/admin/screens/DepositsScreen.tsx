@@ -105,6 +105,8 @@ export function DepositsScreen() {
           totalRows={table.total}
           currentPage={table.page}
           onPageChange={(p) => table.setPage(p)}
+          pageSize={table.pageSize}
+          onPageSizeChange={table.setPageSize}
           globalSearch={table.search}
           onSearchChange={(v) => {
             table.setSearch(v);

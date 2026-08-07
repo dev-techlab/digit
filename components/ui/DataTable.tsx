@@ -151,7 +151,9 @@ export function DataTable<T>({
               const val = e.target.value;
               const numVal = val === 'All' ? 'All' : Number(val);
               setInternalLimit(numVal);
-              if (onPageSizeChange && numVal !== 'All') onPageSizeChange(numVal);
+              if (onPageSizeChange) {
+                onPageSizeChange(numVal === 'All' ? 100 : numVal);
+              }
               handlePageChange(1);
             }}
             className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-700 outline-none focus:border-blue-400"

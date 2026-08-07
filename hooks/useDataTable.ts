@@ -14,6 +14,8 @@ interface DataTableResult<T> {
   setPage: React.Dispatch<React.SetStateAction<number>>;
   search: string;
   setSearch: React.Dispatch<React.SetStateAction<string>>;
+  pageSize: number;
+  setPageSize: React.Dispatch<React.SetStateAction<number>>;
   loading: boolean;
   load: (p?: number, s?: string, extraParams?: Record<string, string>) => Promise<void>;
   reload: () => Promise<void>;
@@ -22,16 +24,17 @@ interface DataTableResult<T> {
 export function useDataTable<T>(
   endpoint: string,
   dataKey: string,
-  defaultPageSize: number = 20,
+  defaultPageSize: number = 10,
   initialExtraParams: Record<string, string> = {}
 ): DataTableResult<T> {
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(defaultPageSize);
   const [search, setSearch] = useState('');
   const [extraParams, setExtraParams] = useState<Record<string, string>>(initialExtraParams);
 
   const q = new URLSearchParams({
     page: String(page),
-    pageSize: String(defaultPageSize),
+    pageSize: String(pageSize),
   });
   if (search) q.append('search', search);
   Object.entries(extraParams).forEach(([k, v]) => {
@@ -78,6 +81,8 @@ export function useDataTable<T>(
     total: (data?.total || 0) as number,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     search,
     setSearch,
     loading: isLoading || (!data && !error),
