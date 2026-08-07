@@ -55,7 +55,7 @@ export function AgentsScreen() {
       password: '',
       nickname: '',
       email: '',
-      commissionPer: '0.00',
+      commissionPer: '30.00',
       inviteCode: `MC${randomChars}`,
       onlineBalance: '0',
       remark: '',
@@ -73,6 +73,7 @@ export function AgentsScreen() {
   const editModal = useActionModal<AgentRow>();
   const [editForm, setEditForm] = useState({
     username: '',
+    password: '',
     nickname: '',
     email: '',
     commissionPer: '0',
@@ -173,6 +174,7 @@ export function AgentsScreen() {
       const payload: any = {
         id: editModal.item.id,
         username: editForm.username,
+        password: editForm.password,
         nickname: editForm.nickname,
         email: editForm.email,
         commissionPer: editForm.commissionPer,
@@ -399,6 +401,7 @@ export function AgentsScreen() {
                     onClick={() => {
                       setEditForm({
                         username: r.username,
+                        password: '', // leave empty unless changing
                         nickname: r.nickname ?? '',
                         email: r.email ?? '',
                         commissionPer: r.commissionPer,
@@ -579,6 +582,13 @@ export function AgentsScreen() {
               <TextInput
                 value={editForm.username}
                 onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+              />
+            </Field>
+            <Field label="Password">
+              <TextInput
+                value={editForm.password}
+                onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                placeholder="Leave blank to keep current"
               />
             </Field>
             <Field label="Nickname">

@@ -68,6 +68,7 @@ export async function GET(req: Request) {
         phone_bound: true,
         kyc_status: true,
         status: true,
+        commission_per: true,
         invite_code: true,
         created_at: true,
         wallets: {
@@ -93,6 +94,7 @@ export async function GET(req: Request) {
     phoneBound: r.phone_bound,
     kycStatus: r.kyc_status,
     status: r.status,
+    commissionPer: r.commission_per,
     inviteCode: r.invite_code,
     createdAt: r.created_at,
     goldCoin: r.wallets?.gold_coin,
@@ -109,6 +111,7 @@ const putSchema = z.object({
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().optional().or(z.literal('')),
   password: z.string().min(6).optional().or(z.literal('')),
+  commissionPer: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
   username: z.string().min(4).optional(),
   kycStatus: z.enum(['unverified', 'pending', 'verified', 'rejected']).optional(),
   inviteCode: z.string().optional(),
@@ -135,6 +138,8 @@ export async function PUT(req: Request) {
     if (data.username !== undefined) set.username = data.username.trim();
     if (data.kycStatus !== undefined) set.kyc_status = data.kycStatus;
     if (data.inviteCode !== undefined) set.invite_code = data.inviteCode.trim();
+    if (data.commissionPer !== undefined && Number.isFinite(data.commissionPer))
+      set.commission_per = String(data.commissionPer);
     if (data.password) {
       set.password_hash = await bcrypt.hash(data.password, 10);
     }
@@ -193,6 +198,7 @@ const postSchema = z.object({
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().optional().or(z.literal('')),
   kycStatus: z.enum(['unverified', 'pending', 'verified', 'rejected']).optional(),
+  commissionPer: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
   inviteCode: z.string().optional(),
   goldCoin: z.number().min(0).optional(),
   onlineSc: z.number().min(0).optional(),
@@ -219,6 +225,9 @@ export async function POST(req: Request) {
         email: data.email?.trim() || null,
         phone: data.phone?.trim() || null,
         kyc_status: data.kycStatus || 'unverified',
+        commission_per: data.commissionPer !== undefined && Number.isFinite(data.commissionPer)
+          ? String(data.commissionPer)
+          : '30',
         invite_code,
         wallets: {
           create: {

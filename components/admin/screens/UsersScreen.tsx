@@ -17,6 +17,7 @@ interface UserRow {
   kycStatus: string;
   status: 'active' | 'blocked';
   inviteCode: string;
+  commissionPer: string;
   createdAt: string;
   goldCoin: string | null;
   onlineSc: string | null;
@@ -34,6 +35,7 @@ const emptyForm = () => {
     email: '',
     phone: '',
     kycStatus: 'unverified',
+    commissionPer: '30.00',
     inviteCode: randomChars,
     goldCoin: '',
     onlineSc: '',
@@ -54,10 +56,12 @@ export function UsersScreen() {
   const editModal = useActionModal<UserRow>();
   const [editForm, setEditForm] = useState({
     username: '',
+    password: '',
     nickname: '',
     email: '',
     phone: '',
     kycStatus: '',
+    commissionPer: '0',
     inviteCode: '',
     goldCoin: '',
     onlineSc: '',
@@ -76,6 +80,7 @@ export function UsersScreen() {
         email: form.email,
         phone: form.phone,
         kycStatus: form.kycStatus,
+        commissionPer: form.commissionPer,
         inviteCode: form.inviteCode,
       };
       
@@ -105,10 +110,12 @@ export function UsersScreen() {
       const payload: any = {
         id: editModal.item.id,
         username: editForm.username,
+        password: editForm.password,
         nickname: editForm.nickname,
         email: editForm.email,
         phone: editForm.phone,
         kycStatus: editForm.kycStatus,
+        commissionPer: editForm.commissionPer,
         inviteCode: editForm.inviteCode,
       };
       
@@ -243,6 +250,11 @@ export function UsersScreen() {
               ),
             },
             {
+              header: 'Commission %',
+              accessorKey: 'commissionPer',
+              cell: (r) => `${r.commissionPer ?? 30}%`,
+            },
+            {
               header: 'Invite Code',
               accessorKey: 'inviteCode',
               cell: (r) => <span className="font-mono text-xs text-slate-500">{r.inviteCode}</span>,
@@ -280,10 +292,12 @@ export function UsersScreen() {
                     onClick={() => {
                       setEditForm({
                         username: r.username,
+                        password: '', // leave empty unless changing
                         nickname: r.nickname ?? '',
                         email: r.email ?? '',
                         phone: r.phone ?? '',
                         kycStatus: r.kycStatus,
+                        commissionPer: r.commissionPer ?? '30',
                         inviteCode: r.inviteCode,
                         goldCoin: r.goldCoin ? String(r.goldCoin) : '0',
                         onlineSc: r.onlineSc ? String(r.onlineSc) : '0',
@@ -379,6 +393,19 @@ export function UsersScreen() {
                 <option value="rejected">Rejected</option>
               </Select>
             </Field>
+            <Field label="Commission %">
+              <div className="relative">
+                <TextInput
+                  type="number"
+                  value={form.commissionPer}
+                  onChange={(e) => setForm({ ...form, commissionPer: e.target.value })}
+                  className="pr-8"
+                />
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                  <span className="text-sm text-slate-400">%</span>
+                </div>
+              </div>
+            </Field>
             <Field label="Invite Code">
               <TextInput
                 value={form.inviteCode}
@@ -466,6 +493,13 @@ export function UsersScreen() {
                 onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
               />
             </Field>
+            <Field label="Password">
+              <TextInput
+                value={editForm.password}
+                onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                placeholder="Leave blank to keep current"
+              />
+            </Field>
             <Field label="Nickname">
               <TextInput
                 value={editForm.nickname}
@@ -494,6 +528,19 @@ export function UsersScreen() {
                 <option value="verified">Verified</option>
                 <option value="rejected">Rejected</option>
               </Select>
+            </Field>
+            <Field label="Commission %">
+              <div className="relative">
+                <TextInput
+                  type="number"
+                  value={editForm.commissionPer}
+                  onChange={(e) => setEditForm({ ...editForm, commissionPer: e.target.value })}
+                  className="pr-8"
+                />
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                  <span className="text-sm text-slate-400">%</span>
+                </div>
+              </div>
             </Field>
             <Field label="Invite Code">
               <TextInput
