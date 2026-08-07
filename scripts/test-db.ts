@@ -20,7 +20,7 @@ async function step(name: string, fn: () => Promise<void>) {
   try {
     await fn();
     passed++;
-    console.log(`  ✓ ${name}`);
+    // console.log(`  ✓ ${name}`);
   } catch (err) {
     failed++;
     failures.push(name);
@@ -41,7 +41,7 @@ async function main() {
   let platformId = '';
   let memberId = '';
 
-  console.log('\n═ game_platforms ═');
+  // console.log('\n═ game_platforms ═');
   await step('CREATE / READ', async () => {
     const row = await db.game_platforms.create({
       data: { name: U('platform'), slug: U('platform'), sort: 999 }
@@ -65,7 +65,7 @@ async function main() {
     expect(threw, 'duplicate name must throw');
   });
 
-  console.log('\n═ agents (store + sale) ═');
+  // console.log('\n═ agents (store + sale) ═');
   const hash = await bcrypt.hash('test123', 4);
   await step('CREATE store / READ', async () => {
     const row = await db.agents.create({
@@ -109,7 +109,7 @@ async function main() {
     expect(threw, 'duplicate username must throw');
   });
 
-  console.log('\n═ agent_sessions ═');
+  // console.log('\n═ agent_sessions ═');
   await step('CREATE / READ / DELETE', async () => {
     const row = await db.agent_sessions.create({
       data: { agent_id: storeId, token: U('token'), expires_at: new Date(Date.now() + 864e5) }
@@ -119,7 +119,7 @@ async function main() {
     await db.agent_sessions.delete({ where: { id: row.id } });
   });
 
-  console.log('\n═ store_settings ═');
+  // console.log('\n═ store_settings ═');
   await step('CREATE / UPDATE (upsert)', async () => {
     await db.store_settings.create({ data: { store_id: storeId, store_name: 'Test Store' } });
     await db.store_settings.update({ where: { store_id: storeId }, data: { store_name: 'Renamed' } });
@@ -127,7 +127,7 @@ async function main() {
     expect(read?.store_name === 'Renamed', 'upsert works');
   });
 
-  console.log('\n═ store_platform_accounts ═');
+  // console.log('\n═ store_platform_accounts ═');
   await step('CREATE / UPDATE / UNIQUE(store,platform)', async () => {
     await db.store_platform_accounts.create({
       data: {
@@ -153,7 +153,7 @@ async function main() {
     expect(threw, 'duplicate (store,platform) must throw');
   });
 
-  console.log('\n═ store_administrators ═');
+  // console.log('\n═ store_administrators ═');
   await step('CREATE / UPDATE status', async () => {
     const row = await db.store_administrators.create({
       data: { store_id: storeId, username: U('admin'), password_hash: hash }
@@ -163,7 +163,7 @@ async function main() {
     expect(read?.status === 'disabled', 'status updated');
   });
 
-  console.log('\n═ kiosks ═');
+  // console.log('\n═ kiosks ═');
   await step('CREATE / READ', async () => {
     const row = await db.kiosks.create({
       data: { store_id: storeId, name: 'Front Desk', code: U('K') }
@@ -172,7 +172,7 @@ async function main() {
     expect(read?.name === 'Front Desk', 'kiosk read back');
   });
 
-  console.log('\n═ members ═');
+  // console.log('\n═ members ═');
   await step('CREATE / UPDATE / UNIQUE(store,username)', async () => {
     const row = await db.users.create({
       data: {
@@ -197,7 +197,7 @@ async function main() {
     expect(threw, 'duplicate (store,username) must throw');
   });
 
-  console.log('\n═ member_logins ═');
+  // console.log('\n═ member_logins ═');
   await step('CREATE / READ', async () => {
     await db.member_logins.create({
       data: {
@@ -210,7 +210,7 @@ async function main() {
     expect(rows.length === 1 && rows[0].device?.includes('Chrome'), 'login recorded');
   });
 
-  console.log('\n═ member_platform_accounts ═');
+  // console.log('\n═ member_platform_accounts ═');
   await step('CREATE / READ', async () => {
     await db.member_platform_accounts.create({
       data: {
@@ -223,7 +223,7 @@ async function main() {
     expect(rows.length === 1, 'binding created');
   });
 
-  console.log('\n═ member_transactions ═');
+  // console.log('\n═ member_transactions ═');
   await step('CREATE / aggregate READ', async () => {
     await db.transactions.createMany({
       data: [
@@ -257,7 +257,7 @@ async function main() {
     expect(totalIn === 100 && totalOut === 40, 'ledger aggregates correct (in 100 / out 40)');
   });
 
-  console.log('\n═ promotions ═');
+  // console.log('\n═ promotions ═');
   await step('CREATE (jsonb days) / UPDATE / DELETE', async () => {
     const row = await db.promotions.create({
       data: {
@@ -279,7 +279,7 @@ async function main() {
     expect(gone.length === 0, 'promotion deleted');
   });
 
-  console.log('\n═ cs_configs ═');
+  // console.log('\n═ cs_configs ═');
   await step('CREATE / upsert UPDATE', async () => {
     await db.cs_configs.create({ data: { store_id: storeId, js_url: 'https://example.com/w.js' } });
     await db.cs_configs.update({ where: { store_id: storeId }, data: { enabled: false } });
@@ -287,7 +287,7 @@ async function main() {
     expect(read?.enabled === false, 'cs config upserted');
   });
 
-  console.log('\n═ store_terms ═');
+  // console.log('\n═ store_terms ═');
   await step('CREATE en+es / UNIQUE(store,locale)', async () => {
     await db.store_terms.createMany({
       data: [
@@ -304,7 +304,7 @@ async function main() {
     expect(threw, 'duplicate (store,locale) must throw');
   });
 
-  console.log('\n═ agent_notices ═');
+  // console.log('\n═ agent_notices ═');
   await step('CREATE broadcast + store-scoped / DELETE', async () => {
     const bcast = await db.agent_notices.create({
       data: { title: U('broadcast'), notice_level: 'High' }
@@ -321,7 +321,7 @@ async function main() {
     await db.agent_notices.delete({ where: { id: bcast.id } });
   });
 
-  console.log('\n═ posters ═');
+  // console.log('\n═ posters ═');
   await step('CREATE / DELETE', async () => {
     const row = await db.posters.create({
       data: { category: 'card', title: U('poster'), image_url: '/test.png', sort: 99 }
@@ -331,7 +331,7 @@ async function main() {
     expect(gone.length === 0, 'poster deleted');
   });
 
-  console.log('\n═ FK cascade ═');
+  // console.log('\n═ FK cascade ═');
   await step('deleting member cascades logins + bindings', async () => {
     await db.users.delete({ where: { id: memberId } });
     const logins = await db.member_logins.findMany({ where: { member_id: memberId } });
@@ -347,13 +347,13 @@ async function main() {
 
   await db.game_platforms.delete({ where: { id: platformId } });
 
-  console.log(`\n${'─'.repeat(50)}`);
-  console.log(`  ${passed} passed, ${failed} failed`);
+  // console.log(`\n${'─'.repeat(50)}`);
+  // console.log(`  ${passed} passed, ${failed} failed`);
   if (failures.length) {
-    console.log(`  Failed: ${failures.join(', ')}`);
+    // console.log(`  Failed: ${failures.join(', ')}`);
     process.exit(1);
   }
-  console.log('  All database models verified ✔');
+  // console.log('  All database models verified ✔');
   process.exit(0);
 }
 

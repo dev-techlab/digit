@@ -25,18 +25,15 @@ const samples: MailPayload[] = [
 ];
 
 async function main() {
-  console.log("SMTP configured:", isSmtpConfigured(), "(false => jsonTransport, nothing sent)\n");
+  // console.log("SMTP configured:", isSmtpConfigured(), "(false => jsonTransport, nothing sent)\n");
   for (const s of samples) {
     const { subject } = renderEmail(s);
     const res = await sendEmailNow(s);
-    console.log(
-      `? ${s.template.padEnd(13)} -> messageId=${res.messageId ?? "(none)"}  subject="${subject}"`
-    );
     // Rate limit for testing services like MailTrap (max 1 or 2 per second)
     await new Promise((r) => setTimeout(r, 1500));
   }
   writeFileSync("/tmp/mail-preview.html", renderEmail(samples[0]).html);
-  console.log("\nWrote OTP HTML preview to /tmp/mail-preview.html");
+  // console.log("\nWrote OTP HTML preview to /tmp/mail-preview.html");
 }
 
 main()

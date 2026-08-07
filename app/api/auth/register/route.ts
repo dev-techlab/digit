@@ -28,14 +28,6 @@ const registerSchema = z
       return !!data.email || !!data.phone || (!!data.username && !!data.password);
     },
     { message: 'Email, phone, or username/password is required', path: ['root'] }
-  )
-  .refine(
-    (data) => {
-      const isQuick = !data.email && !data.phone && !data.username && !data.password && !data.inviteCode;
-      if (isQuick) return true;
-      return !!data.inviteCode;
-    },
-    { message: 'Invite code is required for registration', path: ['inviteCode'] }
   );
 
 /**
@@ -109,10 +101,10 @@ export async function POST(req: Request) {
     res.cookies.set(USER_SESSION_COOKIE, token, sessionCookieOptions(USER_SESSION_TTL_S));
     return res;
   } catch (err) {
-    if (err instanceof UserConflictError) {
-      return NextResponse.json({ error: err.message }, { status: 409 });
+    if (err && (err as any).name === 'UserConflictError') {
+      return NextResponse.json({ error: (err as any).message }, { status: 409 });
     }
     console.error('POST /api/auth/register', err);
-    return NextResponse.json({ error: 'Registration failed' }, { status: 500 });
+    return NextResponse.json({ error: (err as any)?.message || 'Registration failed' }, { status: 500 });
   }
 }

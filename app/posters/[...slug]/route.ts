@@ -26,7 +26,7 @@ export async function GET(
     if (!missingImages.includes(missingPath)) {
       missingImages.push(missingPath);
       await fs.writeFile(logFile, JSON.stringify(missingImages, null, 2));
-      console.log(`[Poster Fallback] Logged missing poster: ${missingPath}`);
+      // console.log(`[Poster Fallback] Logged missing poster: ${missingPath}`);
     }
   } catch (e) {
     console.error('Failed to log missing poster:', e);

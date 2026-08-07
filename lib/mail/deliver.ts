@@ -16,7 +16,7 @@ export async function deliver(payload: MailPayload): Promise<{ messageId?: strin
 
   if (!isSmtpConfigured()) {
     // Dev fallback (jsonTransport): nothing was actually sent.
-    console.log(`[mail] SMTP not configured — logged instead of sent → ${to} :: ${subject}`);
+    // console.log(`[mail] SMTP not configured — logged instead of sent → ${to} :: ${subject}`);
   }
   return { messageId: (info as { messageId?: string }).messageId };
 }

@@ -8,12 +8,11 @@ export async function GET(
   { params }: { params: { slug: string[] } }
 ) {
   const missingPath = `/img/p/${params.slug.join('/')}`;
-  
   // 1. Log the missing image
   try {
     const logFile = path.join(process.cwd(), 'missing-images.json');
     let missingImages: string[] = [];
-    
+
     // Read existing
     try {
       const existing = await fs.readFile(logFile, 'utf8');
@@ -21,12 +20,12 @@ export async function GET(
     } catch (e) {
       // File doesn't exist or is invalid JSON
     }
-    
+
     // Add if not already present
     if (!missingImages.includes(missingPath)) {
       missingImages.push(missingPath);
       await fs.writeFile(logFile, JSON.stringify(missingImages, null, 2));
-      console.log(`[Image Fallback] Logged missing image: ${missingPath}`);
+      // console.log(`[Image Fallback] Logged missing image: ${missingPath}`);
     }
   } catch (e) {
     console.error('Failed to log missing image:', e);
@@ -36,7 +35,7 @@ export async function GET(
   try {
     const fallbackPath = path.join(process.cwd(), 'public', 'logo.png');
     const fallbackBuffer = await fs.readFile(fallbackPath);
-    
+
     return new NextResponse(fallbackBuffer, {
       status: 200,
       headers: {

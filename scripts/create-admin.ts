@@ -52,8 +52,8 @@ async function main() {
   });
 
   const roles = await rolesForAdmin(id);
-  console.log(`${created ? '✓ Created' : '• Updated'} admin ${args.email} (${id})`);
-  console.log(`  roles: ${roles.length ? roles.join(', ') : '(none)'}`);
+  // console.log(`${created ? '✓ Created' : '• Updated'} admin ${args.email} (${id})`);
+  // console.log(`  roles: ${roles.length ? roles.join(', ') : '(none)'}`);
   process.exit(0);
 }
 

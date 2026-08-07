@@ -26,9 +26,9 @@ export const JOBS: JobDef[] = [
     cron: '0 */6 * * *',
     handler: async () => {
       const result = await syncGamePlatforms();
-      console.log(
-        `[providers.sync] ${result.updated} updated, ${result.inserted} inserted, ${result.total} total`
-      );
+      // console.log(
+      //   `[providers.sync] ${result.updated} updated, ${result.inserted} inserted, ${result.total} total`
+      // );
     },
   },
   {
@@ -116,9 +116,9 @@ export const JOBS: JobDef[] = [
       await deliver(job.data as MailPayload);
     },
   },
-  { name: 'image.process', handler: async () => {} },
-  { name: 'order.reconcile', handler: async () => {} },
-  { name: 'kyc.review', handler: async () => {} },
+  { name: 'image.process', handler: async () => { } },
+  { name: 'order.reconcile', handler: async () => { } },
+  { name: 'kyc.review', handler: async () => { } },
 ];
 
 /** Enqueue an on-demand job from an API route/server action. */
@@ -147,7 +147,7 @@ export async function startWorker() {
         }
       }
     });
-    console.log(`[pg-boss] registered ${job.name}${job.cron ? ` (${job.cron})` : ''}`);
+    // console.log(`[pg-boss] registered ${job.name}${job.cron ? ` (${job.cron})` : ''}`);
   }
-  console.log(`[pg-boss] worker ready — ${JOBS.length} jobs`);
+  // console.log(`[pg-boss] worker ready — ${JOBS.length} jobs`);
 }

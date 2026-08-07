@@ -35,7 +35,7 @@ const slugify = (name: string) =>
 async function readSnapshot(type: 'SC' | 'GC'): Promise<SnapshotProvider[]> {
   const file = path.join(process.cwd(), 'data', `providers.${type.toLowerCase()}.json`);
   const list = JSON.parse(await fs.readFile(file, 'utf8')) as SnapshotProvider[];
-  console.log(`✓ snapshot ${file}: ${list.length} ${type} providers`);
+  // console.log(`✓ snapshot ${file}: ${list.length} ${type} providers`);
   return list;
 }
 
@@ -80,9 +80,6 @@ async function main() {
   }
 
   const total = await db.game_platforms.count();
-  console.log(
-    `✓ seeded from snapshots: ${updated} updated, ${inserted} inserted, ${total} total`
-  );
   process.exit(0);
 }
 

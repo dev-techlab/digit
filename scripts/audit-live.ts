@@ -29,20 +29,20 @@ let fail = 0;
 function check(name: string, ok: boolean, detail = '') {
   if (ok) pass++;
   else fail++;
-  console.log(`${ok ? '✓' : '✗ FAIL'}  ${name}${detail ? `  — ${detail}` : ''}`);
+  // console.log(`${ok ? '✓' : '✗ FAIL'}  ${name}${detail ? `  — ${detail}` : ''}`);
 }
 
 async function main() {
   const admins = await db.admins.findMany();
   const roles = await db.roles.findMany();
   const perms = await db.permissions.findMany();
-  console.log(`\nseed: admins=${admins.length} roles=${roles.length} permissions=${perms.length}`);
+  // console.log(`\nseed: admins=${admins.length} roles=${roles.length} permissions=${perms.length}`);
   if (admins.length === 0) {
-    console.log('DB not seeded — run `pnpm db:seed` first.');
+    // console.log('DB not seeded — run `pnpm db:seed` first.');
     process.exit(2);
   }
 
-  console.log('\n— Admin login —');
+  // console.log('\n— Admin login —');
   const superId = await verifyAdminLogin('admin@octanlink.com', 'admin1234');
   check('super admin login (correct pw)', !!superId);
   check(
@@ -54,12 +54,12 @@ async function main() {
     (await verifyAdminLogin('ghost@x.com', 'admin1234')) === null
   );
 
-  console.log('\n— Super admin authority (implicit *) —');
+  // console.log('\n— Super admin authority (implicit *) —');
   check('isSuperAdmin(super)', await isSuperAdmin(superId!));
   check('super can admins.manage', await can(superId!, 'admins.manage'));
   check('super can settings.manage', await can(superId!, 'settings.manage'));
 
-  console.log('\n— Role scoping (finance / support / admin) —');
+  // console.log('\n— Role scoping (finance / support / admin) —');
   const finId = await verifyAdminLogin('finance@octanlink.com', 'admin1234');
   const supId = await verifyAdminLogin('support@octanlink.com', 'admin1234');
   const opsId = await verifyAdminLogin('ops@octanlink.com', 'admin1234');
@@ -75,7 +75,7 @@ async function main() {
     !(await can(opsId!, 'admins.manage'))
   );
 
-  console.log('\n— Deny-wins —');
+  // console.log('\n— Deny-wins —');
   const ordersRead = perms.find((p) => p.key === 'orders.read')!;
   await db.admin_permissions.upsert({
     where: {
@@ -89,7 +89,7 @@ async function main() {
     where: { admin_id: finId!, permission_id: ordersRead.id }
   });
 
-  console.log('\n— Suspended-admin fix (loophole must be CLOSED) —');
+  // console.log('\n— Suspended-admin fix (loophole must be CLOSED) —');
   const token = 'audit-' + randomUUID();
   await db.admin_sessions.create({
     data: {
@@ -110,16 +110,12 @@ async function main() {
     await db.admin_sessions.deleteMany({ where: { token } });
   }
 
-  console.log('\n— User side —');
+  // console.log('\n— User side —');
   const demo = await db.users.findFirst({
     where: { username: 'player_2481' }
   });
   check('demo user seeded (player_2481)', !!demo);
-  console.log('  NOTE: no user login service/route exists — user auth is the frontend mock.');
 
-  console.log(
-    `\n${fail === 0 ? '✓ all' : `✗ ${fail} of ${pass + fail}`} assertions ${fail === 0 ? 'passed' : 'FAILED'} (${pass} passed).`
-  );
   process.exit(fail === 0 ? 0 : 1);
 }
 

@@ -30,7 +30,7 @@ async function main() {
       ORDER BY t.created_at DESC
       LIMIT 200
     `, p1, p2, p3);
-    console.log('logsRaw success');
+    // console.log('logsRaw success');
   } catch(e) {
     console.error('logsRaw error', e);
   }

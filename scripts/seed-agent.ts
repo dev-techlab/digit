@@ -69,7 +69,7 @@ async function main() {
   }
   const platforms = await db.game_platforms.findMany();
   const byName = new Map(platforms.map((p) => [p.name, p]));
-  console.log(`✓ ${platforms.length} game platforms`);
+  // console.log(`✓ ${platforms.length} game platforms`);
 
   const passwordHash = await bcrypt.hash('deluxe123', 10);
   let store = await db.agents.findFirst({ where: { username: 'Deluxe001' } });
@@ -88,7 +88,7 @@ async function main() {
     });
     store = await db.agents.update({ where: { id: store.id }, data: { store_id: store.id } });
   }
-  console.log(`✓ store agent Deluxe001 (${store.id})`);
+  // console.log(`✓ store agent Deluxe001 (${store.id})`);
 
   await db.store_settings.create({
     data: { store_id: store.id, store_name: '', daily_max_redeem: '5000', daily_max_withdraw: '500' }
@@ -120,7 +120,7 @@ async function main() {
       }
     }).catch(() => {});
   }
-  console.log(`✓ ${enabledAccounts.length} enabled platform accounts`);
+  // console.log(`✓ ${enabledAccounts.length} enabled platform accounts`);
 
   const memberNames = [
     '5534453', '6236932', '9152778', '3413558', '8915107', '4594254',
@@ -150,7 +150,7 @@ async function main() {
     });
     memberIds.push(m.id);
   }
-  console.log(`✓ ${memberIds.length} members`);
+  // console.log(`✓ ${memberIds.length} members`);
 
   const txCount = await db.transactions.count();
   if (txCount === 0) {
@@ -178,9 +178,9 @@ async function main() {
       }
     }
     await db.transactions.createMany({ data: rows as any });
-    console.log(`✓ ${rows.length} member transactions`);
+    // console.log(`✓ ${rows.length} member transactions`);
   } else {
-    console.log(`✓ member transactions already present (${txCount})`);
+    // console.log(`✓ member transactions already present (${txCount})`);
   }
 
   const promoExists = await db.promotions.findFirst({ where: { store_id: store.id } });
@@ -230,8 +230,8 @@ async function main() {
     });
   }
 
-  console.log('✓ promotion, CS config, terms, posters');
-  console.log('\nDone. Login: Deluxe001 / deluxe123 at /agent/login (agent panel).');
+  // console.log('✓ promotion, CS config, terms, posters');
+  // console.log('\nDone. Login: Deluxe001 / deluxe123 at /agent/login (agent panel).');
   process.exit(0);
 }
 

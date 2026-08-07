@@ -15,9 +15,9 @@ import path from 'path';
   
   await page.screenshot({ path: path.join(process.cwd(), 'admin_login_error.png') });
   
-  console.log('Current URL:', page.url());
+  // console.log('Current URL:', page.url());
   const errorText = await page.locator('form').innerText();
-  console.log('Form Text:', errorText);
+  // console.log('Form Text:', errorText);
   
   await browser.close();
 })();

@@ -131,9 +131,6 @@ export function RegisterModal() {
     if (form.password !== form.confirmPassword) {
       newFieldErrors.confirmPassword = 'Passwords do not match.';
     }
-    if (!form.inviteCode.trim()) {
-      newFieldErrors.inviteCode = 'Invite Code is required.';
-    }
     
     if (Object.keys(newFieldErrors).length > 0) {
       setFieldErrors(newFieldErrors);
@@ -298,7 +295,7 @@ export function RegisterModal() {
           />
           <IconInput
             icon={<Gift size={16} />}
-            label="Invite Code (Required)"
+            label="Invite Code (Optional)"
             placeholder="Enter invite code"
             value={form.inviteCode}
             onChange={(e) => {

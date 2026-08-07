@@ -75,7 +75,7 @@ async function seedProviders() {
         });
       }
     }
-    console.log(`  providers[${file}]: ${rows.length}`);
+    // console.log(`  providers[${file}]: ${rows.length}`);
   }
 }
 
@@ -227,7 +227,7 @@ async function seedDemoUserAndData() {
     });
   }
 
-  console.log('  demo user + wallet/orders/transactions/bonuses/referrals/redemptions');
+  // console.log('  demo user + wallet/orders/transactions/bonuses/referrals/redemptions');
 }
 
 async function seedProfileTasks() {
@@ -242,12 +242,12 @@ async function seedProfileTasks() {
     })),
     skipDuplicates: true
   });
-  console.log(`  profile_tasks: ${PROFILE_TASKS.length}`);
+  // console.log(`  profile_tasks: ${PROFILE_TASKS.length}`);
 }
 
 async function seedHelp() {
   if (await db.help_sections.findFirst()) {
-    console.log('  help_sections/items/steps: already seeded, skipped');
+    // console.log('  help_sections/items/steps: already seeded, skipped');
     return;
   }
   for (const [tab, sections] of Object.entries(HELP_CONTENT)) {
@@ -284,7 +284,7 @@ async function seedHelp() {
       }
     }
   }
-  console.log('  help_sections/items/steps');
+  // console.log('  help_sections/items/steps');
 }
 
 async function seedContentPages() {
@@ -319,12 +319,12 @@ async function seedContentPages() {
     data: pages,
     skipDuplicates: true
   });
-  console.log(`  content_pages: ${pages.length}`);
+  // console.log(`  content_pages: ${pages.length}`);
 }
 
 async function seedBanners() {
   if (await db.banners.findFirst()) {
-    console.log('  banners: already seeded, skipped');
+    // console.log('  banners: already seeded, skipped');
     return;
   }
   const rows = [
@@ -333,7 +333,7 @@ async function seedBanners() {
     { image_url: '/banners/vip-loyalty.png', sort: 2 },
   ];
   await db.banners.createMany({ data: rows });
-  console.log(`  banners: ${rows.length}`);
+  // console.log(`  banners: ${rows.length}`);
 }
 
 async function seedSettings() {
@@ -367,7 +367,7 @@ async function seedSettings() {
   
   await db.site_settings.createMany({ data: internalRows, skipDuplicates: true });
 
-  console.log(`  site_settings: ${rows.length + internalRows.length}`);
+  // console.log(`  site_settings: ${rows.length + internalRows.length}`);
 }
 
 async function seedSocialLinks() {
@@ -382,7 +382,7 @@ async function seedSocialLinks() {
     { platform: 'email', label: 'Email', url: 'mailto:support@octanlink.mobi', sort: 7 },
   ];
   await db.social_links.createMany({ data: rows as any, skipDuplicates: true });
-  console.log(`  social_links: ${rows.length}`);
+  // console.log(`  social_links: ${rows.length}`);
 }
 
 async function seedRbac() {
@@ -533,14 +533,14 @@ async function seedRbac() {
       roleSlugs: a.roles,
       resetPasswordIfExists: rotate,
     });
-    console.log(`  admin: ${a.email} → [${a.roles.join(', ')}]`);
+    // console.log(`  admin: ${a.email} → [${a.roles.join(', ')}]`);
   }
 
-  console.log(`  permissions: ${allKeys.length}, roles: ${roleDefs.length}`);
+  // console.log(`  permissions: ${allKeys.length}, roles: ${roleDefs.length}`);
 }
 
 async function main() {
-  console.log('Seeding database…');
+  // console.log('Seeding database…');
   await seedProviders();
   await seedDemoUserAndData();
   await seedProfileTasks();
@@ -550,7 +550,7 @@ async function main() {
   await seedSettings();
   await seedSocialLinks();
   await seedRbac();
-  console.log('✓ Seed complete.');
+  // console.log('✓ Seed complete.');
   process.exit(0);
 }
 

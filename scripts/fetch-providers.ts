@@ -17,7 +17,7 @@ async function fetchType(endpoint: string, providerType: 'SC' | 'GC') {
   const outFile = path.join(OUT_DIR, `providers.${providerType.toLowerCase()}.json`);
   await fs.mkdir(OUT_DIR, { recursive: true });
   await fs.writeFile(outFile, JSON.stringify(json.data ?? [], null, 2));
-  console.log(`Wrote ${outFile} (${json.data?.length ?? 0} providers)`);
+  // console.log(`Wrote ${outFile} (${json.data?.length ?? 0} providers)`);
 }
 
 async function main() {

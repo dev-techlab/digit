@@ -20,7 +20,7 @@ async function capture(page: any, name: string, vpName: string, vp: { width: num
   await sleep(1000); // let animations/responsive classes settle
   const filePath = path.join(ARTIFACTS_DIR, `${name}_${vpName}.png`);
   await page.screenshot({ path: filePath, fullPage: true });
-  console.log(`Saved ${filePath}`);
+  // console.log(`Saved ${filePath}`);
 }
 
 async function main() {
@@ -28,7 +28,7 @@ async function main() {
 
   try {
     // 1. ADMIN
-    console.log('Testing Admin...');
+    // console.log('Testing Admin...');
     let context = await browser.newContext();
     let page = await context.newPage();
     await page.goto(`${BASE_URL}/admin/login`);
@@ -50,7 +50,7 @@ async function main() {
     await context.close();
 
     // 2. AGENT
-    console.log('Testing Agent...');
+    // console.log('Testing Agent...');
     context = await browser.newContext();
     page = await context.newPage();
     await page.goto(`${BASE_URL}/agent/login`);
@@ -78,7 +78,7 @@ async function main() {
     await context.close();
 
     // 3. CUSTOMER (Frontend Mock)
-    console.log('Testing Customer...');
+    // console.log('Testing Customer...');
     context = await browser.newContext();
     page = await context.newPage();
     await page.goto(`${BASE_URL}/`);
@@ -88,7 +88,7 @@ async function main() {
     }
     await context.close();
     
-    console.log('All screenshots captured successfully!');
+    // console.log('All screenshots captured successfully!');
   } catch (err) {
     console.error('Error during capture:', err);
   } finally {
