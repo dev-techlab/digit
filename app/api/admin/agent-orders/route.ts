@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { db } from '@/lib/db';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission, PermissionError } from '@/lib/rbac-core';
 import { clientIp, logAdminAction } from '@/lib/audit-log';
-import { z } from 'zod';
 
 const actionSchema = z.object({
   id: z.string().min(1, 'id required'),
-  action: z.enum(['accept', 'reject'], { message: "Invalid input" }),
-  remark: z.string().trim().nullable().optional()
+  action: z.enum(['accept', 'reject'], { message: "Invalid action" }),
+  remark: z.string().optional(),
 });
 
 async function authorize(
@@ -43,11 +43,18 @@ export async function GET(req: Request) {
   const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
   const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('pageSize')) || 20));
   const search = url.searchParams.get('search')?.trim();
-  const statusFilter = url.searchParams.get('status') as
-    'pending' | 'completed' | 'failed' | 'cancelled' | null;
+  const statusFilter = url.searchParams.get('status');
+  const typeFilter = url.searchParams.get('type');
 
-  const where: any = { type: 'withdraw' };
+  const where: any = {};
+  
   if (statusFilter) where.status = statusFilter;
+  if (typeFilter) {
+    where.type = typeFilter;
+  } else {
+    // Both deposits and withdrawals
+    where.type = { in: ['deposit', 'withdraw'] };
+  }
 
   if (search) {
     where.OR = [
@@ -61,6 +68,7 @@ export async function GET(req: Request) {
       where,
       select: {
         id: true,
+        type: true,
         agent_id: true,
         method: true,
         amount: true,
@@ -86,6 +94,7 @@ export async function GET(req: Request) {
 
   const formattedRows = rows.map(r => ({
     id: r.id,
+    type: r.type,
     agentId: r.agent_id,
     username: r.agents_agent_transactions_agent_idToagents?.username,
     method: r.method,
@@ -101,7 +110,7 @@ export async function GET(req: Request) {
     createdAt: r.created_at,
   }));
 
-  return NextResponse.json({ withdrawals: formattedRows, total: count });
+  return NextResponse.json({ orders: formattedRows, total: count });
 }
 
 export async function POST(req: Request) {
@@ -120,34 +129,76 @@ export async function POST(req: Request) {
   try {
     await db.$transaction(async (tx) => {
       const txRow = await tx.agent_transactions.findFirst({
-        where: { id, type: 'withdraw', status: 'pending' }
+        where: { id, status: 'pending' },
+        include: {
+          agents_agent_transactions_agent_idToagents: {
+            select: { online_balance: true }
+          }
+        }
       });
 
       if (!txRow) {
-        throw new Error('Pending withdrawal request not found');
+        throw new Error('Pending request not found');
       }
 
-      if (action === 'accept') {
-        await tx.agent_transactions.update({
-          where: { id },
-          data: { status: 'completed', remark }
-        });
-      } else {
-        await tx.agent_transactions.update({
-          where: { id },
-          data: { status: 'failed', remark }
-        });
+      if (txRow.type === 'deposit') {
+        const agentRow = txRow.agents_agent_transactions_agent_idToagents;
+        const currentBalance = Number(agentRow?.online_balance || 0);
 
-        await tx.agents.update({
-          where: { id: txRow.agent_id },
-          data: { online_balance: { increment: txRow.amount } }
-        });
+        if (action === 'accept') {
+          const amount = Number(txRow.amount);
+          const balanceAfter = currentBalance + amount;
+
+          await tx.agent_transactions.update({
+            where: { id },
+            data: { 
+              status: 'completed',
+              balance_before: currentBalance,
+              balance_after: balanceAfter,
+              remark
+            }
+          });
+
+          await tx.agents.update({
+            where: { id: txRow.agent_id },
+            data: { online_balance: { increment: txRow.amount } }
+          });
+        } else {
+          await tx.agent_transactions.update({
+            where: { id },
+            data: { 
+              status: 'failed',
+              balance_before: currentBalance,
+              balance_after: currentBalance,
+              remark 
+            }
+          });
+        }
+      } else if (txRow.type === 'withdraw') {
+        if (action === 'accept') {
+          await tx.agent_transactions.update({
+            where: { id },
+            data: { status: 'completed', remark }
+          });
+        } else {
+          await tx.agent_transactions.update({
+            where: { id },
+            data: { status: 'failed', remark }
+          });
+
+          await tx.agents.update({
+            where: { id: txRow.agent_id },
+            data: { online_balance: { increment: txRow.amount } }
+          });
+        }
+      } else {
+        throw new Error('Unsupported transaction type');
       }
     });
 
     await logAdminAction({
       adminId,
-      action: `agent_withdrawal.${action}`,
+      action: `agent_order.${action}`,
       entityType: 'agent_transaction',
       entityId: id,
       changes: { status: action === 'accept' ? 'completed' : 'failed', remark },
@@ -157,11 +208,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   } catch (err: unknown) {
     if (err instanceof Error) {
-      if (err.message === 'Pending withdrawal request not found') {
+      if (err.message === 'Pending request not found') {
         return NextResponse.json({ error: err.message }, { status: 404 });
       }
     }
-    console.error('POST /api/admin/withdrawals', err);
-    return NextResponse.json({ error: 'Failed to process withdrawal request' }, { status: 500 });
+    console.error('POST /api/admin/agent-orders', err);
+    return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });
   }
 }

@@ -45,9 +45,11 @@ export async function GET(req: Request) {
   const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('pageSize')) || 20));
   const search = url.searchParams.get('search')?.trim();
   const statusFilter = url.searchParams.get('status');
+  const typeFilter = url.searchParams.get('type');
 
   const where: any = {};
   if (statusFilter) where.status = statusFilter;
+  if (typeFilter) where.type = typeFilter;
 
   if (search) {
     where.OR = [

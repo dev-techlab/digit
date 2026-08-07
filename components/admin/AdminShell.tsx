@@ -36,7 +36,7 @@ const TITLES: Record<string, string> = {
   platforms: 'Platforms',
   users: 'Users',
   agents: 'Agents',
-  withdrawals: 'Withdrawals',
+  'agent-orders': 'Agent Orders',
   bonuses: 'Bonuses',
   'system-admins': 'System Admins',
   'content-pages': 'Content Pages',
@@ -137,19 +137,18 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     <nav className="flex-1 space-y-0.5 overflow-y-auto px-2.5 pb-4">
       <NavItem icon={Home} label="Dashboard" href="/admin/dashboard" />
       <NavItem icon={Gamepad2} label="Platforms" href="/admin/platforms" />
+      {(me.isSuperAdmin || me.permissions.includes('agents.read')) && (
+        <NavItem icon={Store} label="Agents" href="/admin/agents" />
+      )}
       {(me.isSuperAdmin || me.permissions.includes('users.read')) && (
         <>
           <NavItem icon={Users} label="Users" href="/admin/users" />
           <NavItem icon={Wallet} label="Member Orders" href="/admin/member-orders" />
         </>
       )}
-      {(me.isSuperAdmin || me.permissions.includes('agents.read')) && (
-        <NavItem icon={Store} label="Agents" href="/admin/agents" />
-      )}
       {(me.isSuperAdmin || me.permissions.includes('agents.write')) && (
         <>
-          <NavItem icon={Banknote} label="Withdrawals" href="/admin/withdrawals" />
-          <NavItem icon={Wallet} label="Deposits" href="/admin/deposits" />
+          <NavItem icon={Banknote} label="Agent Orders" href="/admin/agent-orders" />
         </>
       )}
       {(me.isSuperAdmin || me.permissions.includes('bonuses.read')) && (
