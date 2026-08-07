@@ -118,17 +118,19 @@ export async function POST(req: Request) {
   try {
     await db.$transaction(async (tx) => {
       const txRow = await tx.agent_transactions.findFirst({
-        where: { id, type: 'deposit', status: 'pending' }
+        where: { id, type: 'deposit', status: 'pending' },
+        include: {
+          agents_agent_transactions_agent_idToagents: {
+            select: { online_balance: true }
+          }
+        }
       });
 
       if (!txRow) {
         throw new Error('Pending deposit request not found');
       }
 
-      const agentRow = await tx.agents.findUnique({
-        where: { id: txRow.agent_id },
-        select: { online_balance: true }
-      });
+      const agentRow = txRow.agents_agent_transactions_agent_idToagents;
 
       const currentBalance = Number(agentRow?.online_balance || 0);
 

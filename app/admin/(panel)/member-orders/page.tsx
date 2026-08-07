@@ -22,6 +22,7 @@ type Tx = {
   methodLabel: string;
   status: string;
   createdAt: string;
+  agentId?: string;
 };
 
 const statusChip = (st: string) => (
@@ -120,6 +121,11 @@ export default function MemberOrdersPage() {
               header: 'Username',
               accessorKey: 'username',
               cell: (r) => <span className="font-medium text-slate-700">{r.username}</span>,
+            },
+            {
+              header: 'Agent ID',
+              accessorKey: 'agentId',
+              cell: (r) => <span className="font-mono text-xs">{r.agentId}</span>,
             },
             {
               header: 'Type',

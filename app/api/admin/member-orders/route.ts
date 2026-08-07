@@ -66,7 +66,13 @@ export async function GET(req: Request) {
         method_label: true,
         status: true,
         created_at: true,
-        users: { select: { username: true } },
+        users: { 
+          select: { 
+            username: true, 
+            agent_invite_code: true,
+            agent: { select: { username: true } }
+          } 
+        },
       },
       orderBy: { created_at: 'desc' },
       take: pageSize,
@@ -78,6 +84,7 @@ export async function GET(req: Request) {
   const formattedRows = rows.map(r => ({
     id: r.id,
     username: r.users?.username || null,
+    agentId: r.users?.agent?.username || r.users?.agent_invite_code || '-',
     type: r.type,
     amount: r.amount,
     methodLabel: r.method_label,
@@ -104,18 +111,19 @@ export async function POST(req: Request) {
   try {
     await db.$transaction(async (tx) => {
       const txRow = await tx.transactions.findFirst({
-        where: { id, status: 'pending' }
+        where: { id, status: 'pending' },
+        include: {
+          users: {
+            include: { wallets: true }
+          }
+        }
       });
 
       if (!txRow) {
         throw new Error('Pending transaction not found');
       }
 
-      const wallet = await tx.wallets.findUnique({
-        where: { user_id: txRow.user_id },
-      });
-
-      if (!wallet) throw new Error('User wallet not found');
+      if (!txRow.users?.wallets) throw new Error('User wallet not found');
 
       if (action === 'accept') {
         // If deposit, credit balance

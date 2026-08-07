@@ -208,6 +208,7 @@ model agents {
   store_platform_accounts                                             store_platform_accounts[]
   store_settings                                                      store_settings?
   store_terms                                                         store_terms[]
+  users_users_agent_invite_codeToagents                               users[]                   @relation("users_agent_invite_codeToagents")
 
   @@index([store_id], map: "agents_store_idx")
 }
@@ -796,6 +797,7 @@ model users {
   users                                                             users?                     @relation("usersTousers", fields: [referred_by_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "users_referred_by_user_id_users_id_fk")
   other_users                                                       users[]                    @relation("usersTousers")
   wallets                                                           wallets?
+  agent                                                             agents?                    @relation("users_agent_invite_codeToagents", fields: [agent_invite_code], references: [invite_code], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model wallets {
