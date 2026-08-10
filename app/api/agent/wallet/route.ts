@@ -23,165 +23,177 @@ const DEPOSIT_METHODS = ['paypal_pyusd', 'cashapp_usdc', 'bitcoin', 'bitcoin_lig
 const WITHDRAW_METHODS = ['paypal_pyusd', 'cashapp_usdc', 'bitcoin', 'bank_card', 'ach'] as const;
 
 export async function GET(req: Request) {
-  const agent = await getAgentFromRequest(req);
-  if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { searchParams } = new URL(req.url);
-  const fromStr = searchParams.get('from');
-  const toStr = searchParams.get('to');
-  const tzParam = searchParams.get('tz') || 'America/New_York';
-  const tzStr = tzParam === 'browser' ? 'UTC' : tzParam; 
-
-  const store = await db.agents.findUnique({
-    where: { id: agent.storeId },
-    select: {
-      email: true,
-      username: true,
-      invite_code: true,
-      online_balance: true,
-      tips_balance: true,
-      commission_per: true,
+  try {
+    const agent = await getAgentFromRequest(req);
+    if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  
+    const { searchParams } = new URL(req.url);
+    const fromStr = searchParams.get('from');
+    const toStr = searchParams.get('to');
+    const tzParam = searchParams.get('tz') || 'America/New_York';
+    const tzStr = tzParam === 'browser' ? 'UTC' : tzParam; 
+  
+    const store = await db.agents.findUnique({
+      where: { id: agent.storeId },
+      select: {
+        email: true,
+        username: true,
+        invite_code: true,
+        online_balance: true,
+        tips_balance: true,
+        commission_per: true,
+      }
+    });
+  
+    const settings = await db.store_settings.findUnique({
+      where: { store_id: agent.storeId }
+    });
+  
+    const tzSafe = tzStr.replace(/'/g, "''");
+    let dateFilterStr = `agent_id = $1`;
+    const params: any[] = [agent.storeId];
+    let pIdx = 2;
+  
+    if (fromStr) {
+      dateFilterStr += ` AND t.created_at AT TIME ZONE '${tzSafe}' >= $${pIdx++}`;
+      params.push(`${fromStr} 00:00:00`);
     }
-  });
-
-  const settings = await db.store_settings.findUnique({
-    where: { store_id: agent.storeId }
-  });
-
-  const tzSafe = tzStr.replace(/'/g, "''");
-  let dateFilterStr = `agent_id = $1`;
-  const params: any[] = [agent.storeId];
-  let pIdx = 2;
-
-  if (fromStr) {
-    dateFilterStr += ` AND t.created_at AT TIME ZONE '${tzSafe}' >= $${pIdx++}`;
-    params.push(`${fromStr} 00:00:00`);
+    if (toStr) {
+      dateFilterStr += ` AND t.created_at AT TIME ZONE '${tzSafe}' <= $${pIdx++}`;
+      params.push(`${toStr} 23:59:59`);
+    }
+  
+    const logsRaw = await db.$queryRawUnsafe(`
+      SELECT 
+        t.id,
+        t.type,
+        t.method,
+        t.amount,
+        t.fee,
+        t.commission_per,
+        t.net_amount,
+        t.address,
+        t.balance_before,
+        t.balance_after,
+        t.remark,
+        c.username AS counterparty,
+        t.status,
+        t.created_at
+      FROM agent_transactions t
+      LEFT JOIN agents c ON c.id = t.counterparty_agent_id
+      WHERE ${dateFilterStr}
+      ORDER BY t.created_at DESC
+      LIMIT 200
+    `, ...params);
+  
+    const reportRaw = await db.$queryRawUnsafe(`
+      SELECT 
+        TO_CHAR(DATE_TRUNC('day', t.created_at AT TIME ZONE '${tzSafe}'), 'YYYY-MM-DD') AS day,
+        COALESCE(SUM(amount) FILTER (WHERE type = 'deposit'), 0) AS deposit,
+        COALESCE(SUM(fee) FILTER (WHERE type = 'deposit'), 0) AS "depositFee",
+        COUNT(*) FILTER (WHERE type = 'deposit')::int AS "depositOrders"
+      FROM agent_transactions t
+      WHERE ${dateFilterStr}
+      GROUP BY 1
+      ORDER BY 1 DESC
+    `, ...params);
+  
+    return NextResponse.json({ 
+      store: store ? {
+        email: store.email,
+        username: store.username,
+        inviteCode: store.invite_code,
+        onlineBalance: store.online_balance,
+        tipsBalance: store.tips_balance,
+        commissionPer: store.commission_per,
+      } : null, 
+      settings: settings ? {
+        storeId: settings.store_id,
+        storeName: settings.store_name,
+        logoUrl: settings.logo_url,
+        dailyMaxRedeem: settings.daily_max_redeem,
+        dailyMaxWithdraw: settings.daily_max_withdraw,
+        phoneBindRewardSc: settings.phone_bind_reward_sc,
+        updatedAt: settings.updated_at,
+      } : null, 
+      logs: (logsRaw as any[]).map(r => ({
+        id: r.id,
+        type: r.type,
+        method: r.method,
+        amount: r.amount?.toString(),
+        fee: r.fee?.toString(),
+        commissionPer: r.commission_per?.toString(),
+        netAmount: r.net_amount?.toString(),
+        address: r.address,
+        balanceBefore: r.balance_before?.toString(),
+        balanceAfter: r.balance_after?.toString(),
+        remark: r.remark,
+        counterparty: r.counterparty,
+        status: r.status,
+        createdAt: r.created_at,
+      })), 
+      report: (reportRaw as any[]).map(r => ({
+        ...r,
+        deposit: r.deposit?.toString(),
+        depositFee: r.depositFee?.toString()
+      }))
+    });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('GET /api/agent/wallet', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
-  if (toStr) {
-    dateFilterStr += ` AND t.created_at AT TIME ZONE '${tzSafe}' <= $${pIdx++}`;
-    params.push(`${toStr} 23:59:59`);
-  }
-
-  const logsRaw = await db.$queryRawUnsafe(`
-    SELECT 
-      t.id,
-      t.type,
-      t.method,
-      t.amount,
-      t.fee,
-      t.commission_per,
-      t.net_amount,
-      t.address,
-      t.balance_before,
-      t.balance_after,
-      t.remark,
-      c.username AS counterparty,
-      t.status,
-      t.created_at
-    FROM agent_transactions t
-    LEFT JOIN agents c ON c.id = t.counterparty_agent_id
-    WHERE ${dateFilterStr}
-    ORDER BY t.created_at DESC
-    LIMIT 200
-  `, ...params);
-
-  const reportRaw = await db.$queryRawUnsafe(`
-    SELECT 
-      TO_CHAR(DATE_TRUNC('day', t.created_at AT TIME ZONE '${tzSafe}'), 'YYYY-MM-DD') AS day,
-      COALESCE(SUM(amount) FILTER (WHERE type = 'deposit'), 0) AS deposit,
-      COALESCE(SUM(fee) FILTER (WHERE type = 'deposit'), 0) AS "depositFee",
-      COUNT(*) FILTER (WHERE type = 'deposit')::int AS "depositOrders"
-    FROM agent_transactions t
-    WHERE ${dateFilterStr}
-    GROUP BY 1
-    ORDER BY 1 DESC
-  `, ...params);
-
-  return NextResponse.json({ 
-    store: store ? {
-      email: store.email,
-      username: store.username,
-      inviteCode: store.invite_code,
-      onlineBalance: store.online_balance,
-      tipsBalance: store.tips_balance,
-      commissionPer: store.commission_per,
-    } : null, 
-    settings: settings ? {
-      storeId: settings.store_id,
-      storeName: settings.store_name,
-      logoUrl: settings.logo_url,
-      dailyMaxRedeem: settings.daily_max_redeem,
-      dailyMaxWithdraw: settings.daily_max_withdraw,
-      phoneBindRewardSc: settings.phone_bind_reward_sc,
-      updatedAt: settings.updated_at,
-    } : null, 
-    logs: (logsRaw as any[]).map(r => ({
-      id: r.id,
-      type: r.type,
-      method: r.method,
-      amount: r.amount?.toString(),
-      fee: r.fee?.toString(),
-      commissionPer: r.commission_per?.toString(),
-      netAmount: r.net_amount?.toString(),
-      address: r.address,
-      balanceBefore: r.balance_before?.toString(),
-      balanceAfter: r.balance_after?.toString(),
-      remark: r.remark,
-      counterparty: r.counterparty,
-      status: r.status,
-      createdAt: r.created_at,
-    })), 
-    report: (reportRaw as any[]).map(r => ({
-      ...r,
-      deposit: r.deposit?.toString(),
-      depositFee: r.depositFee?.toString()
-    }))
-  });
 }
 
 export async function PUT(req: Request) {
-  const agent = await getAgentFromRequest(req);
-  if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (agent.type !== 'store') {
-    return NextResponse.json(
-      { error: 'Only the store account can manage the wallet' },
-      { status: 403 }
-    );
-  }
-
-  const body = await req.json().catch(() => ({}));
-  const parseResult = putSchema.safeParse(body);
-
-  if (!parseResult.success) {
-    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
-  }
-
-  const data = parseResult.data;
-
-  if (data.email) {
-    await db.agents.update({
-      where: { id: agent.storeId },
-      data: { email: data.email }
-    });
-  }
-
-  const patch: any = { updated_at: new Date() };
-  if (data.storeName !== undefined) patch.store_name = data.storeName;
-  if (data.dailyMaxRedeem !== undefined) patch.daily_max_redeem = String(data.dailyMaxRedeem);
-  if (data.dailyMaxWithdraw !== undefined) patch.daily_max_withdraw = String(data.dailyMaxWithdraw);
-  if (data.phoneBindRewardSc !== undefined) patch.phone_bind_reward_sc = String(data.phoneBindRewardSc);
-  if (data.logoUrl !== undefined) patch.logo_url = data.logoUrl;
-
-  await db.store_settings.upsert({
-    where: { store_id: agent.storeId },
-    create: {
-      store_id: agent.storeId,
-      ...patch
-    },
-    update: patch
-  });
+  try {
+    const agent = await getAgentFromRequest(req);
+    if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (agent.type !== 'store') {
+      return NextResponse.json(
+        { error: 'Only the store account can manage the wallet' },
+        { status: 403 }
+      );
+    }
   
-  return NextResponse.json({ ok: true });
+    const body = await req.json().catch(() => ({}));
+    const parseResult = putSchema.safeParse(body);
+  
+    if (!parseResult.success) {
+      return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+    }
+  
+    const data = parseResult.data;
+  
+    if (data.email) {
+      await db.agents.update({
+        where: { id: agent.storeId },
+        data: { email: data.email }
+      });
+    }
+  
+    const patch: any = { updated_at: new Date() };
+    if (data.storeName !== undefined) patch.store_name = data.storeName;
+    if (data.dailyMaxRedeem !== undefined) patch.daily_max_redeem = String(data.dailyMaxRedeem);
+    if (data.dailyMaxWithdraw !== undefined) patch.daily_max_withdraw = String(data.dailyMaxWithdraw);
+    if (data.phoneBindRewardSc !== undefined) patch.phone_bind_reward_sc = String(data.phoneBindRewardSc);
+    if (data.logoUrl !== undefined) patch.logo_url = data.logoUrl;
+  
+    await db.store_settings.upsert({
+      where: { store_id: agent.storeId },
+      create: {
+        store_id: agent.storeId,
+        ...patch
+      },
+      update: patch
+    });
+    
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('PUT /api/agent/wallet', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {

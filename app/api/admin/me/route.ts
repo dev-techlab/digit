@@ -5,11 +5,17 @@ import { effectivePermissions, isSuperAdmin } from '@/lib/rbac-core';
 
 /** GET /api/admin/me — current admin id, super flag, and effective permissions. */
 export async function GET(req: Request) {
-  const adminId = await getAdminIdFromRequest(req);
-  if (!adminId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const [permissions, superAdmin] = await Promise.all([
-    effectivePermissions(adminId),
-    isSuperAdmin(adminId),
-  ]);
-  return NextResponse.json({ adminId, isSuperAdmin: superAdmin, permissions });
+  try {
+    const adminId = await getAdminIdFromRequest(req);
+    if (!adminId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const [permissions, superAdmin] = await Promise.all([
+      effectivePermissions(adminId),
+      isSuperAdmin(adminId),
+    ]);
+    return NextResponse.json({ adminId, isSuperAdmin: superAdmin, permissions });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('GET /api/admin/me', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+  }
 }

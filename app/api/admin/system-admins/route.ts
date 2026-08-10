@@ -7,60 +7,66 @@ import bcrypt from 'bcryptjs';
 
 
 export async function GET(req: Request) {
-  const adminId = await getAdminIdFromRequest(req);
-  if (!adminId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  if (!(await isSuperAdmin(adminId))) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  try {
+    const adminId = await getAdminIdFromRequest(req);
+    if (!adminId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  
+    if (!(await isSuperAdmin(adminId))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+  
+    const url = new URL(req.url);
+    const search = url.searchParams.get('search') || '';
+    const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
+    const pageSize = Math.min(
+      100,
+      Math.max(1, parseInt(url.searchParams.get('pageSize') || '20', 10))
+    );
+  
+    const where: any = {};
+    if (search) {
+      where.OR = [
+        { username: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+  
+    const [results, count] = await Promise.all([
+      db.admins.findMany({
+        where,
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          status: true,
+          last_login_at: true,
+          created_at: true,
+        },
+        orderBy: { created_at: 'desc' },
+        take: pageSize,
+        skip: (page - 1) * pageSize,
+      }),
+      db.admins.count({ where }),
+    ]);
+  
+    const formatted = results.map(r => ({
+      id: r.id,
+      username: r.username,
+      email: r.email,
+      status: r.status,
+      lastLoginAt: r.last_login_at,
+      createdAt: r.created_at,
+    }));
+  
+    return NextResponse.json({
+      admins: formatted,
+      total: count,
+    });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('GET /api/admin/system-admins', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
-
-  const url = new URL(req.url);
-  const search = url.searchParams.get('search') || '';
-  const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
-  const pageSize = Math.min(
-    100,
-    Math.max(1, parseInt(url.searchParams.get('pageSize') || '20', 10))
-  );
-
-  const where: any = {};
-  if (search) {
-    where.OR = [
-      { username: { contains: search, mode: 'insensitive' } },
-      { email: { contains: search, mode: 'insensitive' } },
-    ];
-  }
-
-  const [results, count] = await Promise.all([
-    db.admins.findMany({
-      where,
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        status: true,
-        last_login_at: true,
-        created_at: true,
-      },
-      orderBy: { created_at: 'desc' },
-      take: pageSize,
-      skip: (page - 1) * pageSize,
-    }),
-    db.admins.count({ where }),
-  ]);
-
-  const formatted = results.map(r => ({
-    id: r.id,
-    username: r.username,
-    email: r.email,
-    status: r.status,
-    lastLoginAt: r.last_login_at,
-    createdAt: r.created_at,
-  }));
-
-  return NextResponse.json({
-    admins: formatted,
-    total: count,
-  });
 }
 
 const postSchema = z.object({

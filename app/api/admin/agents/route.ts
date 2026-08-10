@@ -33,61 +33,67 @@ async function authorize(
 }
 
 export async function GET(req: Request) {
-  const { error } = await authorize(req, 'agents.read');
-  if (error) return error;
-
-  const url = new URL(req.url);
-  const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
-  const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('pageSize')) || 20));
-  const search = url.searchParams.get('search')?.trim();
-
-  const where: any = { type: 'store' };
-  if (search) {
-    where.OR = [
-      { username: { contains: search, mode: 'insensitive' } },
-      { nickname: { contains: search, mode: 'insensitive' } },
-      { email: { contains: search, mode: 'insensitive' } },
-    ];
+  try {
+    const { error } = await authorize(req, 'agents.read');
+    if (error) return error;
+  
+    const url = new URL(req.url);
+    const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('pageSize')) || 20));
+    const search = url.searchParams.get('search')?.trim();
+  
+    const where: any = { type: 'store' };
+    if (search) {
+      where.OR = [
+        { username: { contains: search, mode: 'insensitive' } },
+        { nickname: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+  
+    const [rows, count] = await Promise.all([
+      db.agents.findMany({
+        where,
+        select: {
+          id: true,
+          username: true,
+          nickname: true,
+          email: true,
+          invite_code: true,
+          commission_per: true,
+          online_balance: true,
+          status: true,
+          remark: true,
+          last_login_at: true,
+          created_at: true,
+        },
+        orderBy: { created_at: 'desc' },
+        take: pageSize,
+        skip: (page - 1) * pageSize,
+      }),
+      db.agents.count({ where }),
+    ]);
+  
+    const formattedRows = rows.map(r => ({
+      id: r.id,
+      username: r.username,
+      nickname: r.nickname,
+      email: r.email,
+      inviteCode: r.invite_code,
+      commissionPer: r.commission_per,
+      onlineBalance: r.online_balance,
+      status: r.status,
+      remark: r.remark,
+      lastLoginAt: r.last_login_at,
+      createdAt: r.created_at,
+    }));
+  
+    return NextResponse.json({ agents: formattedRows, total: count });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('GET /api/admin/agents', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
-
-  const [rows, count] = await Promise.all([
-    db.agents.findMany({
-      where,
-      select: {
-        id: true,
-        username: true,
-        nickname: true,
-        email: true,
-        invite_code: true,
-        commission_per: true,
-        online_balance: true,
-        status: true,
-        remark: true,
-        last_login_at: true,
-        created_at: true,
-      },
-      orderBy: { created_at: 'desc' },
-      take: pageSize,
-      skip: (page - 1) * pageSize,
-    }),
-    db.agents.count({ where }),
-  ]);
-
-  const formattedRows = rows.map(r => ({
-    id: r.id,
-    username: r.username,
-    nickname: r.nickname,
-    email: r.email,
-    inviteCode: r.invite_code,
-    commissionPer: r.commission_per,
-    onlineBalance: r.online_balance,
-    status: r.status,
-    remark: r.remark,
-    lastLoginAt: r.last_login_at,
-    createdAt: r.created_at,
-  }));
-
-  return NextResponse.json({ agents: formattedRows, total: count });
 }
 
 const postSchema = z.object({
@@ -152,6 +158,7 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     if (err instanceof ZodError) {
       return NextResponse.json({ error: err.issues[0].message }, { status: 400 });
     }
@@ -242,6 +249,7 @@ export async function PUT(req: Request) {
     });
     return NextResponse.json({ ok: true });
   } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     if (err instanceof ZodError) {
       return NextResponse.json({ error: err.issues[0].message }, { status: 400 });
     }

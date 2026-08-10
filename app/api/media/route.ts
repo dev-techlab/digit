@@ -53,7 +53,8 @@ export async function POST(req: Request) {
       isPrivate,
     });
     return NextResponse.json(result, { status: 201 });
-  } catch (err) {
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     if (err instanceof PermissionError) {
       return NextResponse.json({ error: err.message }, { status: 403 });
     }

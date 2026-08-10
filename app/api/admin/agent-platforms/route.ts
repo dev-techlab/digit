@@ -28,38 +28,44 @@ async function authorize(req: Request, permKey: string) {
 }
 
 export async function GET(req: Request) {
-  const auth = await authorize(req, 'platforms.read');
-  if (auth.error) return auth.error;
-
-  const url = new URL(req.url);
-  const agentId = url.searchParams.get('agentId') || '';
-  if (!agentId) return NextResponse.json({ platforms: [] });
-
-  const platforms = await db.game_platforms.findMany({
-    where: { is_active: true, deleted_at: null },
-    orderBy: [{ sort: 'desc' }, { name: 'asc' }],
-    include: {
-      agent_platform_mappings: {
-        where: { agent_id: agentId }
+  try {
+    const auth = await authorize(req, 'platforms.read');
+    if (auth.error) return auth.error;
+  
+    const url = new URL(req.url);
+    const agentId = url.searchParams.get('agentId') || '';
+    if (!agentId) return NextResponse.json({ platforms: [] });
+  
+    const platforms = await db.game_platforms.findMany({
+      where: { is_active: true, deleted_at: null },
+      orderBy: [{ sort: 'desc' }, { name: 'asc' }],
+      include: {
+        agent_platform_mappings: {
+          where: { agent_id: agentId }
+        }
       }
-    }
-  });
-
-  const rows = platforms.map(p => {
-    const mapping = p.agent_platform_mappings[0];
-    return {
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      iconUrl: p.icon_url,
-      isActive: p.is_active,
-      assigned: !!mapping,
-      availableFromTime: mapping?.available_from_time ?? null,
-      availableToTime: mapping?.available_to_time ?? null,
-    };
-  });
-
-  return NextResponse.json({ platforms: rows });
+    });
+  
+    const rows = platforms.map(p => {
+      const mapping = p.agent_platform_mappings[0];
+      return {
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        iconUrl: p.icon_url,
+        isActive: p.is_active,
+        assigned: !!mapping,
+        availableFromTime: mapping?.available_from_time ?? null,
+        availableToTime: mapping?.available_to_time ?? null,
+      };
+    });
+  
+    return NextResponse.json({ platforms: rows });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('GET /api/admin/agent-platforms', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+  }
 }
 
 const putSchema = z.object({
@@ -153,6 +159,7 @@ export async function PUT(req: Request) {
 
   return NextResponse.json({ ok: true });
   } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     if (err instanceof ZodError) {
       return NextResponse.json({ error: err.issues[0].message }, { status: 400 });
     }

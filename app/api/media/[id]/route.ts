@@ -20,14 +20,19 @@ const notFound = () => NextResponse.json({ error: 'Not found' }, { status: 404 }
 /** GET /api/media/:id — resolve a readable URL. Public assets are open;
  *  private assets require an authenticated admin (no anon presigning). */
 export async function GET(req: Request, { params }: Ctx) {
-  if (!UUID_RE.test(params.id)) return notFound();
-  const media = await getMediaUrl(params.id);
-  if (!media) return notFound();
-  if (media.isPrivate && !(await getAdminIdFromRequest(req))) {
-    // Don't confirm the asset exists to an unauthenticated caller.
-    return notFound();
+  try {
+    if (!UUID_RE.test(params.id)) return notFound();
+    const media = await getMediaUrl(params.id);
+    if (!media) return notFound();
+    if (media.isPrivate && !(await getAdminIdFromRequest(req))) {
+      // Don't confirm the asset exists to an unauthenticated caller.
+      return notFound();
+    }
+    return NextResponse.json({ url: media.url });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    return errorResponse(err, 'GET /api/media/:id');
   }
-  return NextResponse.json({ url: media.url });
 }
 
 /** PUT /api/media/:id — replace the bytes of an existing asset (field `file`). */
@@ -65,7 +70,8 @@ export async function PUT(req: Request, { params }: Ctx) {
       filename: file.name,
     });
     return NextResponse.json(result);
-  } catch (err) {
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     return errorResponse(err, 'PUT /api/media/:id');
   }
 }
@@ -79,7 +85,8 @@ export async function DELETE(req: Request, { params }: Ctx) {
     await requirePermission(adminId, 'media.delete');
     await deleteMedia(params.id);
     return new NextResponse(null, { status: 204 });
-  } catch (err) {
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     return errorResponse(err, 'DELETE /api/media/:id');
   }
 }

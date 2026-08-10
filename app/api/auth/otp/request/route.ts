@@ -10,24 +10,30 @@ const requestSchema = z.object({
 
 /** POST /api/auth/otp/request — { destination, purpose } → issues a code. */
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
-  const parseResult = requestSchema.safeParse(body);
+  try {
+    const body = await req.json().catch(() => ({}));
+    const parseResult = requestSchema.safeParse(body);
 
-  if (!parseResult.success) {
-    return NextResponse.json(
-      { error: parseResult.error.issues[0]?.message || 'Invalid input' },
-      { status: 400 }
-    );
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: parseResult.error.issues[0]?.message || 'Invalid input' },
+        { status: 400 }
+      );
+    }
+
+    const { destination, purpose } = parseResult.data;
+
+    const result = await requestOtp(destination, purpose as OtpPurpose);
+    if (!result.ok) return NextResponse.json({ error: result.error }, { status: 429 });
+
+    // The real system delivers `code` via SMS. Never return it in production;
+    // echo it only in non-prod so the flow is testable without an SMS gateway.
+    return NextResponse.json({
+      ok: true,
+    });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('POST /api/auth/otp/request', err);
+    return NextResponse.json({ error: (err as any)?.message || 'Internal server error' }, { status: 500 });
   }
-
-  const { destination, purpose } = parseResult.data;
-
-  const result = await requestOtp(destination, purpose as OtpPurpose);
-  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 429 });
-
-  // The real system delivers `code` via SMS. Never return it in production;
-  // echo it only in non-prod so the flow is testable without an SMS gateway.
-  return NextResponse.json({
-    ok: true,
-  });
 }

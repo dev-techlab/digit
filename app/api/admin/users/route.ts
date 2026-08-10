@@ -33,75 +33,81 @@ async function authorize(
 }
 
 export async function GET(req: Request) {
-  const { error } = await authorize(req, 'users.read');
-  if (error) return error;
-
-  const url = new URL(req.url);
-  const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
-  const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('pageSize')) || 20));
-  const search = url.searchParams.get('search')?.trim();
-  const status = url.searchParams.get('status');
-
-  const where: any = {};
-  if (status === 'active' || status === 'blocked') {
-    where.status = status;
-  }
-
-  if (search) {
-    where.OR = [
-      { username: { contains: search, mode: 'insensitive' } },
-      { nickname: { contains: search, mode: 'insensitive' } },
-      { email: { contains: search, mode: 'insensitive' } },
-      { phone: { contains: search, mode: 'insensitive' } },
-    ];
-  }
-
-  const [rows, count] = await Promise.all([
-    db.users.findMany({
-      where,
-      select: {
-        id: true,
-        username: true,
-        nickname: true,
-        email: true,
-        phone: true,
-        phone_bound: true,
-        kyc_status: true,
-        status: true,
-        commission_per: true,
-        invite_code: true,
-        created_at: true,
-        wallets: {
-          select: {
-            gold_coin: true,
-            online_sc: true,
+  try {
+    const { error } = await authorize(req, 'users.read');
+    if (error) return error;
+  
+    const url = new URL(req.url);
+    const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('pageSize')) || 20));
+    const search = url.searchParams.get('search')?.trim();
+    const status = url.searchParams.get('status');
+  
+    const where: any = {};
+    if (status === 'active' || status === 'blocked') {
+      where.status = status;
+    }
+  
+    if (search) {
+      where.OR = [
+        { username: { contains: search, mode: 'insensitive' } },
+        { nickname: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { phone: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+  
+    const [rows, count] = await Promise.all([
+      db.users.findMany({
+        where,
+        select: {
+          id: true,
+          username: true,
+          nickname: true,
+          email: true,
+          phone: true,
+          phone_bound: true,
+          kyc_status: true,
+          status: true,
+          commission_per: true,
+          invite_code: true,
+          created_at: true,
+          wallets: {
+            select: {
+              gold_coin: true,
+              online_sc: true,
+            }
           }
-        }
-      },
-      orderBy: { created_at: 'desc' },
-      take: pageSize,
-      skip: (page - 1) * pageSize,
-    }),
-    db.users.count({ where }),
-  ]);
-
-  const formattedRows = rows.map(r => ({
-    id: r.id,
-    username: r.username,
-    nickname: r.nickname,
-    email: r.email,
-    phone: r.phone,
-    phoneBound: r.phone_bound,
-    kycStatus: r.kyc_status,
-    status: r.status,
-    commissionPer: r.commission_per,
-    inviteCode: r.invite_code,
-    createdAt: r.created_at,
-    goldCoin: r.wallets?.gold_coin,
-    onlineSc: r.wallets?.online_sc,
-  }));
-
-  return NextResponse.json({ users: formattedRows, total: count });
+        },
+        orderBy: { created_at: 'desc' },
+        take: pageSize,
+        skip: (page - 1) * pageSize,
+      }),
+      db.users.count({ where }),
+    ]);
+  
+    const formattedRows = rows.map(r => ({
+      id: r.id,
+      username: r.username,
+      nickname: r.nickname,
+      email: r.email,
+      phone: r.phone,
+      phoneBound: r.phone_bound,
+      kycStatus: r.kyc_status,
+      status: r.status,
+      commissionPer: r.commission_per,
+      inviteCode: r.invite_code,
+      createdAt: r.created_at,
+      goldCoin: r.wallets?.gold_coin,
+      onlineSc: r.wallets?.online_sc,
+    }));
+  
+    return NextResponse.json({ users: formattedRows, total: count });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('GET /api/admin/users', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+  }
 }
 
 const putSchema = z.object({
@@ -183,6 +189,7 @@ export async function PUT(req: Request) {
     });
     return NextResponse.json({ ok: true });
   } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     if (err instanceof ZodError) {
       return NextResponse.json({ error: err.issues[0].message }, { status: 400 });
     }
@@ -250,6 +257,7 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     if (err instanceof ZodError) {
       return NextResponse.json({ error: err.issues[0].message }, { status: 400 });
     }

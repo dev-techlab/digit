@@ -11,33 +11,39 @@ const passwordSchema = z.object({
 
 
 export async function POST(req: Request) {
-  const agent = await getAgentFromRequest(req);
-  if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const body = await req.json().catch(() => ({}));
-  const parseResult = passwordSchema.safeParse(body);
+  try {
+    const agent = await getAgentFromRequest(req);
+    if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   
-  if (!parseResult.success) {
-    return NextResponse.json(
-      { error: parseResult.error.issues[0]?.message || 'Invalid input' },
-      { status: 400 }
-    );
-  }
-
-  const { current, next } = parseResult.data;
-
-  const row = await db.agents.findUnique({
-    where: { id: agent.id },
-    select: { password_hash: true }
-  });
+    const body = await req.json().catch(() => ({}));
+    const parseResult = passwordSchema.safeParse(body);
+    
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: parseResult.error.issues[0]?.message || 'Invalid input' },
+        { status: 400 }
+      );
+    }
   
-  if (!row || !(await bcrypt.compare(current, row.password_hash))) {
-    return NextResponse.json({ error: 'Current password is incorrect' }, { status: 400 });
+    const { current, next } = parseResult.data;
+  
+    const row = await db.agents.findUnique({
+      where: { id: agent.id },
+      select: { password_hash: true }
+    });
+    
+    if (!row || !(await bcrypt.compare(current, row.password_hash))) {
+      return NextResponse.json({ error: 'Current password is incorrect' }, { status: 400 });
+    }
+  
+    await db.agents.update({
+      where: { id: agent.id },
+      data: { password_hash: await bcrypt.hash(next, 10) }
+    });
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('POST /api/agent/change-password', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
-
-  await db.agents.update({
-    where: { id: agent.id },
-    data: { password_hash: await bcrypt.hash(next, 10) }
-  });
-  return NextResponse.json({ ok: true });
 }

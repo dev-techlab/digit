@@ -17,26 +17,32 @@ const resetSchema = z.object({
  * with the new password afterward.
  */
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
-  const parseResult = resetSchema.safeParse(body);
+  try {
+    const body = await req.json().catch(() => ({}));
+    const parseResult = resetSchema.safeParse(body);
 
-  if (!parseResult.success) {
-    return NextResponse.json(
-      { error: parseResult.error.issues[0]?.message || 'Invalid input' },
-      { status: 400 }
-    );
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: parseResult.error.issues[0]?.message || 'Invalid input' },
+        { status: 400 }
+      );
+    }
+
+    const { destination, code, newPassword } = parseResult.data;
+
+    const result = await verifyOtp(destination, 'reset_password', code);
+    if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
+
+    const userId = result.userId ?? (await userIdByPhone(destination));
+    if (!userId) {
+      return NextResponse.json({ error: 'No account found for this phone number' }, { status: 404 });
+    }
+
+    await setUserPassword(userId, newPassword);
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('POST /api/auth/reset-password', err);
+    return NextResponse.json({ error: (err as any)?.message || 'Failed to reset password' }, { status: 500 });
   }
-
-  const { destination, code, newPassword } = parseResult.data;
-
-  const result = await verifyOtp(destination, 'reset_password', code);
-  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
-
-  const userId = result.userId ?? (await userIdByPhone(destination));
-  if (!userId) {
-    return NextResponse.json({ error: 'No account found for this phone number' }, { status: 404 });
-  }
-
-  await setUserPassword(userId, newPassword);
-  return NextResponse.json({ ok: true });
 }

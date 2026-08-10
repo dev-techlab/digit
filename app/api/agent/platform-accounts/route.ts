@@ -5,78 +5,84 @@ import { getAgentFromRequest } from '@/lib/agent-auth';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 
 export async function GET(req: Request) {
-  const agent = await getAgentFromRequest(req);
-  const adminId = await getAdminIdFromRequest(req);
-
-  if (!agent && !adminId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const url = new URL(req.url);
-  const platformId = url.searchParams.get('platformId');
-  const search = url.searchParams.get('search')?.trim();
-  const state = url.searchParams.get('state')?.trim();
-  const storeId = url.searchParams.get('storeId');
+  try {
+    const agent = await getAgentFromRequest(req);
+    const adminId = await getAdminIdFromRequest(req);
   
-  if (!platformId) return NextResponse.json({ error: 'Missing platformId' }, { status: 400 });
-
-  const memberWhere: any = {};
+    if (!agent && !adminId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   
-  if (agent) {
-    memberWhere.store_id = agent.storeId;
-    const agentCol = agent.type === 'sub' ? 'sub_agent_id' : (agent.type === 'sale' ? 'sale_agent_id' : null);
-    if (agentCol) memberWhere[agentCol] = agent.id;
-  } else if (storeId) {
-    memberWhere.store_id = storeId;
-  }
-
-  if (search) {
-    memberWhere.username = { contains: search, mode: 'insensitive' };
-  }
-
-  const accounts = await db.member_platform_accounts.findMany({
-    where: {
-      platform_id: platformId,
-      members: memberWhere,
-    },
-    include: {
-      members: {
-        select: {
-          username: true,
-          remark: true,
-          online_sc: true,
-        },
+    const url = new URL(req.url);
+    const platformId = url.searchParams.get('platformId');
+    const search = url.searchParams.get('search')?.trim();
+    const state = url.searchParams.get('state')?.trim();
+    const storeId = url.searchParams.get('storeId');
+    
+    if (!platformId) return NextResponse.json({ error: 'Missing platformId' }, { status: 400 });
+  
+    const memberWhere: any = {};
+    
+    if (agent) {
+      memberWhere.store_id = agent.storeId;
+      const agentCol = agent.type === 'sub' ? 'sub_agent_id' : (agent.type === 'sale' ? 'sale_agent_id' : null);
+      if (agentCol) memberWhere[agentCol] = agent.id;
+    } else if (storeId) {
+      memberWhere.store_id = storeId;
+    }
+  
+    if (search) {
+      memberWhere.username = { contains: search, mode: 'insensitive' };
+    }
+  
+    const accounts = await db.member_platform_accounts.findMany({
+      where: {
+        platform_id: platformId,
+        members: memberWhere,
       },
-      game_platforms: {
-        select: {
-          name: true
+      include: {
+        members: {
+          select: {
+            username: true,
+            remark: true,
+            online_sc: true,
+          },
+        },
+        game_platforms: {
+          select: {
+            name: true
+          }
         }
-      }
-    },
-    orderBy: { created_at: 'desc' },
-  });
-
-  let formatted = accounts.map(a => {
-    // Determine mock state based on ID or something deterministic if possible, or just 'offline'
-    let mockState = 'offline';
-    if (a.game_username?.includes('90')) mockState = 'online';
-    if (a.game_username?.includes('55')) mockState = 'locked';
-
-    return {
-      id: a.id,
-      platformName: a.game_platforms?.name || 'Unknown',
-      gameUsername: a.game_username,
-      memberUsername: a.members?.username,
-      notes: a.members?.remark,
-      createdAt: a.created_at,
-      balance: a.members?.online_sc?.toString() || '0.00',
-      state: mockState,
-    };
-  });
-
-  if (state) {
-    formatted = formatted.filter(f => f.state === state);
+      },
+      orderBy: { created_at: 'desc' },
+    });
+  
+    let formatted = accounts.map(a => {
+      // Determine mock state based on ID or something deterministic if possible, or just 'offline'
+      let mockState = 'offline';
+      if (a.game_username?.includes('90')) mockState = 'online';
+      if (a.game_username?.includes('55')) mockState = 'locked';
+  
+      return {
+        id: a.id,
+        platformName: a.game_platforms?.name || 'Unknown',
+        gameUsername: a.game_username,
+        memberUsername: a.members?.username,
+        notes: a.members?.remark,
+        createdAt: a.created_at,
+        balance: a.members?.online_sc?.toString() || '0.00',
+        state: mockState,
+      };
+    });
+  
+    if (state) {
+      formatted = formatted.filter(f => f.state === state);
+    }
+  
+    return NextResponse.json({ accounts: formatted });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('GET /api/agent/platform-accounts', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
-
-  return NextResponse.json({ accounts: formatted });
 }
 
 const createSchema = z.object({

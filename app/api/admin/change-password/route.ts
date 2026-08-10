@@ -11,29 +11,35 @@ const passwordSchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const adminId = await getAdminIdFromRequest(req);
-  if (!adminId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const body = await req.json().catch(() => ({}));
-  const parseResult = passwordSchema.safeParse(body);
+  try {
+    const adminId = await getAdminIdFromRequest(req);
+    if (!adminId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   
-  if (!parseResult.success) {
-    return NextResponse.json(
-      { error: parseResult.error.issues[0]?.message || 'Invalid input' },
-      { status: 400 }
-    );
+    const body = await req.json().catch(() => ({}));
+    const parseResult = passwordSchema.safeParse(body);
+    
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: parseResult.error.issues[0]?.message || 'Invalid input' },
+        { status: 400 }
+      );
+    }
+  
+    const { currentPassword, newPassword } = parseResult.data;
+  
+    const admin = await db.admins.findUnique({ where: { id: adminId } });
+    if (!admin || !(await bcrypt.compare(currentPassword, admin.password_hash))) {
+      return NextResponse.json({ error: 'Current password is incorrect' }, { status: 400 });
+    }
+  
+    await setPassword(adminId, newPassword);
+  
+    const res = NextResponse.json({ ok: true });
+    res.cookies.set(ADMIN_SESSION_COOKIE, '', { path: '/', maxAge: 0 });
+    return res;
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('POST /api/admin/change-password', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
-
-  const { currentPassword, newPassword } = parseResult.data;
-
-  const admin = await db.admins.findUnique({ where: { id: adminId } });
-  if (!admin || !(await bcrypt.compare(currentPassword, admin.password_hash))) {
-    return NextResponse.json({ error: 'Current password is incorrect' }, { status: 400 });
-  }
-
-  await setPassword(adminId, newPassword);
-
-  const res = NextResponse.json({ ok: true });
-  res.cookies.set(ADMIN_SESSION_COOKIE, '', { path: '/', maxAge: 0 });
-  return res;
 }

@@ -1,4 +1,5 @@
 import 'server-only';
+import { headers } from 'next/headers';
 import { db } from '@/lib/db';
 
 function cookieValue(cookieHeader: string | null, name: string): string | null {
@@ -17,6 +18,7 @@ function cookieValue(cookieHeader: string | null, name: string): string | null {
  * when there is no valid session or the admin is suspended/invited.
  */
 export async function getAdminIdFromRequest(req: Request): Promise<string | null> {
+  headers(); // Tell Next.js this route is dynamic
   const authHeader = req.headers.get('authorization');
   const bearer = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
   const token = bearer ?? cookieValue(req.headers.get('cookie'), 'admin_session');

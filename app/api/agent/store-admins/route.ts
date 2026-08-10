@@ -6,30 +6,36 @@ import { getAgentFromRequest } from '@/lib/agent-auth';
 
 
 export async function GET(req: Request) {
-  const agent = await getAgentFromRequest(req);
-  if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const rows = await db.store_administrators.findMany({
-    where: { store_id: agent.storeId },
-    select: {
-      id: true,
-      username: true,
-      nickname: true,
-      email: true,
-      status: true,
-      created_at: true,
-    },
-    orderBy: { created_at: 'desc' }
-  });
+  try {
+    const agent = await getAgentFromRequest(req);
+    if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   
-  return NextResponse.json({ admins: rows.map(r => ({
-    id: r.id,
-    username: r.username,
-    nickname: r.nickname,
-    email: r.email,
-    status: r.status,
-    createdAt: r.created_at,
-  })) });
+    const rows = await db.store_administrators.findMany({
+      where: { store_id: agent.storeId },
+      select: {
+        id: true,
+        username: true,
+        nickname: true,
+        email: true,
+        status: true,
+        created_at: true,
+      },
+      orderBy: { created_at: 'desc' }
+    });
+    
+    return NextResponse.json({ admins: rows.map(r => ({
+      id: r.id,
+      username: r.username,
+      nickname: r.nickname,
+      email: r.email,
+      status: r.status,
+      createdAt: r.created_at,
+    })) });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('GET /api/agent/store-admins', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+  }
 }
 
 const postSchema = z.object({
@@ -121,6 +127,7 @@ export async function PUT(req: Request) {
     });
     return NextResponse.json({ ok: true });
   } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     if (err instanceof ZodError) {
       return NextResponse.json({ error: err.issues[0].message }, { status: 400 });
     }

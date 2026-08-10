@@ -7,91 +7,97 @@ import { getAgentFromRequest } from '@/lib/agent-auth';
 
 
 export async function GET(req: Request) {
-  const agent = await getAgentFromRequest(req);
-  if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const url = new URL(req.url);
-  const type = url.searchParams.get('type') === 'sub' ? 'sub' : 'sale';
-  const search = url.searchParams.get('search')?.trim();
-
-  if (url.searchParams.get('report')) {
-    const agentCol = type === 'sub' ? 'sub_agent_id' : 'sale_agent_id';
-    const rows = await db.$queryRawUnsafe(`
-      SELECT 
-        a.id AS "agentId", 
-        a.username,
-        COALESCE(SUM(mt.amount) FILTER (WHERE mt.type = 'recharge'), 0) AS deposit,
-        COUNT(DISTINCT mt.member_id) FILTER (WHERE mt.type = 'recharge')::int AS depositors,
-        COALESCE(SUM(mt.amount) FILTER (WHERE mt.type = 'redeem'), 0) AS withdrawal,
-        COUNT(DISTINCT mt.member_id) FILTER (WHERE mt.type = 'redeem')::int AS withdrawers,
-        COALESCE(SUM(mt.in_score), 0) AS "totalIn",
-        COALESCE(SUM(mt.out_score), 0) AS "totalOut",
-        COALESCE(SUM(mt.bonus_score), 0) AS bonus,
-        COALESCE(SUM(mt.game_deposit_fee), 0) AS "gameDepositFee",
-        COALESCE(SUM(mt.platform_fee), 0) AS "platformFee"
-      FROM agents a
-      LEFT JOIN members m ON m.${agentCol} = a.id
-      LEFT JOIN member_transactions mt ON mt.member_id = m.id
-      WHERE a.store_id = $1 AND a.type = $2
-      GROUP BY a.id, a.username
-    `, agent.storeId, type);
-
-    const formattedRows = (rows as any[]).map(row => {
-      const formatted: any = {};
-      for (const key in row) {
-        formatted[key] = typeof row[key] === 'bigint' ? row[key].toString() : row[key];
-      }
-      return formatted;
+  try {
+    const agent = await getAgentFromRequest(req);
+    if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const url = new URL(req.url);
+    const type = url.searchParams.get('type') === 'sub' ? 'sub' : 'sale';
+    const search = url.searchParams.get('search')?.trim();
+  
+    if (url.searchParams.get('report')) {
+      const agentCol = type === 'sub' ? 'sub_agent_id' : 'sale_agent_id';
+      const rows = await db.$queryRawUnsafe(`
+        SELECT 
+          a.id AS "agentId", 
+          a.username,
+          COALESCE(SUM(mt.amount) FILTER (WHERE mt.type = 'recharge'), 0) AS deposit,
+          COUNT(DISTINCT mt.member_id) FILTER (WHERE mt.type = 'recharge')::int AS depositors,
+          COALESCE(SUM(mt.amount) FILTER (WHERE mt.type = 'redeem'), 0) AS withdrawal,
+          COUNT(DISTINCT mt.member_id) FILTER (WHERE mt.type = 'redeem')::int AS withdrawers,
+          COALESCE(SUM(mt.in_score), 0) AS "totalIn",
+          COALESCE(SUM(mt.out_score), 0) AS "totalOut",
+          COALESCE(SUM(mt.bonus_score), 0) AS bonus,
+          COALESCE(SUM(mt.game_deposit_fee), 0) AS "gameDepositFee",
+          COALESCE(SUM(mt.platform_fee), 0) AS "platformFee"
+        FROM agents a
+        LEFT JOIN members m ON m.${agentCol} = a.id
+        LEFT JOIN member_transactions mt ON mt.member_id = m.id
+        WHERE a.store_id = $1 AND a.type = $2
+        GROUP BY a.id, a.username
+      `, agent.storeId, type);
+  
+      const formattedRows = (rows as any[]).map(row => {
+        const formatted: any = {};
+        for (const key in row) {
+          formatted[key] = typeof row[key] === 'bigint' ? row[key].toString() : row[key];
+        }
+        return formatted;
+      });
+  
+      return NextResponse.json({ report: formattedRows });
+    }
+  
+    const where: any = {
+      store_id: agent.storeId,
+      type,
+    };
+  
+    if (search) {
+      where.OR = [
+        { username: { contains: search, mode: 'insensitive' } },
+        { nickname: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+  
+    const rows = await db.agents.findMany({
+      where,
+      select: {
+        id: true,
+        username: true,
+        nickname: true,
+        email: true,
+        ratio_pct: true,
+        commission_per: true,
+        online_balance: true,
+        invite_code: true,
+        status: true,
+        remark: true,
+        created_at: true,
+      },
+      orderBy: { created_at: 'desc' },
     });
-
-    return NextResponse.json({ report: formattedRows });
+  
+    const formatted = rows.map(r => ({
+      id: r.id,
+      username: r.username,
+      nickname: r.nickname,
+      email: r.email,
+      ratioPct: r.ratio_pct,
+      commissionPer: r.commission_per,
+      onlineBalance: r.online_balance,
+      inviteCode: r.invite_code,
+      status: r.status,
+      remark: r.remark,
+      createdAt: r.created_at,
+    }));
+  
+    return NextResponse.json({ agents: formatted });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('GET /api/agent/agents', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
-
-  const where: any = {
-    store_id: agent.storeId,
-    type,
-  };
-
-  if (search) {
-    where.OR = [
-      { username: { contains: search, mode: 'insensitive' } },
-      { nickname: { contains: search, mode: 'insensitive' } },
-      { email: { contains: search, mode: 'insensitive' } },
-    ];
-  }
-
-  const rows = await db.agents.findMany({
-    where,
-    select: {
-      id: true,
-      username: true,
-      nickname: true,
-      email: true,
-      ratio_pct: true,
-      commission_per: true,
-      online_balance: true,
-      invite_code: true,
-      status: true,
-      remark: true,
-      created_at: true,
-    },
-    orderBy: { created_at: 'desc' },
-  });
-
-  const formatted = rows.map(r => ({
-    id: r.id,
-    username: r.username,
-    nickname: r.nickname,
-    email: r.email,
-    ratioPct: r.ratio_pct,
-    commissionPer: r.commission_per,
-    onlineBalance: r.online_balance,
-    inviteCode: r.invite_code,
-    status: r.status,
-    remark: r.remark,
-    createdAt: r.created_at,
-  }));
-
-  return NextResponse.json({ agents: formatted });
 }
 
 const postSchema = z.object({
@@ -194,6 +200,7 @@ export async function PUT(req: Request) {
     });
     return NextResponse.json({ ok: true });
   } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     if (err instanceof ZodError) {
       return NextResponse.json({ error: err.issues[0].message }, { status: 400 });
     }

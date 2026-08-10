@@ -11,41 +11,47 @@ const putSchema = z.object({
 class InsufficientBalanceError extends Error {}
 
 export async function GET(req: Request) {
-  const agent = await getAgentFromRequest(req);
-  if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const status = new URL(req.url).searchParams.get('status');
-  const statuses = ['pending', 'approved', 'rejected'] as const;
-
-  const where: any = { store_id: agent.storeId };
-  if (status && statuses.includes(status as any)) {
-    where.status = status;
+  try {
+    const agent = await getAgentFromRequest(req);
+    if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const status = new URL(req.url).searchParams.get('status');
+    const statuses = ['pending', 'approved', 'rejected'] as const;
+  
+    const where: any = { store_id: agent.storeId };
+    if (status && statuses.includes(status as any)) {
+      where.status = status;
+    }
+  
+    const rows = await db.redemption_audits.findMany({
+      where,
+      select: {
+        id: true,
+        members: { select: { username: true } },
+        game_platforms: { select: { name: true } },
+        amount: true,
+        tx_ref: true,
+        status: true,
+        submitted_at: true,
+        reviewed_at: true,
+      },
+      orderBy: { submitted_at: 'desc' },
+      take: 100
+    });
+    return NextResponse.json({ audits: rows.map(r => ({
+      id: r.id,
+      player: r.members?.username || null,
+      platform: r.game_platforms?.name || null,
+      amount: r.amount,
+      txRef: r.tx_ref,
+      status: r.status,
+      submittedAt: r.submitted_at,
+      reviewedAt: r.reviewed_at,
+    })) });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('GET /api/agent/redemption-audits', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
-
-  const rows = await db.redemption_audits.findMany({
-    where,
-    select: {
-      id: true,
-      members: { select: { username: true } },
-      game_platforms: { select: { name: true } },
-      amount: true,
-      tx_ref: true,
-      status: true,
-      submitted_at: true,
-      reviewed_at: true,
-    },
-    orderBy: { submitted_at: 'desc' },
-    take: 100
-  });
-  return NextResponse.json({ audits: rows.map(r => ({
-    id: r.id,
-    player: r.members?.username || null,
-    platform: r.game_platforms?.name || null,
-    amount: r.amount,
-    txRef: r.tx_ref,
-    status: r.status,
-    submittedAt: r.submitted_at,
-    reviewedAt: r.reviewed_at,
-  })) });
 }
 
 export async function PUT(req: Request) {

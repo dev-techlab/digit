@@ -1,4 +1,5 @@
 import 'server-only';
+import { headers } from 'next/headers';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
 import { newSessionToken } from '@/lib/auth-tokens';
@@ -27,6 +28,7 @@ export interface AgentContext {
 
 /** Resolve the authenticated agent from the `agent_session` cookie (or Bearer). */
 export async function getAgentFromRequest(req: Request): Promise<AgentContext | null> {
+  headers(); // Tell Next.js this route is dynamic
   const authHeader = req.headers.get('authorization');
   const bearer = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
   const token = bearer ?? cookieValue(req.headers.get('cookie'), AGENT_SESSION_COOKIE);
@@ -110,6 +112,7 @@ export async function revokeAgentSession(token: string) {
 }
 
 export function agentSessionTokenFromRequest(req: Request): string | null {
+  headers(); // Tell Next.js this route is dynamic
   const authHeader = req.headers.get('authorization');
   const bearer = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
   return bearer ?? cookieValue(req.headers.get('cookie'), AGENT_SESSION_COOKIE);

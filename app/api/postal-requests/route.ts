@@ -16,23 +16,29 @@ const postSchema = z.object({
  * when a session happens to be present.
  */
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
-  const parseResult = postSchema.safeParse(body);
+  try {
+    const body = await req.json().catch(() => ({}));
+    const parseResult = postSchema.safeParse(body);
 
-  if (!parseResult.success) {
-    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+    if (!parseResult.success) {
+      return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+    }
+
+    const { code } = parseResult.data;
+
+    const userId = await getUserIdFromRequest(req);
+    const row = await db.postal_requests.create({
+      data: {
+        user_id: userId || null,
+        code
+      },
+      select: { id: true }
+    });
+
+    return NextResponse.json({ ok: true, id: row.id }, { status: 201 });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('POST /api/postal-requests', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
-
-  const { code } = parseResult.data;
-
-  const userId = await getUserIdFromRequest(req);
-  const row = await db.postal_requests.create({
-    data: {
-      user_id: userId || null,
-      code
-    },
-    select: { id: true }
-  });
-
-  return NextResponse.json({ ok: true, id: row.id }, { status: 201 });
 }

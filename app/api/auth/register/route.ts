@@ -100,7 +100,8 @@ export async function POST(req: Request) {
     );
     res.cookies.set(USER_SESSION_COOKIE, token, sessionCookieOptions(USER_SESSION_TTL_S));
     return res;
-  } catch (err) {
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     if (err && (err as any).name === 'UserConflictError') {
       return NextResponse.json({ error: (err as any).message }, { status: 409 });
     }

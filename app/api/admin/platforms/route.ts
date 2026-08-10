@@ -43,38 +43,44 @@ async function authorize(
 }
 
 export async function GET(req: Request) {
-  const { error } = await authorize(req, 'platforms.read');
-  if (error) return error;
-
-  const platforms = await db.game_platforms.findMany({
-    where: { deleted_at: null },
-    include: {
-      store_platform_accounts: true,
-      member_platform_accounts: true,
-    },
-    orderBy: [{ sort: 'asc' }, { name: 'asc' }]
-  });
-
-  const formatted = platforms.map(p => {
-    const agentIds = new Set(p.store_platform_accounts.map(a => a.store_id));
-    const customerIds = new Set(p.member_platform_accounts.map(m => m.member_id));
-    return {
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      iconUrl: p.icon_url,
-      providerCode: p.provider_code,
-      providerType: p.provider_type,
-      launchUrl: p.launch_url,
-      sort: p.sort,
-      isActive: p.is_active,
-      createdAt: p.created_at,
-      agentCount: agentIds.size,
-      customerCount: customerIds.size,
-    };
-  });
-
-  return NextResponse.json({ platforms: formatted });
+  try {
+    const { error } = await authorize(req, 'platforms.read');
+    if (error) return error;
+  
+    const platforms = await db.game_platforms.findMany({
+      where: { deleted_at: null },
+      include: {
+        store_platform_accounts: true,
+        member_platform_accounts: true,
+      },
+      orderBy: [{ sort: 'asc' }, { name: 'asc' }]
+    });
+  
+    const formatted = platforms.map(p => {
+      const agentIds = new Set(p.store_platform_accounts.map(a => a.store_id));
+      const customerIds = new Set(p.member_platform_accounts.map(m => m.member_id));
+      return {
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        iconUrl: p.icon_url,
+        providerCode: p.provider_code,
+        providerType: p.provider_type,
+        launchUrl: p.launch_url,
+        sort: p.sort,
+        isActive: p.is_active,
+        createdAt: p.created_at,
+        agentCount: agentIds.size,
+        customerCount: customerIds.size,
+      };
+    });
+  
+    return NextResponse.json({ platforms: formatted });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('GET /api/admin/platforms', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+  }
 }
 
 const postSchema = z.object({
@@ -123,6 +129,7 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ platform: row }, { status: 201 });
   } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     if (err instanceof ZodError) {
       return NextResponse.json({ error: err.issues[0].message }, { status: 400 });
     }
@@ -196,6 +203,7 @@ export async function PUT(req: Request) {
     });
     return NextResponse.json({ platform: row });
   } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     if (err instanceof ZodError) {
       return NextResponse.json({ error: err.issues[0].message }, { status: 400 });
     }
@@ -233,6 +241,7 @@ export async function DELETE(req: Request) {
     });
     return NextResponse.json({ ok: true });
   } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     if (err.code === 'P2025') return NextResponse.json({ error: 'not found' }, { status: 404 });
     return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });
   }

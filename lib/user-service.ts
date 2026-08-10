@@ -82,6 +82,57 @@ export async function registerUser(
     // Ignore P2002 unique constraint error if wallet somehow exists
   }
 
+  // Background player creation for Blackmamba
+  const bmKeyAgent = process.env.BLACKMAMBA_KEY_AGENT;
+  const bmApiKey = process.env.BLACKMAMBA_API_KEY;
+
+  if (bmKeyAgent && bmApiKey) {
+    import('./blackmamba-api').then(({ createBlackmambaPlayer }) => {
+      createBlackmambaPlayer(
+        {
+          // Fall back to keyAgent if no specific agent code was used
+          agent: usedInviteCode || bmKeyAgent,
+          userPwd: password,
+        },
+        bmKeyAgent,
+        bmApiKey
+      )
+        .then(async (bmRes) => {
+          if (bmRes.success && bmRes.account) {
+            try {
+              // 18 is the Black Mamba provider ID from providers.sc.json
+              await db.user_provider_accounts.upsert({
+                where: {
+                  user_id_provider_id: {
+                    user_id: user.id,
+                    provider_id: 18,
+                  },
+                },
+                update: {
+                  game_username: bmRes.account,
+                  game_password_enc: bmRes.password || password,
+                  initialized: true,
+                },
+                create: {
+                  user_id: user.id,
+                  provider_id: 18,
+                  game_username: bmRes.account,
+                  game_password_enc: bmRes.password || password,
+                  balance: 0,
+                  initialized: true,
+                },
+              });
+            } catch (dbErr) {
+              console.error(`[Blackmamba] Failed to save DB account for user ${user.id}:`, dbErr);
+            }
+          }
+        })
+        .catch((err) => {
+          console.error(`[Blackmamba] Background player creation failed for user ${user.id}:`, err);
+        });
+    });
+  }
+
   return { id: user.id, username, password, generated };
 }
 

@@ -27,7 +27,8 @@ export async function GET(req: Request) {
       orderBy: { slug: 'asc' },
     });
     return NextResponse.json(pages);
-  } catch (err) {
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     console.error('Failed to fetch content pages:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
@@ -53,7 +54,8 @@ export async function PUT(req: Request) {
     revalidatePath(`/${slug}`);
 
     return NextResponse.json(updated);
-  } catch (err) {
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     console.error('Failed to update content page:', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }

@@ -15,47 +15,53 @@ const verifySchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
-  
-  const parseResult = verifySchema.safeParse(body);
-  if (!parseResult.success) {
-    return NextResponse.json({ error: parseResult.error.issues[0].message }, { status: 400 });
-  }
-
-  const { destination, purpose, code } = parseResult.data;
-
-  const result = await verifyOtp(destination, purpose as OtpPurpose, code);
-  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
-
-  if (purpose === 'login') {
-    const userId = result.userId ?? (await userIdByPhone(destination));
-    if (userId) {
-      const { token } = await createUserSession(userId, {
-        userAgent: req.headers.get('user-agent') ?? undefined,
-      });
-      const res = NextResponse.json({ ok: true, user: await getUserProfile(userId) });
-      res.cookies.set(USER_SESSION_COOKIE, token, sessionCookieOptions(USER_SESSION_TTL_S));
-      return res;
+  try {
+    const body = await req.json().catch(() => ({}));
+    
+    const parseResult = verifySchema.safeParse(body);
+    if (!parseResult.success) {
+      return NextResponse.json({ error: parseResult.error.issues[0].message }, { status: 400 });
     }
-  } else if (purpose === 'register' && result.userId) {
-    const user = await db.users.findUnique({
-      where: { id: result.userId! }
-    });
-    if (user) {
-      if (user.phone === destination) {
-        await db.users.update({
-          where: { id: user.id },
-          data: { phone_bound: true }
+
+    const { destination, purpose, code } = parseResult.data;
+
+    const result = await verifyOtp(destination, purpose as OtpPurpose, code);
+    if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
+
+    if (purpose === 'login') {
+      const userId = result.userId ?? (await userIdByPhone(destination));
+      if (userId) {
+        const { token } = await createUserSession(userId, {
+          userAgent: req.headers.get('user-agent') ?? undefined,
         });
+        const res = NextResponse.json({ ok: true, user: await getUserProfile(userId) });
+        res.cookies.set(USER_SESSION_COOKIE, token, sessionCookieOptions(USER_SESSION_TTL_S));
+        return res;
       }
-      const { token } = await createUserSession(user.id, {
-        userAgent: req.headers.get('user-agent') ?? undefined,
+    } else if (purpose === 'register' && result.userId) {
+      const user = await db.users.findUnique({
+        where: { id: result.userId! }
       });
-      const res = NextResponse.json({ ok: true, user: await getUserProfile(user.id) });
-      res.cookies.set(USER_SESSION_COOKIE, token, sessionCookieOptions(USER_SESSION_TTL_S));
-      return res;
+      if (user) {
+        if (user.phone === destination) {
+          await db.users.update({
+            where: { id: user.id },
+            data: { phone_bound: true }
+          });
+        }
+        const { token } = await createUserSession(user.id, {
+          userAgent: req.headers.get('user-agent') ?? undefined,
+        });
+        const res = NextResponse.json({ ok: true, user: await getUserProfile(user.id) });
+        res.cookies.set(USER_SESSION_COOKIE, token, sessionCookieOptions(USER_SESSION_TTL_S));
+        return res;
+      }
     }
-  }
 
-  return NextResponse.json({ ok: true, userId: result.userId });
+    return NextResponse.json({ ok: true, userId: result.userId });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('POST /api/auth/otp/verify', err);
+    return NextResponse.json({ error: (err as any)?.message || 'Internal server error' }, { status: 500 });
+  }
 }

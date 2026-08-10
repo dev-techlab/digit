@@ -69,14 +69,20 @@ const slugify = (v: string) =>
     .replace(/^-+|-+$/g, '');
 
 export async function GET(req: Request) {
-  const { error } = await authorize(req, 'bonuses.read');
-  if (error) return error;
-
-  const bonuses = await db.bonuses.findMany({
-    where: { deleted_at: null },
-    orderBy: [{ sort: 'asc' }, { title: 'asc' }]
-  });
-  return NextResponse.json({ bonuses });
+  try {
+    const { error } = await authorize(req, 'bonuses.read');
+    if (error) return error;
+  
+    const bonuses = await db.bonuses.findMany({
+      where: { deleted_at: null },
+      orderBy: [{ sort: 'asc' }, { title: 'asc' }]
+    });
+    return NextResponse.json({ bonuses });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('GET /api/admin/bonuses', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
@@ -193,6 +199,7 @@ export async function PUT(req: Request) {
     });
     return NextResponse.json({ bonus: row });
   } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     if (err.code === 'P2025') return NextResponse.json({ error: 'not found' }, { status: 404 });
     console.error('PUT /api/admin/bonuses', err);
     return NextResponse.json({ error: 'Failed to update bonus' }, { status: 500 });
@@ -221,6 +228,7 @@ export async function DELETE(req: Request) {
     });
     return NextResponse.json({ ok: true });
   } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     if (err.code === 'P2025') return NextResponse.json({ error: 'not found' }, { status: 404 });
     console.error('DELETE /api/admin/bonuses', err);
     return NextResponse.json({ error: 'Failed to delete bonus' }, { status: 500 });

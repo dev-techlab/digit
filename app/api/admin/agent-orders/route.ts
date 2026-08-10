@@ -36,81 +36,87 @@ async function authorize(
 }
 
 export async function GET(req: Request) {
-  const { error } = await authorize(req, 'agents.read');
-  if (error) return error;
-
-  const url = new URL(req.url);
-  const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
-  const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('pageSize')) || 20));
-  const search = url.searchParams.get('search')?.trim();
-  const statusFilter = url.searchParams.get('status');
-  const typeFilter = url.searchParams.get('type');
-
-  const where: any = {};
+  try {
+    const { error } = await authorize(req, 'agents.read');
+    if (error) return error;
   
-  if (statusFilter) where.status = statusFilter;
-  if (typeFilter) {
-    where.type = typeFilter;
-  } else {
-    // Both deposits and withdrawals
-    where.type = { in: ['deposit', 'withdraw'] };
+    const url = new URL(req.url);
+    const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('pageSize')) || 20));
+    const search = url.searchParams.get('search')?.trim();
+    const statusFilter = url.searchParams.get('status');
+    const typeFilter = url.searchParams.get('type');
+  
+    const where: any = {};
+    
+    if (statusFilter) where.status = statusFilter;
+    if (typeFilter) {
+      where.type = typeFilter;
+    } else {
+      // Both deposits and withdrawals
+      where.type = { in: ['deposit', 'withdraw'] };
+    }
+  
+    if (search) {
+      where.OR = [
+        { id: { contains: search, mode: 'insensitive' } },
+        { agents_agent_transactions_agent_idToagents: { username: { contains: search, mode: 'insensitive' } } }
+      ];
+    }
+  
+    const [rows, count] = await Promise.all([
+      db.agent_transactions.findMany({
+        where,
+        select: {
+          id: true,
+          type: true,
+          agent_id: true,
+          method: true,
+          amount: true,
+          fee: true,
+          commission_per: true,
+          net_amount: true,
+          address: true,
+          balance_before: true,
+          balance_after: true,
+          remark: true,
+          status: true,
+          created_at: true,
+          agents_agent_transactions_agent_idToagents: {
+            select: { username: true }
+          }
+        },
+        orderBy: { created_at: 'desc' },
+        take: pageSize,
+        skip: (page - 1) * pageSize,
+      }),
+      db.agent_transactions.count({ where }),
+    ]);
+  
+    const formattedRows = rows.map(r => ({
+      id: r.id,
+      type: r.type,
+      agentId: r.agent_id,
+      username: r.agents_agent_transactions_agent_idToagents?.username,
+      method: r.method,
+      amount: r.amount,
+      fee: r.fee,
+      commissionPer: r.commission_per,
+      netAmount: r.net_amount,
+      address: r.address,
+      balanceBefore: r.balance_before,
+      balanceAfter: r.balance_after,
+      remark: r.remark,
+      status: r.status,
+      createdAt: r.created_at,
+    }));
+  
+    return NextResponse.json({ orders: formattedRows, total: count });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('GET /api/admin/agent-orders', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
   }
-
-  if (search) {
-    where.OR = [
-      { id: { contains: search, mode: 'insensitive' } },
-      { agents_agent_transactions_agent_idToagents: { username: { contains: search, mode: 'insensitive' } } }
-    ];
-  }
-
-  const [rows, count] = await Promise.all([
-    db.agent_transactions.findMany({
-      where,
-      select: {
-        id: true,
-        type: true,
-        agent_id: true,
-        method: true,
-        amount: true,
-        fee: true,
-        commission_per: true,
-        net_amount: true,
-        address: true,
-        balance_before: true,
-        balance_after: true,
-        remark: true,
-        status: true,
-        created_at: true,
-        agents_agent_transactions_agent_idToagents: {
-          select: { username: true }
-        }
-      },
-      orderBy: { created_at: 'desc' },
-      take: pageSize,
-      skip: (page - 1) * pageSize,
-    }),
-    db.agent_transactions.count({ where }),
-  ]);
-
-  const formattedRows = rows.map(r => ({
-    id: r.id,
-    type: r.type,
-    agentId: r.agent_id,
-    username: r.agents_agent_transactions_agent_idToagents?.username,
-    method: r.method,
-    amount: r.amount,
-    fee: r.fee,
-    commissionPer: r.commission_per,
-    netAmount: r.net_amount,
-    address: r.address,
-    balanceBefore: r.balance_before,
-    balanceAfter: r.balance_after,
-    remark: r.remark,
-    status: r.status,
-    createdAt: r.created_at,
-  }));
-
-  return NextResponse.json({ orders: formattedRows, total: count });
 }
 
 export async function POST(req: Request) {

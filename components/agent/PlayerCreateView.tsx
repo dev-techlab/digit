@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { api, Btn, Card, Field, TextInput } from '@/components/agent/ui';
 import { PlatformAccountTable } from '@/components/agent/PlatformAccountTable';
 import { cn } from '@/lib/cn';
-import { getLocalImageUrl } from '@/lib/image';
 
 interface Platform {
   id: string;

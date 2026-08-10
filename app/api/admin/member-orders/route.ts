@@ -35,66 +35,72 @@ async function authorize(
 }
 
 export async function GET(req: Request) {
-  // Use agents.read as permission placeholder for now since there is no members.read 
-  // explicitly for fiat transactions yet, or we could use users.read
-  const { error } = await authorize(req, 'users.read');
-  if (error) return error;
-
-  const url = new URL(req.url);
-  const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
-  const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('pageSize')) || 20));
-  const search = url.searchParams.get('search')?.trim();
-  const statusFilter = url.searchParams.get('status');
-  const typeFilter = url.searchParams.get('type');
-
-  const where: any = {};
-  if (statusFilter) where.status = statusFilter;
-  if (typeFilter) where.type = typeFilter;
-
-  if (search) {
-    where.OR = [
-      { id: { contains: search, mode: 'insensitive' } },
-      { users: { username: { contains: search, mode: 'insensitive' } } }
-    ];
-  }
-
-  const [rows, count] = await Promise.all([
-    db.transactions.findMany({
-      where,
-      select: {
-        id: true,
-        type: true,
-        amount: true,
-        method_label: true,
-        status: true,
-        created_at: true,
-        users: { 
-          select: { 
-            username: true, 
-            agent_invite_code: true,
-            agent: { select: { username: true } }
-          } 
+  try {
+    // Use agents.read as permission placeholder for now since there is no members.read 
+    // explicitly for fiat transactions yet, or we could use users.read
+    const { error } = await authorize(req, 'users.read');
+    if (error) return error;
+  
+    const url = new URL(req.url);
+    const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('pageSize')) || 20));
+    const search = url.searchParams.get('search')?.trim();
+    const statusFilter = url.searchParams.get('status');
+    const typeFilter = url.searchParams.get('type');
+  
+    const where: any = {};
+    if (statusFilter) where.status = statusFilter;
+    if (typeFilter) where.type = typeFilter;
+  
+    if (search) {
+      where.OR = [
+        { id: { contains: search, mode: 'insensitive' } },
+        { users: { username: { contains: search, mode: 'insensitive' } } }
+      ];
+    }
+  
+    const [rows, count] = await Promise.all([
+      db.transactions.findMany({
+        where,
+        select: {
+          id: true,
+          type: true,
+          amount: true,
+          method_label: true,
+          status: true,
+          created_at: true,
+          users: { 
+            select: { 
+              username: true, 
+              agent_invite_code: true,
+              agent: { select: { username: true } }
+            } 
+          },
         },
-      },
-      orderBy: { created_at: 'desc' },
-      take: pageSize,
-      skip: (page - 1) * pageSize,
-    }),
-    db.transactions.count({ where }),
-  ]);
-
-  const formattedRows = rows.map(r => ({
-    id: r.id,
-    username: r.users?.username || null,
-    agentId: r.users?.agent?.username || r.users?.agent_invite_code || '-',
-    type: r.type,
-    amount: r.amount,
-    methodLabel: r.method_label,
-    status: r.status,
-    createdAt: r.created_at,
-  }));
-
-  return NextResponse.json({ transactions: formattedRows, total: count });
+        orderBy: { created_at: 'desc' },
+        take: pageSize,
+        skip: (page - 1) * pageSize,
+      }),
+      db.transactions.count({ where }),
+    ]);
+  
+    const formattedRows = rows.map(r => ({
+      id: r.id,
+      username: r.users?.username || null,
+      agentId: r.users?.agent?.username || r.users?.agent_invite_code || '-',
+      type: r.type,
+      amount: r.amount,
+      methodLabel: r.method_label,
+      status: r.status,
+      createdAt: r.created_at,
+    }));
+  
+    return NextResponse.json({ transactions: formattedRows, total: count });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('GET /api/admin/member-orders', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {

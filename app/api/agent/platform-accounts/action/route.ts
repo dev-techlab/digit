@@ -74,7 +74,8 @@ export async function POST(req: Request) {
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
-  } catch (err) {
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     console.error(err);
     if (err instanceof ZodError) {
       return NextResponse.json({ error: (err as any).issues[0].message }, { status: 400 });

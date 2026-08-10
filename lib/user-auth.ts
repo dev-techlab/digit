@@ -1,4 +1,5 @@
 import 'server-only';
+import { headers } from 'next/headers';
 import { userIdForToken } from '@/lib/user-service';
 import { USER_SESSION_COOKIE } from '@/lib/auth-tokens';
 
@@ -13,6 +14,7 @@ function cookieValue(cookieHeader: string | null, name: string): string | null {
 
 /** Resolve the authenticated user id from a request's `session` cookie. */
 export async function getUserIdFromRequest(req: Request): Promise<string | null> {
+  headers(); // Tell Next.js this route is dynamic
   const token = cookieValue(req.headers.get('cookie'), USER_SESSION_COOKIE);
   if (!token) return null;
   return userIdForToken(token);

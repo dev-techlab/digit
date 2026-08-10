@@ -36,14 +36,20 @@ async function authorize(
 }
 
 export async function GET(req: Request) {
-  const { error } = await authorize(req, 'providers.read');
-  if (error) return error;
-
-  const providers = await db.game_providers.findMany({
-    where: { deleted_at: null },
-    orderBy: [{ sort: 'asc' }, { name: 'asc' }]
-  });
-  return NextResponse.json({ providers });
+  try {
+    const { error } = await authorize(req, 'providers.read');
+    if (error) return error;
+  
+    const providers = await db.game_providers.findMany({
+      where: { deleted_at: null },
+      orderBy: [{ sort: 'asc' }, { name: 'asc' }]
+    });
+    return NextResponse.json({ providers });
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+    console.error('GET /api/admin/providers', err);
+    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 });
+  }
 }
 
 const postSchema = z.object({
@@ -120,6 +126,7 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ provider: row }, { status: 201 });
   } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     if (err instanceof ZodError) {
       return NextResponse.json({ error: err.issues[0].message }, { status: 400 });
     }
@@ -196,6 +203,7 @@ export async function PUT(req: Request) {
     });
     return NextResponse.json({ provider: row });
   } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     if (err instanceof ZodError) {
       return NextResponse.json({ error: err.issues[0].message }, { status: 400 });
     }
@@ -233,6 +241,7 @@ export async function DELETE(req: Request) {
     });
     return NextResponse.json({ ok: true });
   } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     if (err.code === 'P2025') return NextResponse.json({ error: 'not found' }, { status: 404 });
     return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });
   }
