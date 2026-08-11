@@ -60,6 +60,16 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         create: { user_id: userId, online_sc: balanceChange > 0 ? balanceChange : 0, gold_coin: 0 }
       });
 
+      let fee = 0;
+      let netAmount = amount;
+      let appliedCommissionPer = 0;
+
+      if (action === 'withdraw') {
+        appliedCommissionPer = Number(user.commission_per || 0);
+        fee = amount * (appliedCommissionPer / 100);
+        netAmount = amount - fee;
+      }
+
       // 2. Create Transaction Record
       await tx.transactions.create({
         data: {
@@ -70,6 +80,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
           method: 'cashapp',
           status: 'completed',
           amount,
+          fee,
+          commission_per: appliedCommissionPer,
+          net_amount: netAmount,
           type: action as any,
           created_at: new Date(),
         }

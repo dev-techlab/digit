@@ -114,12 +114,25 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         data: { online_balance: { increment: balanceChange } },
       });
 
+      let fee = 0;
+      let netAmount = amount;
+      let appliedCommissionPer = 0;
+
+      if (action === 'withdraw') {
+        appliedCommissionPer = Number(agent.commission_per || 0);
+        fee = amount * (appliedCommissionPer / 100);
+        netAmount = amount - fee;
+      }
+
       await tx.agent_transactions.create({
         data: {
           agent_id: agentId,
           type: action as any,
           method: 'admin' as any,
           amount,
+          fee,
+          commission_per: appliedCommissionPer,
+          net_amount: netAmount,
           balance_before: currentBalance,
           balance_after: balanceAfter,
           status: 'completed',
