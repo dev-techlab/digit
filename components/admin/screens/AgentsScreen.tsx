@@ -82,6 +82,52 @@ export function AgentsScreen() {
     remark: '',
   });
 
+  // Purchase / Redeem Modal State
+  const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
+  const [redeemModalOpen, setRedeemModalOpen] = useState(false);
+  const [actionAccount, setActionAccount] = useState<AgentRow | null>(null);
+  const [amount, setAmount] = useState('0.00');
+  const [actionSaving, setActionSaving] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const openPurchaseModal = (account: AgentRow) => {
+    setActionAccount(account);
+    setAmount('0.00');
+    setActionError(null);
+    setPurchaseModalOpen(true);
+  };
+
+  const openRedeemModal = (account: AgentRow) => {
+    setActionAccount(account);
+    setAmount('0.00');
+    setActionError(null);
+    setRedeemModalOpen(true);
+  };
+
+  const submitActionAmount = async (action: 'deposit' | 'withdraw') => {
+    if (!actionAccount) return;
+    const val = parseFloat(amount);
+    if (isNaN(val) || val <= 0) {
+      setActionError('Please enter a valid amount greater than 0');
+      return;
+    }
+    setActionSaving(true);
+    setActionError(null);
+    try {
+      await api(`/api/admin/agents/${actionAccount.id}/transactions`, {
+        method: 'POST',
+        body: JSON.stringify({ action, amount: val, remark: 'Admin manual adjustment' })
+      });
+      setPurchaseModalOpen(false);
+      setRedeemModalOpen(false);
+      void table.reload();
+    } catch (e) {
+      setActionError((e as Error).message);
+    } finally {
+      setActionSaving(false);
+    }
+  };
+
   const [platforms, setPlatforms] = useState<PlatformOption[]>([]);
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [gameSearch, setGameSearch] = useState('');
@@ -389,6 +435,25 @@ export function AgentsScreen() {
               ),
             },
             {
+              header: 'Purchase / Redeem',
+              cell: (r) => (
+                <div className="flex items-center">
+                  <button 
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-[11px] px-2 py-1 rounded-l shadow-sm font-semibold disabled:opacity-50" 
+                    disabled={actionSaving && actionAccount?.id === r.id}
+                    onClick={() => openPurchaseModal(r)}>
+                    Purchase
+                  </button>
+                  <button 
+                    className="bg-red-600 hover:bg-red-700 text-white text-[11px] px-2 py-1 rounded-r shadow-sm font-semibold disabled:opacity-50" 
+                    disabled={actionSaving && actionAccount?.id === r.id}
+                    onClick={() => openRedeemModal(r)}>
+                    Redeem
+                  </button>
+                </div>
+              )
+            },
+            {
               header: 'Edit',
               enableSorting: false,
               enableGlobalFilter: false,
@@ -683,6 +748,96 @@ export function AgentsScreen() {
           <p className="text-slate-700">
             Are you sure you want to delete agent <strong>{deleteModal.item?.username}</strong>? This action cannot be undone.
           </p>
+        </div>
+      </Modal>
+
+      <Modal
+        title="Purchase"
+        open={purchaseModalOpen}
+        onClose={() => setPurchaseModalOpen(false)}
+        footer={
+          <>
+            <Btn onClick={() => submitActionAmount('deposit')} disabled={actionSaving} className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600">
+              {actionSaving ? 'Processing...' : 'Purchase'}
+            </Btn>
+            <Btn variant="ghost" onClick={() => setPurchaseModalOpen(false)}>Cancel</Btn>
+          </>
+        }
+      >
+        <div className="space-y-4 text-center">
+          {actionError && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500 text-left">{actionError}</p>
+          )}
+          <div className="flex justify-center items-center gap-2 mb-4">
+            <span className="text-slate-500 text-sm">Account #</span>
+            <span className="font-bold text-green-600 text-lg">{actionAccount?.username}</span>
+          </div>
+          
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">Amount</span>
+              <TextInput
+                type="number"
+                className="w-32 text-center"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+            </div>
+            
+            <div className="mt-4 text-slate-500 text-xs">Quick amounts:</div>
+            <div className="flex gap-2 flex-wrap justify-center max-w-[250px] mt-1">
+              {[5, 10, 20, 50, 100].map(val => (
+                <button
+                  key={val}
+                  onClick={() => setAmount((parseFloat(amount || '0') + val).toFixed(2))}
+                  className="bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 px-3 py-1 rounded shadow-sm text-sm"
+                >
+                  +${val}
+                </button>
+              ))}
+              <button
+                onClick={() => setAmount('0.00')}
+                className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded shadow-sm text-sm"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        title="Redeem from the balance"
+        open={redeemModalOpen}
+        onClose={() => setRedeemModalOpen(false)}
+        footer={
+          <>
+            <Btn onClick={() => submitActionAmount('withdraw')} disabled={actionSaving} className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600">
+              {actionSaving ? 'Processing...' : 'Redeem'}
+            </Btn>
+            <Btn variant="ghost" onClick={() => setRedeemModalOpen(false)}>Cancel</Btn>
+          </>
+        }
+      >
+        <div className="space-y-4 text-center">
+          {actionError && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500 text-left">{actionError}</p>
+          )}
+          <div className="flex justify-center items-center gap-2 mb-4">
+            <span className="font-bold text-green-600 text-xl">{actionAccount?.username}</span>
+          </div>
+          
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">Amount <span className="text-red-500">*</span></span>
+              <TextInput
+                type="number"
+                className="w-48 text-center"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+            </div>
+          </div>
         </div>
       </Modal>
     </div>
