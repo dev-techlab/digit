@@ -63,6 +63,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
     return NextResponse.json({ admin: updated });
   } catch (e: any) {
+    if (e && (e.digest === 'DYNAMIC_SERVER_USAGE' || e.message?.includes('NEXT_'))) throw e;
     if (e instanceof ZodError) {
       return NextResponse.json({ error: e.issues[0].message }, { status: 400 });
     }
@@ -108,6 +109,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {
+    if (e && (e.digest === 'DYNAMIC_SERVER_USAGE' || e.message?.includes('NEXT_'))) throw e;
     if (e.code === 'P2025') {
       return NextResponse.json({ error: 'Admin not found' }, { status: 404 });
     }

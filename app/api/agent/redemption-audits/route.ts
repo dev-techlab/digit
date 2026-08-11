@@ -126,7 +126,8 @@ export async function PUT(req: Request) {
         });
       }
     });
-  } catch (err) {
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     if (err instanceof InsufficientBalanceError) {
       return NextResponse.json(
         { error: "Member's balance is insufficient to settle this redemption" },

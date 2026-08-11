@@ -140,6 +140,7 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ ok: true, id: created.id });
   } catch (e: any) {
+    if (e && (e.digest === 'DYNAMIC_SERVER_USAGE' || e.message?.includes('NEXT_'))) throw e;
     if (e instanceof ZodError) {
       return NextResponse.json({ error: e.issues[0].message }, { status: 400 });
     }

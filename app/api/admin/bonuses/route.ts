@@ -49,7 +49,8 @@ async function authorize(
     };
   try {
     await requirePermission(adminId, permKey);
-  } catch (e) {
+  } catch (e: any) {
+    if (e && (e.digest === 'DYNAMIC_SERVER_USAGE' || e.message?.includes('NEXT_'))) throw e;
     if (e instanceof PermissionError) {
       return {
         adminId: undefined,
@@ -142,7 +143,8 @@ export async function POST(req: Request) {
       ipAddress: clientIp(req),
     });
     return NextResponse.json({ bonus: row }, { status: 201 });
-  } catch (err) {
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     console.error('POST /api/admin/bonuses', err);
     return NextResponse.json({ error: 'Failed to create bonus' }, { status: 500 });
   }

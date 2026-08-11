@@ -149,7 +149,8 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true, accountId: platformAccount.id });
-  } catch (err) {
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     console.error(err);
     if (err instanceof ZodError) {
       return NextResponse.json({ error: (err as any).issues[0].message }, { status: 400 });
@@ -202,7 +203,8 @@ export async function PUT(req: Request) {
     ]);
 
     return NextResponse.json({ success: true });
-  } catch (err) {
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     console.error(err);
     if (err instanceof ZodError) {
       return NextResponse.json({ error: (err as any).issues[0].message }, { status: 400 });

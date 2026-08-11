@@ -13,6 +13,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   try {
     await requirePermission(adminId, 'agents.read');
   } catch (e: any) {
+    if (e && (e.digest === 'DYNAMIC_SERVER_USAGE' || e.message?.includes('NEXT_'))) throw e;
     return NextResponse.json({ error: e.message }, { status: e.status || 403 });
   }
 

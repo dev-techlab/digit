@@ -389,49 +389,68 @@ export function AgentsScreen() {
               ),
             },
             {
-              header: 'Operations',
+              header: 'Edit',
               enableSorting: false,
               enableGlobalFilter: false,
               cell: (r) => (
-                <div className="flex items-center gap-2">
-                  <Btn
-                    variant="ghost"
-                    className="px-1 text-xs"
-                    disabled={editModal.busy && editModal.item?.id === r.id}
-                    onClick={() => {
-                      setEditForm({
-                        username: r.username,
-                        password: '', // leave empty unless changing
-                        nickname: r.nickname ?? '',
-                        email: r.email ?? '',
-                        commissionPer: r.commissionPer,
-                        inviteCode: r.inviteCode,
-                        onlineBalance: r.onlineBalance ? String(r.onlineBalance) : '0',
-                        remark: r.remark ?? '',
-                      });
-                      void loadPlatforms(r.id);
-                      editModal.openModal(r);
-                    }}
-                  >
-                    <Edit size={14} />
-                  </Btn>
-                  <Btn
-                    variant={r.status === 'active' ? 'danger' : 'success'}
-                    className="px-3 py-1.5 text-xs"
-                    disabled={busyId === r.id}
-                    onClick={() => void toggleStatus(r)}
-                  >
-                    {r.status === 'active' ? 'Block Access' : 'Restore Access'}
-                  </Btn>
-                  <Btn
-                    variant="danger"
-                    className="px-3 py-1.5 text-xs ml-1 bg-red-600 hover:bg-red-700"
-                    disabled={busyId === r.id || (deleteModal.busy && deleteModal.item?.id === r.id)}
-                    onClick={() => deleteModal.openModal(r)}
-                  >
-                    Delete
-                  </Btn>
-                </div>
+                <Btn
+                  variant="ghost"
+                  className="px-1 text-slate-500 hover:text-blue-600"
+                  disabled={editModal.busy && editModal.item?.id === r.id}
+                  onClick={() => {
+                    setEditForm({
+                      username: r.username,
+                      password: '', // leave empty unless changing
+                      nickname: r.nickname ?? '',
+                      email: r.email ?? '',
+                      commissionPer: r.commissionPer,
+                      inviteCode: r.inviteCode,
+                      onlineBalance: r.onlineBalance ? String(r.onlineBalance) : '0',
+                      remark: r.remark ?? '',
+                    });
+                    void loadPlatforms(r.id);
+                    editModal.openModal(r);
+                  }}
+                >
+                  <Edit size={16} />
+                </Btn>
+              ),
+            },
+            {
+              header: 'Security',
+              enableSorting: false,
+              enableGlobalFilter: false,
+              cell: (r) => (
+                <button
+                  className={`${
+                    r.status === 'active'
+                      ? 'bg-green-500 hover:bg-green-600'
+                      : 'bg-orange-500 hover:bg-orange-600'
+                  } text-white p-1 rounded shadow-sm disabled:opacity-50`}
+                  title={r.status === 'active' ? 'Block Access' : 'Restore Access'}
+                  disabled={busyId === r.id}
+                  onClick={() => void toggleStatus(r)}
+                >
+                  {r.status === 'active' ? (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
+                  )}
+                </button>
+              ),
+            },
+            {
+              header: 'Delete',
+              enableSorting: false,
+              enableGlobalFilter: false,
+              cell: (r) => (
+                <button
+                  className="bg-red-600 hover:bg-red-700 text-white text-[11px] px-2 py-1 rounded shadow-sm font-semibold disabled:opacity-50"
+                  disabled={busyId === r.id || (deleteModal.busy && deleteModal.item?.id === r.id)}
+                  onClick={() => deleteModal.openModal(r)}
+                >
+                  Delete
+                </button>
               ),
             },
           ]}

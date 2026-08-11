@@ -341,7 +341,8 @@ export async function POST(req: Request) {
           data: { online_balance: { decrement: amount } }
         });
       });
-    } catch (err) {
+    } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
       if (err instanceof InsufficientBalanceError) {
         return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
       }
@@ -400,7 +401,8 @@ export async function POST(req: Request) {
         data: { online_balance: { increment: amount } }
       });
     });
-  } catch (err) {
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     if (err instanceof InsufficientBalanceError) {
       return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
     }

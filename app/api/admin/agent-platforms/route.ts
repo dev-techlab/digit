@@ -15,7 +15,8 @@ async function authorize(req: Request, permKey: string) {
   }
   try {
     await requirePermission(adminId, permKey);
-  } catch (e) {
+  } catch (e: any) {
+    if (e && (e.digest === 'DYNAMIC_SERVER_USAGE' || e.message?.includes('NEXT_'))) throw e;
     if (e instanceof PermissionError) {
       return {
         adminId: undefined,

@@ -133,6 +133,7 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ ok: true, id: created.id });
   } catch (e: any) {
+    if (e && (e.digest === 'DYNAMIC_SERVER_USAGE' || e.message?.includes('NEXT_'))) throw e;
     if (e.code === 'P2002') {
       return NextResponse.json({ error: 'Username already exists' }, { status: 409 });
     }

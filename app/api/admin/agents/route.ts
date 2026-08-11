@@ -20,7 +20,8 @@ async function authorize(
     };
   try {
     await requirePermission(adminId, permKey);
-  } catch (e) {
+  } catch (e: any) {
+    if (e && (e.digest === 'DYNAMIC_SERVER_USAGE' || e.message?.includes('NEXT_'))) throw e;
     if (e instanceof PermissionError) {
       return {
         adminId: undefined,
@@ -286,7 +287,8 @@ export async function DELETE(req: Request) {
     });
 
     return NextResponse.json({ ok: true });
-  } catch (err) {
+  } catch (err: any) {
+    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     console.error('DELETE /api/admin/agents', err);
     return NextResponse.json({ error: 'Failed to delete agent. It might be referenced by other records.' }, { status: 500 });
   }
