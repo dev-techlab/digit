@@ -754,14 +754,38 @@ export function UsersScreen() {
           </div>
           
           <div className="flex flex-col items-center gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-sm">Amount <span className="text-red-500">*</span></span>
-              <TextInput
-                type="number"
-                className="w-48 text-center"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
+            <div className="flex flex-col gap-3 items-end w-full max-w-[280px] mx-auto">
+              <div className="flex items-center gap-2 w-full justify-between">
+                <span className="text-sm font-medium whitespace-nowrap">Full Amount <span className="text-red-500">*</span></span>
+                <TextInput
+                  type="number"
+                  className="w-32 text-right"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center gap-2 w-full justify-between">
+                <span className="text-sm font-medium whitespace-nowrap text-slate-500">Platform Commission %</span>
+                <TextInput
+                  type="text"
+                  disabled
+                  className="w-32 text-right bg-slate-50 text-slate-500"
+                  value={actionAccount?.commissionPer ? `${actionAccount.commissionPer}%` : '0%'}
+                />
+              </div>
+              <div className="flex items-center gap-2 w-full justify-between">
+                <span className="text-sm font-bold whitespace-nowrap text-green-600">Actual Withdraw</span>
+                <TextInput
+                  type="text"
+                  disabled
+                  className="w-32 text-right font-bold text-green-600 bg-green-50/50"
+                  value={
+                    !isNaN(parseFloat(amount)) 
+                      ? `$${(parseFloat(amount) - (parseFloat(amount) * (Number(actionAccount?.commissionPer || 0) / 100))).toFixed(2)}`
+                      : '$0.00'
+                  }
+                />
+              </div>
             </div>
           </div>
         </div>

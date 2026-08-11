@@ -128,7 +128,6 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         data: {
           agent_id: agentId,
           type: action as any,
-          method: 'admin' as any,
           amount,
           fee,
           commission_per: appliedCommissionPer,
