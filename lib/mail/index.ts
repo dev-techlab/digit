@@ -25,11 +25,7 @@ export { isSmtpConfigured } from './transport';
 export { deliver as sendEmailNow } from './deliver';
 
 export async function sendEmail(payload: MailPayload): Promise<void> {
-  if (process.env.NODE_ENV !== 'production') {
-    await deliver(payload);
-  } else {
-    await enqueue('email.send', payload);
-  }
+  await deliver(payload);
 }
 
 // --- Per-flow helpers: the one call each future flow makes -------------------
@@ -56,5 +52,5 @@ export function sendAdminAlert(args: Omit<AdminAlertPayload, 'template'>) {
 
 /** OTP code (registration, password reset, etc). */
 export function sendOtpEmail(args: Omit<OtpEmailPayload, 'template'>) {
-  return sendEmail({ template: 'otp-email', ...args });
+  return deliver({ template: 'otp-email', ...args });
 }
