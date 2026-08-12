@@ -42,7 +42,8 @@ function hashCode(code: string, destination: string): string {
 export async function requestOtp(
   destination: string,
   purpose: OtpPurpose,
-  userId?: string | null
+  userId?: string | null,
+  options?: { skipEmail?: boolean }
 ): Promise<{ ok: true; code: string } | { ok: false; error: string }> {
   if (!isValidOtpDestination(destination)) {
     return { ok: false, error: 'Enter a valid phone number or email address' };
@@ -70,7 +71,7 @@ export async function requestOtp(
     }
   });
 
-  if (EMAIL_RE.test(destination)) {
+  if (EMAIL_RE.test(destination) && !options?.skipEmail) {
     await sendOtpEmail({
       to: destination,
       purpose,

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyOtp } from '@/lib/otp';
-import { userIdByPhone, setUserPassword } from '@/lib/user-service';
+import { userIdByDestination, setUserPassword } from '@/lib/user-service';
 import { z } from 'zod';
 
 const resetSchema = z.object({
@@ -33,9 +33,9 @@ export async function POST(req: Request) {
     const result = await verifyOtp(destination, 'reset_password', code);
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
 
-    const userId = result.userId ?? (await userIdByPhone(destination));
+    const userId = result.userId ?? (await userIdByDestination(destination));
     if (!userId) {
-      return NextResponse.json({ error: 'No account found for this phone number' }, { status: 404 });
+      return NextResponse.json({ error: 'No account found for this contact method' }, { status: 404 });
     }
 
     await setUserPassword(userId, newPassword);

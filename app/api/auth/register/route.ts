@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     let pendingVerification = false;
 
     if (email) {
-      const otpReq = await requestOtp(email, 'register', created.id);
+      const otpReq = await requestOtp(email, 'register', created.id, { skipEmail: true });
       if (otpReq.ok) {
         // Assume verifyUrl expects token or code. We'll pass the code.
         const origin = req.headers.get('origin') || 'http://localhost:3000';

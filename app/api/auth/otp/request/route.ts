@@ -26,8 +26,12 @@ export async function POST(req: Request) {
     const result = await requestOtp(destination, purpose as OtpPurpose);
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 429 });
 
-    // The real system delivers `code` via SMS. Never return it in production;
-    // echo it only in non-prod so the flow is testable without an SMS gateway.
+    if (!destination.includes('@')) {
+      const { sendSms } = await import('@/lib/sms');
+      await sendSms(destination, `Your OctanLink verification code is: ${result.code}`);
+    }
+
+    // Never return the code in production; echo it only in non-prod so the flow is testable without an SMS gateway.
     return NextResponse.json({
       ok: true,
     });

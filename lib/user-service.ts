@@ -211,6 +211,16 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
   };
 }
 
+/** Find a user id by bound phone or email (for OTP login/reset). */
+export async function userIdByDestination(destination: string): Promise<string | null> {
+  const isEmail = destination.includes('@');
+  const u = await db.users.findFirst({
+    where: isEmail ? { email: destination } : { phone: destination },
+    select: { id: true },
+  });
+  return u?.id ?? null;
+}
+
 /** Find a user id by bound phone (for phone-OTP login). */
 export async function userIdByPhone(phone: string): Promise<string | null> {
   const u = await db.users.findFirst({

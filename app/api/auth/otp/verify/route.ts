@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { verifyOtp, type OtpPurpose, isValidOtpDestination } from '@/lib/otp';
-import { createUserSession, getUserProfile, userIdByPhone } from '@/lib/user-service';
+import { verifyOtp, type OtpPurpose } from '@/lib/otp';
+import { createUserSession, getUserProfile, userIdByDestination } from '@/lib/user-service';
 import { db } from '@/lib/db';
 import { USER_SESSION_COOKIE, USER_SESSION_TTL_S, sessionCookieOptions } from '@/lib/auth-tokens';
 
@@ -17,7 +17,7 @@ const verifySchema = z.object({
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
-    
+
     const parseResult = verifySchema.safeParse(body);
     if (!parseResult.success) {
       return NextResponse.json({ error: parseResult.error.issues[0].message }, { status: 400 });
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
 
     if (purpose === 'login') {
-      const userId = result.userId ?? (await userIdByPhone(destination));
+      const userId = result.userId ?? (await userIdByDestination(destination));
       if (userId) {
         const { token } = await createUserSession(userId, {
           userAgent: req.headers.get('user-agent') ?? undefined,
