@@ -35,21 +35,25 @@ test.describe('Agent Panel Menu Sweep', () => {
   for (const menu of MENUS) {
     test(`should load ${menu.name} without crashing`, async ({ page }) => {
       await page.goto(menu.path);
-      
+
       // Check that Next.js error boundary did not trigger
       const hasError = await page.locator('meta[name="next-error"]').count();
       expect(hasError, `Next.js error boundary found on ${menu.path}`).toBe(0);
 
       // Check for generic 500 error text if any
       const text = await page.locator('body').innerText();
-      expect(text.toLowerCase(), `Server error found on ${menu.path}`).not.toContain('internal server error');
-      
+      expect(text.toLowerCase(), `Server error found on ${menu.path}`).not.toContain(
+        'internal server error'
+      );
+
       // Ensure page isn't just blank
       const numElements = await page.locator('body *').count();
       expect(numElements, `Page ${menu.path} appears blank`).toBeGreaterThan(10);
-      
+
       // Take a screenshot
-      await page.screenshot({ path: `e2e-screenshots/agent-${menu.path.replace('/agent/', '')}.png` });
+      await page.screenshot({
+        path: `e2e-screenshots/agent-${menu.path.replace('/agent/', '')}.png`,
+      });
     });
   }
 });

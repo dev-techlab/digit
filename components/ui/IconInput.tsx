@@ -12,7 +12,20 @@ interface IconInputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const IconInput = forwardRef<HTMLInputElement, IconInputProps>(
-  ({ icon, label, labelAction, trailing, error, errorMessage, className, containerClassName, ...props }, ref) => {
+  (
+    {
+      icon,
+      label,
+      labelAction,
+      trailing,
+      error,
+      errorMessage,
+      className,
+      containerClassName,
+      ...props
+    },
+    ref
+  ) => {
     return (
       <div className={containerClassName}>
         {(label || labelAction) && (
@@ -46,9 +59,7 @@ export const IconInput = forwardRef<HTMLInputElement, IconInputProps>(
             </span>
           )}
         </div>
-        {errorMessage && (
-          <p className="mt-1 text-xs text-danger">{errorMessage}</p>
-        )}
+        {errorMessage && <p className="mt-1 text-xs text-danger">{errorMessage}</p>}
       </div>
     );
   }

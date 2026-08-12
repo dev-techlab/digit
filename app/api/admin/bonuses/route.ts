@@ -18,7 +18,7 @@ const postSchema = z.object({
   scheduleIcon: z.enum(['clock', 'calendar']).optional().default('calendar'),
   scheduleText: z.string().trim().optional(),
   scheduleCountdownSeconds: z.coerce.number().int().nullable().optional(),
-  sort: z.coerce.number().int().optional().default(0)
+  sort: z.coerce.number().int().optional().default(0),
 });
 
 const putSchema = z.object({
@@ -34,7 +34,7 @@ const putSchema = z.object({
   scheduleIcon: z.enum(['clock', 'calendar']).optional(),
   scheduleText: z.string().trim().optional(),
   scheduleCountdownSeconds: z.coerce.number().int().nullable().optional(),
-  sort: z.coerce.number().int().optional()
+  sort: z.coerce.number().int().optional(),
 });
 
 async function authorize(
@@ -73,10 +73,10 @@ export async function GET(req: Request) {
   try {
     const { error } = await authorize(req, 'bonuses.read');
     if (error) return error;
-  
+
     const bonuses = await db.bonuses.findMany({
       where: { deleted_at: null },
-      orderBy: [{ sort: 'asc' }, { title: 'asc' }]
+      orderBy: [{ sort: 'asc' }, { title: 'asc' }],
     });
     return NextResponse.json({ bonuses });
   } catch (err: any) {
@@ -94,14 +94,20 @@ export async function POST(req: Request) {
   const parseResult = postSchema.safeParse(body);
 
   if (!parseResult.success) {
-    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+    return NextResponse.json(
+      { error: parseResult.error.issues[0]?.message || 'Invalid input' },
+      { status: 400 }
+    );
   }
 
   const data = parseResult.data;
   const id = data.id ? slugify(data.id) : slugify(data.title);
-  
+
   if (!id) {
-    return NextResponse.json({ error: 'id (or a title to derive it from) is required' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'id (or a title to derive it from) is required' },
+      { status: 400 }
+    );
   }
 
   const values: any = {
@@ -113,7 +119,8 @@ export async function POST(req: Request) {
     banner_type: data.bannerType,
     banner_gradient: data.bannerType === 'gradient' ? data.bannerGradient || null : null,
     banner_badge_icon:
-      data.bannerType === 'gradient' && (data.bannerBadgeIcon === 'coin' || data.bannerBadgeIcon === 'percent')
+      data.bannerType === 'gradient' &&
+      (data.bannerBadgeIcon === 'coin' || data.bannerBadgeIcon === 'percent')
         ? data.bannerBadgeIcon
         : null,
     banner_badge_text: data.bannerType === 'gradient' ? data.bannerBadgeText || null : null,
@@ -158,7 +165,10 @@ export async function PUT(req: Request) {
   const parseResult = putSchema.safeParse(body);
 
   if (!parseResult.success) {
-    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+    return NextResponse.json(
+      { error: parseResult.error.issues[0]?.message || 'Invalid input' },
+      { status: 400 }
+    );
   }
 
   const data = parseResult.data;
@@ -186,7 +196,8 @@ export async function PUT(req: Request) {
   }
   if (data.scheduleIcon !== undefined) set.schedule_icon = data.scheduleIcon;
   if (data.scheduleText !== undefined) set.schedule_text = data.scheduleText;
-  if (data.scheduleCountdownSeconds !== undefined) set.schedule_countdown_seconds = data.scheduleCountdownSeconds;
+  if (data.scheduleCountdownSeconds !== undefined)
+    set.schedule_countdown_seconds = data.scheduleCountdownSeconds;
   if (data.sort !== undefined) set.sort = data.sort;
 
   try {
@@ -218,7 +229,7 @@ export async function DELETE(req: Request) {
   try {
     const row = await db.bonuses.update({
       where: { id },
-      data: { deleted_at: new Date() }
+      data: { deleted_at: new Date() },
     });
     await logAdminAction({
       adminId,

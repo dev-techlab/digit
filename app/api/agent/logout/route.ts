@@ -6,7 +6,6 @@ import {
 } from '@/lib/agent-auth';
 import { sessionCookieOptions } from '@/lib/auth-tokens';
 
-
 /** POST /api/agent/logout — revokes the session and clears the cookie. */
 export async function POST(req: Request) {
   try {

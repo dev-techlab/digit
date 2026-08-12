@@ -27,7 +27,7 @@ export function ProviderCard({ provider }: { provider: GameProvider }) {
     }
     setAction(kind);
     window.open(provider.launchUrlTemplate, '_blank', 'noopener,noreferrer');
-    
+
     // Keep the visual spinner for 800ms on the current page
     window.setTimeout(() => {
       setAction('idle');

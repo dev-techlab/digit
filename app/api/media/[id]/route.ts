@@ -9,7 +9,6 @@ import {
   MediaNotFoundError,
 } from '@/lib/media';
 
-
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB — matches POST /api/media
 
 type Ctx = { params: { id: string } };

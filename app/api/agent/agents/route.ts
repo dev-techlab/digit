@@ -5,7 +5,6 @@ import { randomBytes } from 'node:crypto';
 import { db } from '@/lib/db';
 import { getAgentFromRequest } from '@/lib/agent-auth';
 
-
 export async function GET(req: Request) {
   try {
     const agent = await getAgentFromRequest(req);
@@ -13,10 +12,11 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const type = url.searchParams.get('type') === 'sub' ? 'sub' : 'sale';
     const search = url.searchParams.get('search')?.trim();
-  
+
     if (url.searchParams.get('report')) {
       const agentCol = type === 'sub' ? 'sub_agent_id' : 'sale_agent_id';
-      const rows = await db.$queryRawUnsafe(`
+      const rows = await db.$queryRawUnsafe(
+        `
         SELECT 
           a.id AS "agentId", 
           a.username,
@@ -34,24 +34,27 @@ export async function GET(req: Request) {
         LEFT JOIN member_transactions mt ON mt.member_id = m.id
         WHERE a.store_id = $1 AND a.type = $2
         GROUP BY a.id, a.username
-      `, agent.storeId, type);
-  
-      const formattedRows = (rows as any[]).map(row => {
+      `,
+        agent.storeId,
+        type
+      );
+
+      const formattedRows = (rows as any[]).map((row) => {
         const formatted: any = {};
         for (const key in row) {
           formatted[key] = typeof row[key] === 'bigint' ? row[key].toString() : row[key];
         }
         return formatted;
       });
-  
+
       return NextResponse.json({ report: formattedRows });
     }
-  
+
     const where: any = {
       store_id: agent.storeId,
       type,
     };
-  
+
     if (search) {
       where.OR = [
         { username: { contains: search, mode: 'insensitive' } },
@@ -59,7 +62,7 @@ export async function GET(req: Request) {
         { email: { contains: search, mode: 'insensitive' } },
       ];
     }
-  
+
     const rows = await db.agents.findMany({
       where,
       select: {
@@ -77,8 +80,8 @@ export async function GET(req: Request) {
       },
       orderBy: { created_at: 'desc' },
     });
-  
-    const formatted = rows.map(r => ({
+
+    const formatted = rows.map((r) => ({
       id: r.id,
       username: r.username,
       nickname: r.nickname,
@@ -91,7 +94,7 @@ export async function GET(req: Request) {
       remark: r.remark,
       createdAt: r.created_at,
     }));
-  
+
     return NextResponse.json({ agents: formatted });
   } catch (err: any) {
     if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
@@ -105,8 +108,14 @@ const postSchema = z.object({
   username: z.string().min(4, 'Username must be at least 4 characters'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   nickname: z.string().min(1, 'Nickname required'),
-  ratioPct: z.union([z.string(), z.number()]).optional().transform(v => Number(v)),
-  commissionPer: z.union([z.string(), z.number()]).optional().transform(v => Number(v)),
+  ratioPct: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => Number(v)),
+  commissionPer: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => Number(v)),
   remark: z.string().max(300).optional().or(z.literal('')),
 });
 
@@ -130,13 +139,11 @@ export async function POST(req: Request) {
         store_id: agent.storeId,
         parent_agent_id: agent.id,
         ratio_pct: Number.isFinite(data.ratioPct) ? String(data.ratioPct) : '0',
-        commission_per: Number.isFinite(data.commissionPer)
-          ? String(data.commissionPer)
-          : '0',
+        commission_per: Number.isFinite(data.commissionPer) ? String(data.commissionPer) : '0',
         invite_code: `MC${randomBytes(8).toString('hex').toUpperCase()}`,
         remark: data.remark?.trim() || null,
       },
-      select: { id: true }
+      select: { id: true },
     });
     return NextResponse.json({ ok: true, id: created.id });
   } catch (e: any) {
@@ -154,8 +161,14 @@ export async function POST(req: Request) {
 
 const putSchema = z.object({
   id: z.string().uuid(),
-  ratioPct: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
-  commissionPer: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
+  ratioPct: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : undefined)),
+  commissionPer: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : undefined)),
   status: z.enum(['active', 'disabled']).optional(),
   remark: z.string().max(300).optional().or(z.literal('')),
   nickname: z.string().optional().or(z.literal('')),
@@ -195,9 +208,9 @@ export async function PUT(req: Request) {
     await db.agents.updateMany({
       where: {
         id: data.id,
-        store_id: agent.storeId
+        store_id: agent.storeId,
       },
-      data: set
+      data: set,
     });
     return NextResponse.json({ ok: true });
   } catch (err: any) {

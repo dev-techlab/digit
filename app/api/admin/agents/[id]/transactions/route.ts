@@ -45,7 +45,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     take: 100,
   });
 
-  const formattedLogs = logs.map(l => ({
+  const formattedLogs = logs.map((l) => ({
     id: l.id,
     type: l.type,
     method: l.method,
@@ -81,7 +81,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 
   const agentId = params.id;
-  
+
   const body = await req.json().catch(() => ({}));
   const parseResult = actionSchema.safeParse(body);
   if (!parseResult.success) {
@@ -92,7 +92,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   try {
     const agent = await db.agents.findUnique({
-      where: { id: agentId }
+      where: { id: agentId },
     });
 
     if (!agent) {
@@ -108,7 +108,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     await db.$transaction(async (tx) => {
       const balanceChange = action === 'deposit' ? amount : -amount;
       const balanceAfter = currentBalance + balanceChange;
-      
+
       await tx.agents.update({
         where: { id: agentId },
         data: { online_balance: { increment: balanceChange } },
@@ -137,7 +137,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
           status: 'completed',
           remark: remark || 'Admin manual adjustment',
           created_at: new Date(),
-        }
+        },
       });
     });
 

@@ -110,7 +110,9 @@ export function PlatformCatalogScreen() {
           {
             header: 'Code',
             accessorKey: 'providerCode',
-            cell: (p) => <span className="font-mono text-xs text-slate-500">{p.providerCode || '--'}</span>,
+            cell: (p) => (
+              <span className="font-mono text-xs text-slate-500">{p.providerCode || '--'}</span>
+            ),
           },
           {
             header: 'Type',

@@ -12,7 +12,7 @@ export function ContentPagesScreen() {
   const [pages, setPages] = useState<ContentPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
+
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [bodyDraft, setBodyDraft] = useState('');
   const [saving, setSaving] = useState(false);
@@ -97,7 +97,7 @@ export function ContentPagesScreen() {
             {error}
           </div>
         )}
-        
+
         {selectedPage ? (
           <>
             <div className="flex items-center justify-between">
@@ -108,7 +108,7 @@ export function ContentPagesScreen() {
                 </Btn>
               )}
             </div>
-            
+
             <div className="text-sm text-slate-500">
               Editing: <span className="font-mono text-slate-400">{selectedPage.slug}</span>
             </div>

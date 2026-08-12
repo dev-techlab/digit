@@ -106,7 +106,7 @@ export async function createAdmin(input: CreateAdminInput) {
 export async function assignRole(adminId: string, roleSlug: string, assignedByAdminId?: string) {
   if (assignedByAdminId) await guardRoleGrant(assignedByAdminId, roleSlug);
   const roleId = await roleIdBySlug(roleSlug);
-  
+
   try {
     await db.admin_roles.create({
       data: { admin_id: adminId, role_id: roleId, assigned_by_admin_id: assignedByAdminId ?? null },

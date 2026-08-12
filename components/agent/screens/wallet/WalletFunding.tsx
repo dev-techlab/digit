@@ -40,7 +40,7 @@ export function WalletFunding({ data, mutate, flash }: Props) {
   const [recipient, setRecipient] = useState('');
   const [transferRemark, setTransferRemark] = useState('');
   const [fundError, setFundError] = useState('');
-  
+
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideStep, setGuideStep] = useState(1);
 
@@ -135,7 +135,9 @@ export function WalletFunding({ data, mutate, flash }: Props) {
                 <TextInput
                   placeholder="Recipient agent username"
                   value={recipient}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRecipient(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setRecipient(e.target.value)
+                  }
                 />
               </Field>
               <Field label="Transfer amount" required>
@@ -151,7 +153,9 @@ export function WalletFunding({ data, mutate, flash }: Props) {
                   maxLength={100}
                   placeholder="Enter transfer remark (optional)"
                   value={transferRemark}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTransferRemark(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setTransferRemark(e.target.value)
+                  }
                 />
               </Field>
             </>

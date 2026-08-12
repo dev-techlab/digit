@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 const actionSchema = z.object({
   id: z.string().min(1, 'id required'),
-  action: z.enum(['accept', 'reject'], { message: "Invalid input" }),
+  action: z.enum(['accept', 'reject'], { message: 'Invalid input' }),
 });
 
 async function authorize(
@@ -37,29 +37,29 @@ async function authorize(
 
 export async function GET(req: Request) {
   try {
-    // Use agents.read as permission placeholder for now since there is no members.read 
+    // Use agents.read as permission placeholder for now since there is no members.read
     // explicitly for fiat transactions yet, or we could use users.read
     const { error } = await authorize(req, 'users.read');
     if (error) return error;
-  
+
     const url = new URL(req.url);
     const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('pageSize')) || 20));
     const search = url.searchParams.get('search')?.trim();
     const statusFilter = url.searchParams.get('status');
     const typeFilter = url.searchParams.get('type');
-  
+
     const where: any = {};
     if (statusFilter) where.status = statusFilter;
     if (typeFilter) where.type = typeFilter;
-  
+
     if (search) {
       where.OR = [
         { id: { contains: search, mode: 'insensitive' } },
-        { users: { username: { contains: search, mode: 'insensitive' } } }
+        { users: { username: { contains: search, mode: 'insensitive' } } },
       ];
     }
-  
+
     const [rows, count] = await Promise.all([
       db.transactions.findMany({
         where,
@@ -70,12 +70,12 @@ export async function GET(req: Request) {
           method_label: true,
           status: true,
           created_at: true,
-          users: { 
-            select: { 
-              username: true, 
+          users: {
+            select: {
+              username: true,
               agent_invite_code: true,
-              agent: { select: { username: true } }
-            } 
+              agent: { select: { username: true } },
+            },
           },
         },
         orderBy: { created_at: 'desc' },
@@ -84,8 +84,8 @@ export async function GET(req: Request) {
       }),
       db.transactions.count({ where }),
     ]);
-  
-    const formattedRows = rows.map(r => ({
+
+    const formattedRows = rows.map((r) => ({
       id: r.id,
       username: r.users?.username || null,
       agentId: r.users?.agent?.username || r.users?.agent_invite_code || '-',
@@ -95,7 +95,7 @@ export async function GET(req: Request) {
       status: r.status,
       createdAt: r.created_at,
     }));
-  
+
     return NextResponse.json({ transactions: formattedRows, total: count });
   } catch (err: any) {
     if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
@@ -112,7 +112,10 @@ export async function POST(req: Request) {
   const parseResult = actionSchema.safeParse(body);
 
   if (!parseResult.success) {
-    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+    return NextResponse.json(
+      { error: parseResult.error.issues[0]?.message || 'Invalid input' },
+      { status: 400 }
+    );
   }
 
   const { id, action } = parseResult.data;
@@ -123,9 +126,9 @@ export async function POST(req: Request) {
         where: { id, status: 'pending' },
         include: {
           users: {
-            include: { wallets: true }
-          }
-        }
+            include: { wallets: true },
+          },
+        },
       });
 
       if (!txRow) {
@@ -139,14 +142,14 @@ export async function POST(req: Request) {
         if (txRow.type === 'deposit') {
           await tx.wallets.update({
             where: { user_id: txRow.user_id },
-            data: { online_sc: { increment: txRow.amount } }
+            data: { online_sc: { increment: txRow.amount } },
           });
         }
         // Withdraw was already deducted on creation, so no action needed on wallet
 
         await tx.transactions.update({
           where: { id },
-          data: { status: 'completed' }
+          data: { status: 'completed' },
         });
       } else {
         // Reject
@@ -154,13 +157,13 @@ export async function POST(req: Request) {
         if (txRow.type === 'withdraw') {
           await tx.wallets.update({
             where: { user_id: txRow.user_id },
-            data: { online_sc: { increment: txRow.amount } }
+            data: { online_sc: { increment: txRow.amount } },
           });
         }
 
         await tx.transactions.update({
           where: { id },
-          data: { status: 'failed' }
+          data: { status: 'failed' },
         });
       }
     });
@@ -177,7 +180,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   } catch (err: unknown) {
     if (err instanceof Error) {
-      if (err.message === 'Pending transaction not found' || err.message === 'User wallet not found') {
+      if (
+        err.message === 'Pending transaction not found' ||
+        err.message === 'User wallet not found'
+      ) {
         return NextResponse.json({ error: err.message }, { status: 404 });
       }
     }

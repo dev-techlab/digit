@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react';
 import useSWR from 'swr';
 
-const fetcher = (url: string) => fetch(url).then(r => {
-  if (!r.ok) throw new Error('Fetch error');
-  return r.json();
-});
+const fetcher = (url: string) =>
+  fetch(url).then((r) => {
+    if (!r.ok) throw new Error('Fetch error');
+    return r.json();
+  });
 
 interface DataTableResult<T> {
   rows: T[];
@@ -42,7 +43,7 @@ export function useDataTable<T>(
   });
 
   const url = `${endpoint}?${q.toString()}`;
-  
+
   const { data, error, isLoading, mutate } = useSWR(url, fetcher, {
     keepPreviousData: true,
   });
@@ -50,12 +51,21 @@ export function useDataTable<T>(
   const load = useCallback(
     async (p = page, s = search, extra = extraParams) => {
       let changed = false;
-      if (p !== page) { setPage(p); changed = true; }
-      if (s !== search) { setSearch(s); changed = true; }
-      
+      if (p !== page) {
+        setPage(p);
+        changed = true;
+      }
+      if (s !== search) {
+        setSearch(s);
+        changed = true;
+      }
+
       const extraChanged = JSON.stringify(extra) !== JSON.stringify(extraParams);
-      if (extraChanged) { setExtraParams(extra); changed = true; }
-      
+      if (extraChanged) {
+        setExtraParams(extra);
+        changed = true;
+      }
+
       if (!changed) {
         await mutate(); // Force re-fetch if params didn't change but load was called
       }
@@ -67,13 +77,17 @@ export function useDataTable<T>(
     await mutate();
   }, [mutate]);
 
-  const setRowsOptimistic = useCallback((updater: React.SetStateAction<T[]>) => {
-    mutate((current: any) => {
-      if (!current) return current;
-      const newRows = typeof updater === 'function' ? (updater as any)(current[dataKey] || []) : updater;
-      return { ...current, [dataKey]: newRows };
-    }, false);
-  }, [mutate, dataKey]);
+  const setRowsOptimistic = useCallback(
+    (updater: React.SetStateAction<T[]>) => {
+      mutate((current: any) => {
+        if (!current) return current;
+        const newRows =
+          typeof updater === 'function' ? (updater as any)(current[dataKey] || []) : updater;
+        return { ...current, [dataKey]: newRows };
+      }, false);
+    },
+    [mutate, dataKey]
+  );
 
   return {
     rows: (data?.[dataKey] || []) as T[],

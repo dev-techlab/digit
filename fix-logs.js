@@ -8,7 +8,12 @@ function walk(dir) {
     file = path.join(dir, file);
     const stat = fs.statSync(file);
     if (stat && stat.isDirectory()) {
-      if (!file.includes('node_modules') && !file.includes('.next') && !file.includes('.git') && !file.includes('public')) {
+      if (
+        !file.includes('node_modules') &&
+        !file.includes('.next') &&
+        !file.includes('.git') &&
+        !file.includes('public')
+      ) {
         results = results.concat(walk(file));
       }
     } else {
@@ -20,12 +25,7 @@ function walk(dir) {
   return results;
 }
 
-const files = [
-  ...walk('app'),
-  ...walk('components'),
-  ...walk('lib'),
-  ...walk('scripts')
-];
+const files = [...walk('app'), ...walk('components'), ...walk('lib'), ...walk('scripts')];
 
 let changedCount = 0;
 

@@ -16,7 +16,7 @@ test.describe('Agent Portal', () => {
     await page.waitForURL('**/agent');
     await expect(page).toHaveURL(/.*\/agent/);
 
-    // Verify some element is visible, like the header or sidebar 
+    // Verify some element is visible, like the header or sidebar
     // Usually 'Deluxe001' or 'Logout' would be present on the authenticated shell
     await expect(page.getByText('Deluxe001').first()).toBeVisible({ timeout: 10000 });
   });

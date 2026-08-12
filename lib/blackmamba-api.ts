@@ -107,7 +107,12 @@ export async function changePlayerEntries(
   agent?: string
 ): Promise<ChangeScoreResponse> {
   if (orderId.length > 25) throw new Error('orderId must be 25 characters or fewer');
-  return fetchBlackmamba<ChangeScoreResponse>('setEntries', keyAgent, apiKey, { account, scoreNum, orderId, agent });
+  return fetchBlackmamba<ChangeScoreResponse>('setEntries', keyAgent, apiKey, {
+    account,
+    scoreNum,
+    orderId,
+    agent,
+  });
 }
 
 /**
@@ -122,7 +127,12 @@ export async function changePlayerWinning(
   agent?: string
 ): Promise<ChangeScoreResponse> {
   if (orderId.length > 25) throw new Error('orderId must be 25 characters or fewer');
-  return fetchBlackmamba<ChangeScoreResponse>('setWinning', keyAgent, apiKey, { account, scoreNum, orderId, agent });
+  return fetchBlackmamba<ChangeScoreResponse>('setWinning', keyAgent, apiKey, {
+    account,
+    scoreNum,
+    orderId,
+    agent,
+  });
 }
 
 /**
@@ -149,7 +159,12 @@ export async function setPlayerSpecial(
   agent?: string
 ): Promise<ChangeScoreResponse> {
   if (orderId.length > 25) throw new Error('orderId must be 25 characters or fewer');
-  return fetchBlackmamba<ChangeScoreResponse>('setSpecial', keyAgent, apiKey, { account, scoreNum, orderId, agent });
+  return fetchBlackmamba<ChangeScoreResponse>('setSpecial', keyAgent, apiKey, {
+    account,
+    scoreNum,
+    orderId,
+    agent,
+  });
 }
 
 export interface GetPlayerInfoResponse extends BaseResponse {
@@ -173,7 +188,10 @@ export async function getPlayerInfo(
   keyAgent: string,
   apiKey: string
 ): Promise<GetPlayerInfoResponse> {
-  return fetchBlackmamba<GetPlayerInfoResponse>('getUserInfo', keyAgent, apiKey, { account, userPwd });
+  return fetchBlackmamba<GetPlayerInfoResponse>('getUserInfo', keyAgent, apiKey, {
+    account,
+    userPwd,
+  });
 }
 
 export interface ResetPasswordResponse extends BaseResponse {
@@ -190,7 +208,10 @@ export async function resetPlayerPassword(
   apiKey: string
 ): Promise<ResetPasswordResponse> {
   if (userPwd.length < 6) throw new Error('Password must be at least 6 characters');
-  return fetchBlackmamba<ResetPasswordResponse>('resetUserPwd', keyAgent, apiKey, { account, userPwd: userPwd.slice(0, 15) });
+  return fetchBlackmamba<ResetPasswordResponse>('resetUserPwd', keyAgent, apiKey, {
+    account,
+    userPwd: userPwd.slice(0, 15),
+  });
 }
 
 export interface GetAgentScoreResponse extends BaseResponse {
@@ -259,7 +280,11 @@ export async function getPlayerScoreLog(
   apiKey: string,
   pageSize?: number
 ): Promise<GetScoreLogResponse> {
-  return fetchBlackmamba<GetScoreLogResponse>('getScoreLog', keyAgent, apiKey, { account, pageIndex, pageSize });
+  return fetchBlackmamba<GetScoreLogResponse>('getScoreLog', keyAgent, apiKey, {
+    account,
+    pageIndex,
+    pageSize,
+  });
 }
 
 export interface GetSkeyUrlResponse extends BaseResponse {
@@ -310,7 +335,10 @@ export async function changeAgentScore(
   keyAgent: string,
   apiKey: string
 ): Promise<ChangeAgentScoreResponse> {
-  return fetchBlackmamba<ChangeAgentScoreResponse>('setAgentScore', keyAgent, apiKey, { agent, scoreNum });
+  return fetchBlackmamba<ChangeAgentScoreResponse>('setAgentScore', keyAgent, apiKey, {
+    agent,
+    scoreNum,
+  });
 }
 
 export interface CheckAgentInfoResponse extends BaseResponse {}
@@ -327,5 +355,8 @@ export async function checkAgentPassword(
   // MD5 value of agent account password
   // Based on the example in the PDF, this should be lowercase.
   const hashedPw = crypto.createHash('md5').update(agentPwd).digest('hex').toLowerCase();
-  return fetchBlackmamba<CheckAgentInfoResponse>('checkAgentInfo', keyAgent, apiKey, { agent, agentPwd: hashedPw });
+  return fetchBlackmamba<CheckAgentInfoResponse>('checkAgentInfo', keyAgent, apiKey, {
+    agent,
+    agentPwd: hashedPw,
+  });
 }

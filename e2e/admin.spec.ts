@@ -16,7 +16,7 @@ test.describe('Admin Portal', () => {
     await page.waitForURL('**/admin');
     await expect(page).toHaveURL(/.*\/admin/);
 
-    // Verify some element is visible, like the header or sidebar 
+    // Verify some element is visible, like the header or sidebar
     // Usually 'Super Admin' or 'Logout' would be present on the authenticated shell
     await expect(page.getByText('Super Admin').first()).toBeVisible({ timeout: 10000 });
   });

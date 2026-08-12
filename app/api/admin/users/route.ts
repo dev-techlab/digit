@@ -7,7 +7,6 @@ import { requirePermission, PermissionError } from '@/lib/rbac-core';
 import { clientIp, logAdminAction } from '@/lib/audit-log';
 import { blockUser, unblockUser } from '@/lib/user-service';
 
-
 async function authorize(
   req: Request,
   permKey: string
@@ -37,18 +36,18 @@ export async function GET(req: Request) {
   try {
     const { error } = await authorize(req, 'users.read');
     if (error) return error;
-  
+
     const url = new URL(req.url);
     const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('pageSize')) || 20));
     const search = url.searchParams.get('search')?.trim();
     const status = url.searchParams.get('status');
-  
+
     const where: any = {};
     if (status === 'active' || status === 'blocked') {
       where.status = status;
     }
-  
+
     if (search) {
       where.OR = [
         { username: { contains: search, mode: 'insensitive' } },
@@ -57,7 +56,7 @@ export async function GET(req: Request) {
         { phone: { contains: search, mode: 'insensitive' } },
       ];
     }
-  
+
     const [rows, count] = await Promise.all([
       db.users.findMany({
         where,
@@ -77,8 +76,8 @@ export async function GET(req: Request) {
             select: {
               gold_coin: true,
               online_sc: true,
-            }
-          }
+            },
+          },
         },
         orderBy: { created_at: 'desc' },
         take: pageSize,
@@ -86,8 +85,8 @@ export async function GET(req: Request) {
       }),
       db.users.count({ where }),
     ]);
-  
-    const formattedRows = rows.map(r => ({
+
+    const formattedRows = rows.map((r) => ({
       id: r.id,
       username: r.username,
       nickname: r.nickname,
@@ -102,7 +101,7 @@ export async function GET(req: Request) {
       goldCoin: r.wallets?.gold_coin,
       onlineSc: r.wallets?.online_sc,
     }));
-  
+
     return NextResponse.json({ users: formattedRows, total: count });
   } catch (err: any) {
     if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
@@ -118,7 +117,10 @@ const putSchema = z.object({
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().optional().or(z.literal('')),
   password: z.string().min(6).optional().or(z.literal('')),
-  commissionPer: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
+  commissionPer: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : undefined)),
   username: z.string().min(4).optional(),
   kycStatus: z.enum(['unverified', 'pending', 'verified', 'rejected']).optional(),
   inviteCode: z.string().optional(),
@@ -162,7 +164,7 @@ export async function PUT(req: Request) {
       const walletUpdate: any = {};
       if (data.goldCoin !== undefined) walletUpdate.gold_coin = data.goldCoin;
       if (data.onlineSc !== undefined) walletUpdate.online_sc = data.onlineSc;
-      
+
       await db.wallets.upsert({
         where: { user_id: data.id },
         update: walletUpdate,
@@ -170,7 +172,7 @@ export async function PUT(req: Request) {
           user_id: data.id,
           gold_coin: data.goldCoin || 0,
           online_sc: data.onlineSc || 0,
-        }
+        },
       });
     }
 
@@ -206,7 +208,10 @@ const postSchema = z.object({
   email: z.string().email().optional().or(z.literal('')),
   phone: z.string().optional().or(z.literal('')),
   kycStatus: z.enum(['unverified', 'pending', 'verified', 'rejected']).optional(),
-  commissionPer: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
+  commissionPer: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : undefined)),
   inviteCode: z.string().optional(),
   goldCoin: z.number().min(0).optional(),
   onlineSc: z.number().min(0).optional(),
@@ -221,9 +226,11 @@ export async function POST(req: Request) {
     const data = postSchema.parse(body);
 
     const password_hash = await bcrypt.hash(data.password, 10);
-    const invite_code = data.inviteCode?.trim() || Array.from(crypto.getRandomValues(new Uint8Array(6)))
-      .map(b => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[b % 36])
-      .join('');
+    const invite_code =
+      data.inviteCode?.trim() ||
+      Array.from(crypto.getRandomValues(new Uint8Array(6)))
+        .map((b) => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[b % 36])
+        .join('');
 
     const created = await db.users.create({
       data: {
@@ -233,16 +240,17 @@ export async function POST(req: Request) {
         email: data.email?.trim() || null,
         phone: data.phone?.trim() || null,
         kyc_status: data.kycStatus || 'unverified',
-        commission_per: data.commissionPer !== undefined && Number.isFinite(data.commissionPer)
-          ? String(data.commissionPer)
-          : '30',
+        commission_per:
+          data.commissionPer !== undefined && Number.isFinite(data.commissionPer)
+            ? String(data.commissionPer)
+            : '30',
         invite_code,
         wallets: {
           create: {
             gold_coin: data.goldCoin || 0,
             online_sc: data.onlineSc || 0,
-          }
-        }
+          },
+        },
       },
     });
 
@@ -283,7 +291,7 @@ export async function DELETE(req: Request) {
 
   try {
     await db.users.delete({
-      where: { id }
+      where: { id },
     });
 
     await logAdminAction({
@@ -298,6 +306,9 @@ export async function DELETE(req: Request) {
   } catch (err: any) {
     if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     console.error('DELETE /api/admin/users', err);
-    return NextResponse.json({ error: 'Failed to delete user. It might be referenced by other records.' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to delete user. It might be referenced by other records.' },
+      { status: 500 }
+    );
   }
 }

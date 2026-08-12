@@ -38,8 +38,15 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
         body: JSON.stringify({
           type: 'deposit',
           amount,
-          method: method === 'Debit Card' ? 'card' : method === 'Bitcoin On-Chain' ? 'btc' : method === 'Bitcoin Lightning Network' ? 'lightning' : 'pyusd',
-        })
+          method:
+            method === 'Debit Card'
+              ? 'card'
+              : method === 'Bitcoin On-Chain'
+                ? 'btc'
+                : method === 'Bitcoin Lightning Network'
+                  ? 'lightning'
+                  : 'pyusd',
+        }),
       });
       if (!res.ok) {
         throw new Error('Deposit failed');
@@ -73,7 +80,14 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
                 )}{' '}
                 SC.
               </p>
-              <Button fullWidth className="mt-2" onClick={() => { onClose(); router.refresh(); }}>
+              <Button
+                fullWidth
+                className="mt-2"
+                onClick={() => {
+                  onClose();
+                  router.refresh();
+                }}
+              >
                 Done
               </Button>
             </>

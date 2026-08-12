@@ -57,8 +57,8 @@ export function WithdrawModal({
           type: 'withdraw',
           amount: numericAmount,
           method: mappedMethod,
-          address
-        })
+          address,
+        }),
       });
       if (!res.ok) {
         throw new Error('Withdrawal failed');
@@ -145,12 +145,26 @@ export function WithdrawModal({
 
         {method === 'ACH Bank Transfer' && (
           <div className="space-y-3">
-            <Input placeholder="Account/Routing details (e.g. 123456789)" value={address} onChange={(e) => setAddress(e.target.value)} />
+            <Input
+              placeholder="Account/Routing details (e.g. 123456789)"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
           </div>
         )}
-        {method === 'Crypto Wallet' && <Input placeholder="Wallet address" value={address} onChange={(e) => setAddress(e.target.value)} />}
+        {method === 'Crypto Wallet' && (
+          <Input
+            placeholder="Wallet address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+          />
+        )}
         {(method === 'Cash App' || method === 'Chime') && (
-          <Input placeholder="$Cashtag or username" value={address} onChange={(e) => setAddress(e.target.value)} />
+          <Input
+            placeholder="$Cashtag or username"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+          />
         )}
 
         <div>

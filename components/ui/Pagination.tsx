@@ -8,7 +8,14 @@ interface PaginationProps extends HTMLAttributes<HTMLDivElement> {
   onPageChange: (page: number) => void;
 }
 
-export function Pagination({ page, pageSize, total, onPageChange, className, ...props }: PaginationProps) {
+export function Pagination({
+  page,
+  pageSize,
+  total,
+  onPageChange,
+  className,
+  ...props
+}: PaginationProps) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const startItem = (page - 1) * pageSize + 1;
   const endItem = Math.min(page * pageSize, total);
@@ -29,7 +36,7 @@ export function Pagination({ page, pageSize, total, onPageChange, className, ...
         <button
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Previous
         </button>
@@ -50,7 +57,7 @@ export function Pagination({ page, pageSize, total, onPageChange, className, ...
         <button
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Next
         </button>

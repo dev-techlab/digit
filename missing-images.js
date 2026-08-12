@@ -5,12 +5,12 @@ function walk(dir) {
   let results = [];
   try {
     const list = fs.readdirSync(dir);
-    list.forEach(function(file) {
+    list.forEach(function (file) {
       file = dir + '/' + file;
       const stat = fs.statSync(file);
-      if (stat && stat.isDirectory()) { 
+      if (stat && stat.isDirectory()) {
         results = results.concat(walk(file));
-      } else { 
+      } else {
         results.push(file);
       }
     });
@@ -41,4 +41,4 @@ for (const img of imgPaths) {
 }
 
 console.log('Missing Images:');
-missing.forEach(m => console.log(m));
+missing.forEach((m) => console.log(m));

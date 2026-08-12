@@ -3,23 +3,23 @@
  * jsonTransport fallback. No SMTP creds or network needed.
  *   pnpm test:mail
  */
-import "./load-env";
-import { writeFileSync } from "node:fs";
-import { sendEmailNow, renderEmail, isSmtpConfigured, type MailPayload } from "@/lib/mail";
+import './load-env';
+import { writeFileSync } from 'node:fs';
+import { sendEmailNow, renderEmail, isSmtpConfigured, type MailPayload } from '@/lib/mail';
 
 const samples: MailPayload[] = [
   {
-    template: "otp-email",
-    to: "player@example.com",
-    purpose: "register",
-    code: "123456",
+    template: 'otp-email',
+    to: 'player@example.com',
+    purpose: 'register',
+    code: '123456',
     expiresMinutes: 5,
   },
   {
-    template: "otp-email",
-    to: "player@example.com",
-    purpose: "reset_password",
-    code: "654321",
+    template: 'otp-email',
+    to: 'player@example.com',
+    purpose: 'reset_password',
+    code: '654321',
     expiresMinutes: 5,
   },
 ];
@@ -32,7 +32,7 @@ async function main() {
     // Rate limit for testing services like MailTrap (max 1 or 2 per second)
     await new Promise((r) => setTimeout(r, 1500));
   }
-  writeFileSync("/tmp/mail-preview.html", renderEmail(samples[0]).html);
+  writeFileSync('/tmp/mail-preview.html', renderEmail(samples[0]).html);
   // console.log("\nWrote OTP HTML preview to /tmp/mail-preview.html");
 }
 
@@ -42,4 +42,3 @@ main()
     console.error(e);
     process.exit(1);
   });
-

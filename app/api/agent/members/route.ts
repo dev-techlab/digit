@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { getAgentFromRequest } from '@/lib/agent-auth';
 
-
 export async function GET(req: Request) {
   try {
     const agent = await getAgentFromRequest(req);
@@ -14,17 +13,18 @@ export async function GET(req: Request) {
     const phone = url.searchParams.get('phone')?.trim();
     const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('pageSize')) || 10));
-  
-    const agentCol = agent.type === 'sub' ? 'sub_agent_id' : (agent.type === 'sale' ? 'sale_agent_id' : null);
+
+    const agentCol =
+      agent.type === 'sub' ? 'sub_agent_id' : agent.type === 'sale' ? 'sale_agent_id' : null;
     const where: any = { store_id: agent.storeId };
     if (agentCol) where[agentCol] = agent.id;
-    
+
     if (search || phone) {
       where.AND = [];
       if (search) where.AND.push({ username: { contains: search, mode: 'insensitive' } });
       if (phone) where.AND.push({ phone: { contains: phone, mode: 'insensitive' } });
     }
-  
+
     const [rawRows, total] = await Promise.all([
       db.members.findMany({
         where,
@@ -45,13 +45,14 @@ export async function GET(req: Request) {
       }),
       db.members.count({ where }),
     ]);
-    
-    const memberIds = rawRows.map(m => m.id);
+
+    const memberIds = rawRows.map((m) => m.id);
     let aggregate: any[] = [];
-    
+
     if (memberIds.length > 0) {
-      const bindParams = memberIds.map((_, i) => `$${i+1}`).join(',');
-      aggregate = await db.$queryRawUnsafe(`
+      const bindParams = memberIds.map((_, i) => `$${i + 1}`).join(',');
+      aggregate = await db.$queryRawUnsafe(
+        `
         SELECT 
           member_id,
           COALESCE(SUM(amount) FILTER (WHERE type = 'recharge'), 0) AS deposit,
@@ -61,12 +62,14 @@ export async function GET(req: Request) {
         FROM member_transactions
         WHERE member_id IN (${bindParams})
         GROUP BY member_id
-      `, ...memberIds);
+      `,
+        ...memberIds
+      );
     }
-    
-    const aggMap = new Map(aggregate.map(a => [a.member_id, a]));
-  
-    const rows = rawRows.map(r => {
+
+    const aggMap = new Map(aggregate.map((a) => [a.member_id, a]));
+
+    const rows = rawRows.map((r) => {
       const agg = aggMap.get(r.id) || {};
       const totalIn = Number(agg.totalIn || 0);
       const totalOut = Number(agg.totalOut || 0);
@@ -87,7 +90,7 @@ export async function GET(req: Request) {
         totalNet: (totalIn - totalOut).toFixed(2),
       };
     });
-  
+
     return NextResponse.json({
       members: rows,
       total,
@@ -129,7 +132,7 @@ export async function POST(req: Request) {
         password_hash: await bcrypt.hash(password, 10),
         remark: typeof remark === 'string' ? remark : null,
       },
-      select: { id: true }
+      select: { id: true },
     });
     return NextResponse.json({ ok: true, id: created.id });
   } catch (e: any) {
@@ -159,26 +162,26 @@ export async function PUT(req: Request) {
         { status: 403 }
       );
     }
-  
+
     const body = await req.json().catch(() => ({}));
     const parseResult = updateMemberSchema.safeParse(body);
     if (!parseResult.success) {
       return NextResponse.json({ error: parseResult.error.issues[0].message }, { status: 400 });
     }
-  
+
     const { id, remark, scRewardEnabled, status } = parseResult.data;
-  
+
     const set: any = {};
     if (remark !== undefined) set.remark = remark;
     if (scRewardEnabled !== undefined) set.sc_reward_enabled = scRewardEnabled;
     if (status !== undefined) set.status = status;
-  
+
     await db.members.updateMany({
       where: {
         id,
-        store_id: agent.storeId
+        store_id: agent.storeId,
       },
-      data: set
+      data: set,
     });
     return NextResponse.json({ ok: true });
   } catch (err: any) {

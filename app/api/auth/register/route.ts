@@ -11,7 +11,6 @@ import { requestOtp } from '@/lib/otp';
 import { sendEmailVerification } from '@/lib/mail';
 import { sendSms } from '@/lib/sms';
 
-
 const registerSchema = z
   .object({
     username: z.string().min(8, 'Username must be at least 8 characters').optional(),
@@ -23,7 +22,8 @@ const registerSchema = z
   .refine(
     (data) => {
       // Quick Register allows sending empty body
-      const isQuick = !data.email && !data.phone && !data.username && !data.password && !data.inviteCode;
+      const isQuick =
+        !data.email && !data.phone && !data.username && !data.password && !data.inviteCode;
       if (isQuick) return true;
       return !!data.email || !!data.phone || (!!data.username && !!data.password);
     },
@@ -36,7 +36,7 @@ const registerSchema = z
  */
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
-  
+
   const parseResult = registerSchema.safeParse(body);
   if (!parseResult.success) {
     return NextResponse.json({ error: parseResult.error.issues[0].message }, { status: 400 });
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
 
   try {
     const created = await registerUser({ username, password, email, phone, inviteCode });
-    
+
     let verificationMethod = null;
     let pendingVerification = false;
 
@@ -66,7 +66,10 @@ export async function POST(req: Request) {
     } else if (phone) {
       const otpReq = await requestOtp(phone, 'register', created.id);
       if (otpReq.ok) {
-        const smsResult = await sendSms(phone, `Your OctanLink verification code is: ${otpReq.code}`);
+        const smsResult = await sendSms(
+          phone,
+          `Your OctanLink verification code is: ${otpReq.code}`
+        );
         if (!smsResult.ok) {
           return NextResponse.json({ error: smsResult.error }, { status: 400 });
         }
@@ -82,7 +85,9 @@ export async function POST(req: Request) {
           pendingVerification: true,
           verificationMethod,
           user: await getUserProfile(created.id),
-          credentials: created.generated ? { username: created.username, password: created.password } : undefined,
+          credentials: created.generated
+            ? { username: created.username, password: created.password }
+            : undefined,
         },
         { status: 201 }
       );
@@ -109,6 +114,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: (err as any).message }, { status: 409 });
     }
     console.error('POST /api/auth/register', err);
-    return NextResponse.json({ error: (err as any)?.message || 'Registration failed' }, { status: 500 });
+    return NextResponse.json(
+      { error: (err as any)?.message || 'Registration failed' },
+      { status: 500 }
+    );
   }
 }

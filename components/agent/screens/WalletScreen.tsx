@@ -29,7 +29,9 @@ export function WalletScreen() {
   if (filters.timezone) {
     params.append(
       'tz',
-      filters.timezone === 'browser' ? Intl.DateTimeFormat().resolvedOptions().timeZone : filters.timezone
+      filters.timezone === 'browser'
+        ? Intl.DateTimeFormat().resolvedOptions().timeZone
+        : filters.timezone
     );
   }
 
@@ -58,11 +60,11 @@ export function WalletScreen() {
       )}
 
       <WalletOverview data={data} mutate={mutate} flash={flash} />
-      
+
       <WalletSettings data={data} mutate={mutate} flash={flash} />
-      
+
       <WalletFunding data={data} mutate={mutate} flash={flash} />
-      
+
       <WalletLogs data={data} mutate={mutate} filters={filters} setFilters={setFilters} />
     </div>
   );

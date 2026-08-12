@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { effectivePermissions, isSuperAdmin } from '@/lib/rbac-core';
 
-
 /** GET /api/admin/me — current admin id, super flag, and effective permissions. */
 export async function GET(req: Request) {
   try {

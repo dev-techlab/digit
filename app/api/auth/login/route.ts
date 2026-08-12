@@ -5,9 +5,8 @@ import { z } from 'zod';
 
 const loginSchema = z.object({
   username: z.string().trim().min(1, 'Username is required'),
-  password: z.string().min(1, 'Password is required')
+  password: z.string().min(1, 'Password is required'),
 });
-
 
 /** POST /api/auth/login — { username, password } → sets the session cookie. */
 export async function POST(req: Request) {
@@ -16,7 +15,10 @@ export async function POST(req: Request) {
     const parseResult = loginSchema.safeParse(body);
 
     if (!parseResult.success) {
-      return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+      return NextResponse.json(
+        { error: parseResult.error.issues[0]?.message || 'Invalid input' },
+        { status: 400 }
+      );
     }
 
     const { username, password } = parseResult.data;
@@ -33,6 +35,9 @@ export async function POST(req: Request) {
   } catch (err: any) {
     if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     console.error('POST /api/auth/login', err);
-    return NextResponse.json({ error: (err as any)?.message || 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: (err as any)?.message || 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

@@ -54,7 +54,9 @@ const statusChip = (st: string) => (
 
 export function DepositsScreen() {
   const [statusFilter, setStatusFilter] = useState<string>('pending');
-  const table = useDataTable<DepositRow>('/api/admin/deposits', 'deposits', 20, { status: 'pending' });
+  const table = useDataTable<DepositRow>('/api/admin/deposits', 'deposits', 20, {
+    status: 'pending',
+  });
 
   const actionModal = useActionModal<DepositRow, 'accept' | 'reject'>();
   const [remark, setRemark] = useState('');

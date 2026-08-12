@@ -89,7 +89,6 @@ export function AgentLoginView() {
           <p className="mt-1 text-sm text-slate-500 sm:text-base">Agent Panel Sign In</p>
         </div>
 
-
         <form className="mt-4 sm:mt-6" onSubmit={submit} noValidate>
           <div className="space-y-3">
             <div>
@@ -103,7 +102,7 @@ export function AgentLoginView() {
                   type="text"
                   value={form.username}
                   onChange={(e) => {
-                    setForm(prev => ({ ...prev, username: e.target.value }));
+                    setForm((prev) => ({ ...prev, username: e.target.value }));
                     if (usernameError) setUsernameError(false);
                   }}
                   placeholder="Username"
@@ -125,7 +124,7 @@ export function AgentLoginView() {
                   type="password"
                   value={form.password}
                   onChange={(e) => {
-                    setForm(prev => ({ ...prev, password: e.target.value }));
+                    setForm((prev) => ({ ...prev, password: e.target.value }));
                     if (passwordError) setPasswordError(false);
                   }}
                   placeholder="Password"

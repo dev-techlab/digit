@@ -68,13 +68,15 @@ async function main() {
     if (match) {
       await db.game_platforms.update({
         where: { id: match.id },
-        data: { ...values, name: p.name }
+        data: { ...values, name: p.name },
       });
       updated++;
     } else {
-      await db.game_platforms.create({
-        data: { name: p.name, slug: slugify(p.name), ...values }
-      }).catch(() => {}); // ignore duplicates
+      await db.game_platforms
+        .create({
+          data: { name: p.name, slug: slugify(p.name), ...values },
+        })
+        .catch(() => {}); // ignore duplicates
       inserted++;
     }
   }

@@ -4,14 +4,7 @@ import { useState } from 'react';
 import { useDataTable } from '@/hooks/useDataTable';
 import { useActionModal } from '@/hooks/useActionModal';
 import { Check, X } from 'lucide-react';
-import {
-  api,
-  Btn,
-  Card,
-  fmtDateTime,
-  fmtMoney,
-  Modal,
-} from '@/components/agent/ui';
+import { api, Btn, Card, fmtDateTime, fmtMoney, Modal } from '@/components/agent/ui';
 import { DataTable } from '@/components/ui/DataTable';
 
 type Tx = {
@@ -31,7 +24,9 @@ import { OrderFilters } from '@/components/admin/ui/OrderFilters';
 export default function MemberOrdersPage() {
   const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [typeFilter, setTypeFilter] = useState<string>('');
-  const table = useDataTable<Tx>('/api/admin/member-orders', 'transactions', 20, { status: 'pending' });
+  const table = useDataTable<Tx>('/api/admin/member-orders', 'transactions', 20, {
+    status: 'pending',
+  });
 
   const actionModal = useActionModal<Tx, 'accept' | 'reject'>();
 
@@ -123,7 +118,11 @@ export default function MemberOrdersPage() {
               accessorKey: 'methodLabel',
               cell: (r) => r.methodLabel || '-',
             },
-            { header: 'Status', accessorKey: 'status', cell: (r) => <StatusBadge status={r.status} /> },
+            {
+              header: 'Status',
+              accessorKey: 'status',
+              cell: (r) => <StatusBadge status={r.status} />,
+            },
             {
               header: 'Date',
               accessorKey: 'createdAt',
@@ -190,7 +189,9 @@ export default function MemberOrdersPage() {
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Type:</span>
-              <span className="font-semibold capitalize text-slate-700">{actionModal.item?.type}</span>
+              <span className="font-semibold capitalize text-slate-700">
+                {actionModal.item?.type}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Amount:</span>

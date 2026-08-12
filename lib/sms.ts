@@ -10,12 +10,13 @@ const twilioNumber = env.TWILIO_PHONE_NUMBER;
 const client = accountSid && authToken ? twilio(accountSid, authToken) : null;
 
 if (env.NODE_ENV === 'production' && !client) {
-  console.warn(
-    '[sms] Twilio credentials are not set in production. SMS will not be sent.'
-  );
+  console.warn('[sms] Twilio credentials are not set in production. SMS will not be sent.');
 }
 
-export async function sendSms(to: string, body: string): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function sendSms(
+  to: string,
+  body: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!client || !twilioNumber) {
     console.warn(`[sms] Would send SMS to ${to}: ${body}`);
     return { ok: true }; // Mock success in dev if no credentials

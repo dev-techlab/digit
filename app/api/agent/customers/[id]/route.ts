@@ -2,24 +2,23 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAgentFromRequest } from '@/lib/agent-auth';
 
-
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
     const agent = await getAgentFromRequest(req);
     if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  
+
     const customerId = params.id;
-  
+
     const customer = await db.users.findFirst({
       where: {
         id: customerId,
-      }
+      },
     });
-  
+
     if (!customer) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
     }
-  
+
     const rawLogins = await db.sessions.findMany({
       where: { user_id: customer.id },
       select: {
@@ -28,15 +27,15 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         created_at: true,
       },
       orderBy: { created_at: 'desc' },
-      take: 10
+      take: 10,
     });
-  
-    const logins = rawLogins.map(login => ({
+
+    const logins = rawLogins.map((login) => ({
       ipAddress: login.token, // just using token as a placeholder since there is no ipAddress field in sessions
       userAgent: login.user_agent,
       createdAt: login.created_at,
     }));
-  
+
     const rawTransactions = await db.transactions.findMany({
       where: { user_id: customer.id },
       select: {
@@ -45,15 +44,15 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         created_at: true,
       },
       orderBy: { created_at: 'desc' },
-      take: 20
+      take: 20,
     });
-  
-    const transactions = rawTransactions.map(tx => ({
+
+    const transactions = rawTransactions.map((tx) => ({
       type: tx.type,
       amount: tx.amount,
       createdAt: tx.created_at,
     }));
-  
+
     const rawGameActivity = await db.user_provider_accounts.findMany({
       where: { user_id: customer.id },
       select: {
@@ -61,16 +60,16 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         game_providers: {
           select: {
             name: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
-  
-    const gameActivity = rawGameActivity.map(activity => ({
+
+    const gameActivity = rawGameActivity.map((activity) => ({
       providerName: activity.game_providers.name,
       balance: activity.balance,
     }));
-  
+
     return NextResponse.json({
       customer: {
         id: customer.id,

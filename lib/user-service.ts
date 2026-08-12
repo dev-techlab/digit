@@ -76,7 +76,7 @@ export async function registerUser(
     if (err.code === 'P2002') throw new UserConflictError('Username already taken');
     throw err;
   }
-  
+
   try {
     await db.wallets.create({ data: { user_id: user.id } });
   } catch (e: any) {
@@ -196,9 +196,9 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
       pwa_installed: true,
     },
   });
-  
+
   if (!u) return null;
-  
+
   return {
     id: u.id,
     username: u.username,

@@ -16,10 +16,7 @@ type Tx = {
 };
 
 export default function CustomerOrdersPage() {
-  const table = useDataTable<Tx>(
-    '/api/agent/customer-orders',
-    'transactions'
-  );
+  const table = useDataTable<Tx>('/api/agent/customer-orders', 'transactions');
 
   return (
     <div className="space-y-4">
@@ -55,9 +52,7 @@ export default function CustomerOrdersPage() {
               header: 'Type',
               accessorKey: 'type',
               cell: (tx) => (
-                <Badge tone={tx.type === 'deposit' ? 'success' : 'warning'}>
-                  {tx.type}
-                </Badge>
+                <Badge tone={tx.type === 'deposit' ? 'success' : 'warning'}>{tx.type}</Badge>
               ),
             },
             {
@@ -73,7 +68,15 @@ export default function CustomerOrdersPage() {
               header: 'Status',
               accessorKey: 'status',
               cell: (tx) => (
-                <Badge tone={tx.status === 'completed' ? 'success' : tx.status === 'failed' ? 'danger' : 'neutral'}>
+                <Badge
+                  tone={
+                    tx.status === 'completed'
+                      ? 'success'
+                      : tx.status === 'failed'
+                        ? 'danger'
+                        : 'neutral'
+                  }
+                >
                   {tx.status}
                 </Badge>
               ),

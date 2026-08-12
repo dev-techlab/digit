@@ -23,7 +23,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 
   const userId = params.id;
-  
+
   const body = await req.json().catch(() => ({}));
   const parseResult = actionSchema.safeParse(body);
   if (!parseResult.success) {
@@ -35,7 +35,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   try {
     const user = await db.users.findUnique({
       where: { id: userId },
-      include: { wallets: true }
+      include: { wallets: true },
     });
 
     if (!user) {
@@ -53,11 +53,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     await db.$transaction(async (tx) => {
       // 1. Update User Wallet
       const balanceChange = action === 'deposit' ? amount : -amount;
-      
+
       await tx.wallets.upsert({
         where: { user_id: userId },
         update: { online_sc: { increment: balanceChange } },
-        create: { user_id: userId, online_sc: balanceChange > 0 ? balanceChange : 0, gold_coin: 0 }
+        create: { user_id: userId, online_sc: balanceChange > 0 ? balanceChange : 0, gold_coin: 0 },
       });
 
       let fee = 0;
@@ -85,7 +85,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
           net_amount: netAmount,
           type: action as any,
           created_at: new Date(),
-        }
+        },
       });
     });
 

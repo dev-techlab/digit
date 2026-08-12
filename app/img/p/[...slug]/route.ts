@@ -3,10 +3,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 // This route handles any /img/p/... requests that didn't match a real file in public/img/p/
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { slug: string[] } }
-) {
+export async function GET(req: NextRequest, { params }: { params: { slug: string[] } }) {
   const missingPath = `/img/p/${params.slug.join('/')}`;
   // 1. Log the missing image
   try {

@@ -84,10 +84,10 @@ export function PostersScreen() {
               >
                 {p.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img 
-                    src={getLocalImageUrl(p.imageUrl)} 
-                    alt={p.title || 'Poster'} 
-                    className="absolute inset-0 h-full w-full object-cover" 
+                  <img
+                    src={getLocalImageUrl(p.imageUrl)}
+                    alt={p.title || 'Poster'}
+                    className="absolute inset-0 h-full w-full object-cover"
                   />
                 ) : (
                   <div className="flex flex-col items-center gap-2">

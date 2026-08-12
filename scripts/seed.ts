@@ -37,26 +37,26 @@ async function seedProviders() {
   for (const [, file] of files) {
     const rows = readJson(file) as any[];
     await db.game_providers.createMany({
-      data: rows.map(p => ({
-          id: p.id,
-          name: p.name,
-          provider_code: p.providerCode,
-          launch_url_template: p.launchUrlTemplate,
-          icon_url: p.iconUrl,
-          status: p.status,
-          sort: p.sort,
-          create_type: p.createType,
-          operate: p.operate,
-          need_init_balance: p.needInitBalance,
-          can_manual_input: p.canManualInput,
-          provider_type: p.providerType,
-          iframe_supported: p.iframeSupported,
-          is_machine_supported: p.isMachineSupported,
-          redeem_field: p.redeemField,
-          invalid_password_state: p.invalidPasswordState,
-          can_change_password: p.canChangePassword,
+      data: rows.map((p) => ({
+        id: p.id,
+        name: p.name,
+        provider_code: p.providerCode,
+        launch_url_template: p.launchUrlTemplate,
+        icon_url: p.iconUrl,
+        status: p.status,
+        sort: p.sort,
+        create_type: p.createType,
+        operate: p.operate,
+        need_init_balance: p.needInitBalance,
+        can_manual_input: p.canManualInput,
+        provider_type: p.providerType,
+        iframe_supported: p.iframeSupported,
+        is_machine_supported: p.isMachineSupported,
+        redeem_field: p.redeemField,
+        invalid_password_state: p.invalidPasswordState,
+        can_change_password: p.canChangePassword,
       })),
-      skipDuplicates: true
+      skipDuplicates: true,
     });
 
     for (const p of rows) {
@@ -71,7 +71,7 @@ async function seedProviders() {
             bonus_amount: tier.bonusAmount,
             sort: i,
           })),
-          skipDuplicates: true
+          skipDuplicates: true,
         });
       }
     }
@@ -84,7 +84,7 @@ async function seedDemoUserAndData() {
   const wallet = readJson('data/mock/wallet.json');
 
   const passwordHash = await bcrypt.hash('demo1234', 10);
-  
+
   let user = await db.users.findUnique({ where: { username: 'player_2481' } });
   if (!user) {
     user = await db.users.create({
@@ -97,7 +97,7 @@ async function seedDemoUserAndData() {
         kyc_status: 'unverified',
         pwa_installed: false,
         invite_code: referral.inviteCode,
-      }
+      },
     });
   }
   const userId = user.id;
@@ -113,76 +113,78 @@ async function seedDemoUserAndData() {
         kiosk_sc: wallet.kioskSC,
         unwagered: wallet.unwagered,
         free_bonus: wallet.freeBonus,
-      }
+      },
     });
   }
 
   // Orders
   await db.orders.createMany({
-    data: (readJson('data/mock/orders.json') as any[]).map(o => ({
-        order_no: o.orderNo,
-        user_id: userId,
-        amount: o.amount,
-        pay_amount: o.payAmount,
-        actual_deposit_amount: o.actualDepositAmount,
-        payment_method: o.paymentMethod,
-        fee: o.fee,
-        fee_mode: o.feeMode,
-        fee_waived: o.feeWaived,
-        sc_bonus: o.scBonus,
-        status: o.status,
-        created_at: parseDate(o.createTime),
+    data: (readJson('data/mock/orders.json') as any[]).map((o) => ({
+      order_no: o.orderNo,
+      user_id: userId,
+      amount: o.amount,
+      pay_amount: o.payAmount,
+      actual_deposit_amount: o.actualDepositAmount,
+      payment_method: o.paymentMethod,
+      fee: o.fee,
+      fee_mode: o.feeMode,
+      fee_waived: o.feeWaived,
+      sc_bonus: o.scBonus,
+      status: o.status,
+      created_at: parseDate(o.createTime),
     })),
-    skipDuplicates: true
+    skipDuplicates: true,
   });
 
   // Transactions
   await db.transactions.createMany({
-    data: (readJson('data/mock/transactions.json') as any[]).map(t => ({
-        id: t.id,
-        user_id: userId,
-        address: t.address,
-        method_label: t.methodLabel,
-        method: t.method,
-        status: t.status,
-        amount: t.amount,
-        type: t.type,
-        created_at: parseDate(t.createTime),
+    data: (readJson('data/mock/transactions.json') as any[]).map((t) => ({
+      id: t.id,
+      user_id: userId,
+      address: t.address,
+      method_label: t.methodLabel,
+      method: t.method,
+      status: t.status,
+      amount: t.amount,
+      type: t.type,
+      created_at: parseDate(t.createTime),
     })),
-    skipDuplicates: true
+    skipDuplicates: true,
   });
 
   // Bonuses
   await db.bonuses.createMany({
-    data: (readJson('data/mock/bonus.json') as any[]).map(b => ({
-        id: b.id,
-        title: b.title,
-        description: b.description,
-        tags: b.tags,
-        active: b.active,
-        banner_type: b.banner.type,
-        banner_gradient: b.banner.gradient ?? null,
-        banner_badge_icon: b.banner.badgeIcon ?? null,
-        banner_badge_text: b.banner.badgeText ?? null,
-        schedule_icon: b.schedule.icon,
-        schedule_text: b.schedule.text ?? '',
-        schedule_countdown_seconds: b.schedule.countdownSeconds ?? null,
+    data: (readJson('data/mock/bonus.json') as any[]).map((b) => ({
+      id: b.id,
+      title: b.title,
+      description: b.description,
+      tags: b.tags,
+      active: b.active,
+      banner_type: b.banner.type,
+      banner_gradient: b.banner.gradient ?? null,
+      banner_badge_icon: b.banner.badgeIcon ?? null,
+      banner_badge_text: b.banner.badgeText ?? null,
+      schedule_icon: b.schedule.icon,
+      schedule_text: b.schedule.text ?? '',
+      schedule_countdown_seconds: b.schedule.countdownSeconds ?? null,
     })),
-    skipDuplicates: true
+    skipDuplicates: true,
   });
 
-  const bonusClaims = (readJson('data/mock/bonus.json') as any[]).filter(b => b.status && b.status !== 'none');
+  const bonusClaims = (readJson('data/mock/bonus.json') as any[]).filter(
+    (b) => b.status && b.status !== 'none'
+  );
   if (bonusClaims.length > 0) {
     const existingClaims = await db.user_bonus_claims.findFirst({ where: { user_id: userId } });
     if (!existingClaims) {
       await db.user_bonus_claims.createMany({
-        data: bonusClaims.map(b => ({
-            user_id: userId,
-            bonus_id: b.id,
-            status: b.status,
-            claimed_at: b.status === 'claimed' ? new Date() : null,
+        data: bonusClaims.map((b) => ({
+          user_id: userId,
+          bonus_id: b.id,
+          status: b.status,
+          claimed_at: b.status === 'claimed' ? new Date() : null,
         })),
-        skipDuplicates: true
+        skipDuplicates: true,
       });
     }
   }
@@ -193,14 +195,14 @@ async function seedDemoUserAndData() {
   });
   if (!hasReferrals) {
     await db.referral_commissions.createMany({
-      data: (referral.invitees as any[]).map(inv => ({
+      data: (referral.invitees as any[]).map((inv) => ({
         referrer_user_id: userId,
         invitee_display: inv.username,
         reward: inv.reward,
         status: inv.status,
         joined_at: parseDate(inv.joinedAt),
       })),
-      skipDuplicates: true
+      skipDuplicates: true,
     });
   }
 
@@ -223,7 +225,7 @@ async function seedDemoUserAndData() {
         status: r.status,
         visible: r.visible,
         submitted_at: parseDate(r.submittedAt),
-      }
+      },
     });
   }
 
@@ -233,14 +235,14 @@ async function seedDemoUserAndData() {
 async function seedProfileTasks() {
   await db.profile_tasks.createMany({
     data: PROFILE_TASKS.map((t, i) => ({
-        key: t.key,
-        title: t.title,
-        description: t.description,
-        reward_gc: t.rewardGc,
-        reward_sc: t.rewardSc,
-        sort: i,
+      key: t.key,
+      title: t.title,
+      description: t.description,
+      reward_gc: t.rewardGc,
+      reward_sc: t.rewardSc,
+      sort: i,
     })),
-    skipDuplicates: true
+    skipDuplicates: true,
   });
   // console.log(`  profile_tasks: ${PROFILE_TASKS.length}`);
 }
@@ -253,13 +255,13 @@ async function seedHelp() {
   for (const [tab, sections] of Object.entries(HELP_CONTENT)) {
     for (const [si, section] of sections.entries()) {
       const sec = await db.help_sections.create({
-          data: {
-            tab: tab as any,
-            key: section.key,
-            label: section.label,
-            icon: section.icon as any,
-            sort: si,
-          }
+        data: {
+          tab: tab as any,
+          key: section.key,
+          label: section.label,
+          icon: section.icon as any,
+          sort: si,
+        },
       });
       for (const [ii, item] of section.items.entries()) {
         const it = await db.help_items.create({
@@ -269,7 +271,7 @@ async function seedHelp() {
             icon: (item as any).icon ?? null,
             body: (item as any).body ?? null,
             sort: ii,
-          }
+          },
         });
         if ((item as any).steps?.length) {
           await db.help_steps.createMany({
@@ -278,7 +280,7 @@ async function seedHelp() {
               title: step.title,
               description: step.description,
               sort: pi,
-            }))
+            })),
           });
         }
       }
@@ -292,32 +294,32 @@ async function seedContentPages() {
     {
       slug: 'terms',
       title: 'Terms & Conditions',
-      body: `<p>These Terms & Conditions ("Terms") govern your access to and use of Octan Link (the "Platform"). By creating an account or using the Platform, you agree to be bound by these Terms.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">1. Eligibility</h2>\n<p>You must be at least 18 years old (or the age of majority in your jurisdiction) and a legal resident of a jurisdiction where use of the Platform is permitted to create an account.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">2. Virtual Currencies</h2>\n<p>Gold Coins (GC) have no monetary value and are for entertainment purposes only. Sweepstakes Coins (SC) may be redeemed for cash prizes subject to these Terms and the <a href="/sweeps-rules" class="text-brand">Sweeps Rules</a>.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">3. Account Responsibility</h2>\n<p>You are responsible for maintaining the confidentiality of your account credentials and for all activity that occurs under your account.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">4. Changes to These Terms</h2>\n<p>We may update these Terms from time to time. Continued use of the Platform after changes take effect constitutes acceptance of the revised Terms.</p>`
+      body: `<p>These Terms & Conditions ("Terms") govern your access to and use of Octan Link (the "Platform"). By creating an account or using the Platform, you agree to be bound by these Terms.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">1. Eligibility</h2>\n<p>You must be at least 18 years old (or the age of majority in your jurisdiction) and a legal resident of a jurisdiction where use of the Platform is permitted to create an account.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">2. Virtual Currencies</h2>\n<p>Gold Coins (GC) have no monetary value and are for entertainment purposes only. Sweepstakes Coins (SC) may be redeemed for cash prizes subject to these Terms and the <a href="/sweeps-rules" class="text-brand">Sweeps Rules</a>.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">3. Account Responsibility</h2>\n<p>You are responsible for maintaining the confidentiality of your account credentials and for all activity that occurs under your account.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">4. Changes to These Terms</h2>\n<p>We may update these Terms from time to time. Continued use of the Platform after changes take effect constitutes acceptance of the revised Terms.</p>`,
     },
     {
       slug: 'privacy',
       title: 'Privacy Policy',
-      body: `<p>This Privacy Policy explains how Octan Link collects, uses, and protects your personal information when you use the Platform.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">1. Information We Collect</h2>\n<p>We collect information you provide directly (account details, contact information, identity verification documents) and information collected automatically (device information, usage data, approximate location for geo-compliance).</p>\n<h2 class="font-semibold text-[var(--text-primary)]">2. How We Use Information</h2>\n<p>We use your information to operate the Platform, process transactions, verify your identity, comply with legal obligations, and communicate with you about your account.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">3. Data Sharing</h2>\n<p>We share information with service providers who help us operate the Platform (payment processors, identity verification providers) and as required by law.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">4. Your Rights</h2>\n<p>You may request access to, correction of, or deletion of your personal information by contacting our support team through the Help Center.</p>`
+      body: `<p>This Privacy Policy explains how Octan Link collects, uses, and protects your personal information when you use the Platform.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">1. Information We Collect</h2>\n<p>We collect information you provide directly (account details, contact information, identity verification documents) and information collected automatically (device information, usage data, approximate location for geo-compliance).</p>\n<h2 class="font-semibold text-[var(--text-primary)]">2. How We Use Information</h2>\n<p>We use your information to operate the Platform, process transactions, verify your identity, comply with legal obligations, and communicate with you about your account.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">3. Data Sharing</h2>\n<p>We share information with service providers who help us operate the Platform (payment processors, identity verification providers) and as required by law.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">4. Your Rights</h2>\n<p>You may request access to, correction of, or deletion of your personal information by contacting our support team through the Help Center.</p>`,
     },
     {
       slug: 'sweeps-rules',
       title: 'Official Sweepstakes Rules',
-      body: `<p>NO PURCHASE OR PAYMENT NECESSARY TO ENTER OR WIN. A purchase will not improve your chances of winning. Void where prohibited by law.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">1. Eligibility</h2>\n<p>Open to legal residents of eligible jurisdictions who are at least 18 years old. Employees of Octan Link and their immediate family members are not eligible to participate.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">2. Free Entry (AMOE)</h2>\n<p>You may obtain Sweepstakes Coins without purchase via the <a href="/postal-request" class="text-brand">Postal Request</a> method described on the Platform, subject to the same redemption requirements as purchased entries.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">3. Redemption</h2>\n<p>Sweepstakes Coins may be redeemed for cash prizes once applicable wagering and verification requirements have been met. Gold Coins have no cash value and cannot be redeemed.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">4. Odds</h2>\n<p>Odds of winning depend on the number of eligible entries received and game outcomes.</p>`
+      body: `<p>NO PURCHASE OR PAYMENT NECESSARY TO ENTER OR WIN. A purchase will not improve your chances of winning. Void where prohibited by law.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">1. Eligibility</h2>\n<p>Open to legal residents of eligible jurisdictions who are at least 18 years old. Employees of Octan Link and their immediate family members are not eligible to participate.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">2. Free Entry (AMOE)</h2>\n<p>You may obtain Sweepstakes Coins without purchase via the <a href="/postal-request" class="text-brand">Postal Request</a> method described on the Platform, subject to the same redemption requirements as purchased entries.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">3. Redemption</h2>\n<p>Sweepstakes Coins may be redeemed for cash prizes once applicable wagering and verification requirements have been met. Gold Coins have no cash value and cannot be redeemed.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">4. Odds</h2>\n<p>Odds of winning depend on the number of eligible entries received and game outcomes.</p>`,
     },
     {
       slug: 'responsible-gaming',
       title: 'Responsible Social Gameplay',
-      body: `<p>Octan Link is committed to promoting responsible social gameplay. Our games are intended for entertainment purposes and should never be viewed as a way to make money.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">Play Within Your Means</h2>\n<p>Only use funds you can comfortably afford. Set personal time and spending limits before you start playing.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">Warning Signs</h2>\n<p>If gameplay is affecting your relationships, finances, or wellbeing, take a break and seek support. Warning signs include chasing losses, hiding play from loved ones, and playing longer than intended.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">Self-Exclusion & Support</h2>\n<p>Contact our Help Center to set deposit limits, take a cooling-off period, or self-exclude from the Platform. If you or someone you know needs help, contact the National Council on Problem Gambling at 1-800-522-4700.</p>`
+      body: `<p>Octan Link is committed to promoting responsible social gameplay. Our games are intended for entertainment purposes and should never be viewed as a way to make money.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">Play Within Your Means</h2>\n<p>Only use funds you can comfortably afford. Set personal time and spending limits before you start playing.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">Warning Signs</h2>\n<p>If gameplay is affecting your relationships, finances, or wellbeing, take a break and seek support. Warning signs include chasing losses, hiding play from loved ones, and playing longer than intended.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">Self-Exclusion & Support</h2>\n<p>Contact our Help Center to set deposit limits, take a cooling-off period, or self-exclude from the Platform. If you or someone you know needs help, contact the National Council on Problem Gambling at 1-800-522-4700.</p>`,
     },
     {
       slug: 'anti-fraud',
       title: 'Anti-Fraud Policy',
-      body: `<p>Octan Link is committed to protecting our players and platform from fraud, including account takeover, payment fraud, bonus abuse, and the use of multiple accounts.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">Identity Verification</h2>\n<p>We may require identity verification (KYC) at any time, particularly before processing a withdrawal, to confirm you are the rightful owner of an account.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">One Account Per Person</h2>\n<p>Each individual, household, and device is permitted one account. Duplicate accounts may be suspended and any associated balances forfeited.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">Reporting Suspicious Activity</h2>\n<p>If you suspect fraudulent activity on your account or believe someone is misusing the platform, contact our support team immediately via the <a href="/contact-us" class="text-brand">Contact Us</a> page.</p>`
-    }
+      body: `<p>Octan Link is committed to protecting our players and platform from fraud, including account takeover, payment fraud, bonus abuse, and the use of multiple accounts.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">Identity Verification</h2>\n<p>We may require identity verification (KYC) at any time, particularly before processing a withdrawal, to confirm you are the rightful owner of an account.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">One Account Per Person</h2>\n<p>Each individual, household, and device is permitted one account. Duplicate accounts may be suspended and any associated balances forfeited.</p>\n<h2 class="font-semibold text-[var(--text-primary)]">Reporting Suspicious Activity</h2>\n<p>If you suspect fraudulent activity on your account or believe someone is misusing the platform, contact our support team immediately via the <a href="/contact-us" class="text-brand">Contact Us</a> page.</p>`,
+    },
   ];
   await db.content_pages.createMany({
     data: pages,
-    skipDuplicates: true
+    skipDuplicates: true,
   });
   // console.log(`  content_pages: ${pages.length}`);
 }
@@ -364,7 +366,7 @@ async function seedSettings() {
       label: 'Provider catalog API base URL',
     },
   ].map((r: any) => ({ ...r, is_public: false }));
-  
+
   await db.site_settings.createMany({ data: internalRows, skipDuplicates: true });
 
   // console.log(`  site_settings: ${rows.length + internalRows.length}`);
@@ -501,7 +503,7 @@ async function seedRbac() {
           name: def.name,
           level: def.level,
           is_system: def.isSystem,
-        }
+        },
       });
     }
 
@@ -512,7 +514,7 @@ async function seedRbac() {
         await db.role_permissions.upsert({
           where: { role_id_permission_id: { role_id: role.id, permission_id: pid } },
           create: { role_id: role.id, permission_id: pid },
-          update: {}
+          update: {},
         });
       }
     }

@@ -7,8 +7,11 @@ import { clientIp, logAdminAction } from '@/lib/audit-log';
 import { z } from 'zod';
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address').transform(s => s.toLowerCase().trim()),
-  password: z.string().min(1, 'Password is required')
+  email: z
+    .string()
+    .email('Invalid email address')
+    .transform((s) => s.toLowerCase().trim()),
+  password: z.string().min(1, 'Password is required'),
 });
 
 /** POST /api/admin/login — { email, password } → sets the admin_session cookie. */
@@ -16,16 +19,16 @@ export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
     const parseResult = loginSchema.safeParse(body);
-    
+
     if (!parseResult.success) {
       return NextResponse.json(
         { error: parseResult.error.issues[0]?.message || 'Invalid input' },
         { status: 400 }
       );
     }
-  
+
     const { email, password } = parseResult.data;
-  
+
     const ip = clientIp(req);
     const rateLimitKey = `${email.toLowerCase()}:${ip ?? 'unknown'}`;
     const { allowed, retryAfterMs } = checkLoginRateLimit(rateLimitKey);
@@ -35,20 +38,20 @@ export async function POST(req: Request) {
         { status: 429 }
       );
     }
-  
+
     const adminId = await verifyAdminLogin(email, password);
     if (!adminId) {
       recordLoginFailure(rateLimitKey);
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
     recordLoginSuccess(rateLimitKey);
-  
+
     const { token } = await createAdminSession(adminId, {
       userAgent: req.headers.get('user-agent') ?? undefined,
     });
     const permissions = await effectivePermissions(adminId);
     await logAdminAction({ adminId, action: 'admin.login', ipAddress: ip });
-  
+
     const res = NextResponse.json({ ok: true, adminId, permissions });
     res.cookies.set(ADMIN_SESSION_COOKIE, token, sessionCookieOptions(ADMIN_SESSION_TTL_S));
     return res;

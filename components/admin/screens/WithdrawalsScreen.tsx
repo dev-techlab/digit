@@ -57,7 +57,9 @@ const statusChip = (st: string) => (
 
 export function WithdrawalsScreen() {
   const [statusFilter, setStatusFilter] = useState<string>('pending');
-  const table = useDataTable<WithdrawalRow>('/api/admin/withdrawals', 'withdrawals', 20, { status: 'pending' });
+  const table = useDataTable<WithdrawalRow>('/api/admin/withdrawals', 'withdrawals', 20, {
+    status: 'pending',
+  });
 
   const actionModal = useActionModal<WithdrawalRow, 'accept' | 'reject'>();
   const [remark, setRemark] = useState('');
@@ -269,8 +271,8 @@ export function WithdrawalsScreen() {
             )}
           </div>
 
-          <Field 
-            label="Reason / Remark" 
+          <Field
+            label="Reason / Remark"
             required={actionModal.actionType === 'reject'}
             error={actionModal.fieldErrs.remark}
           >

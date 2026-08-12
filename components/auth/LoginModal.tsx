@@ -22,7 +22,7 @@ export function LoginModal() {
     username: '',
     password: '',
     phone: '',
-    code: ''
+    code: '',
   });
   const [cooldown, setCooldown] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -34,7 +34,7 @@ export function LoginModal() {
       username: '',
       password: '',
       phone: '',
-      code: ''
+      code: '',
     });
     setError(null);
   };
@@ -107,7 +107,11 @@ export function LoginModal() {
       const res = await fetch('/api/auth/otp/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ destination: form.phone.trim(), purpose: 'login', code: form.code.trim() }),
+        body: JSON.stringify({
+          destination: form.phone.trim(),
+          purpose: 'login',
+          code: form.code.trim(),
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? 'Verification failed');
@@ -153,7 +157,7 @@ export function LoginModal() {
               placeholder="Please enter username"
               autoComplete="username"
               value={form.username}
-              onChange={(e) => setForm(prev => ({ ...prev, username: e.target.value }))}
+              onChange={(e) => setForm((prev) => ({ ...prev, username: e.target.value }))}
             />
             <IconInput
               icon={<Lock size={16} />}
@@ -170,7 +174,7 @@ export function LoginModal() {
               placeholder="Please enter password"
               autoComplete="current-password"
               value={form.password}
-              onChange={(e) => setForm(prev => ({ ...prev, password: e.target.value }))}
+              onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
               trailing={
                 <button
                   onClick={() => setShowPassword((v) => !v)}
@@ -191,7 +195,7 @@ export function LoginModal() {
               inputMode="tel"
               autoComplete="tel"
               value={form.phone}
-              onChange={(e) => setForm(prev => ({ ...prev, phone: e.target.value }))}
+              onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
             />
             <div>
               <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--text-secondary)]">
@@ -204,7 +208,7 @@ export function LoginModal() {
                   containerClassName="flex-1"
                   autoComplete="one-time-code"
                   value={form.code}
-                  onChange={(e) => setForm(prev => ({ ...prev, code: e.target.value }))}
+                  onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value }))}
                 />
                 <Button
                   variant="secondary"
@@ -219,7 +223,11 @@ export function LoginModal() {
           </>
         )}
 
-        {error && <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger text-center">{error}</p>}
+        {error && (
+          <p className="rounded-md bg-danger/10 px-3 py-2 text-center text-sm text-danger">
+            {error}
+          </p>
+        )}
 
         <Button fullWidth onClick={submit} disabled={loading} className="mt-2">
           {loading ? 'Logging in…' : 'Login'}

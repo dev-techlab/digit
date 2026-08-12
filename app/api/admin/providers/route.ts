@@ -5,7 +5,6 @@ import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission, PermissionError } from '@/lib/rbac-core';
 import { clientIp, logAdminAction } from '@/lib/audit-log';
 
-
 const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 const int = (v: unknown, fallback = 0) =>
   Number.isFinite(Number(v)) ? Math.trunc(Number(v)) : fallback;
@@ -40,10 +39,10 @@ export async function GET(req: Request) {
   try {
     const { error } = await authorize(req, 'providers.read');
     if (error) return error;
-  
+
     const providers = await db.game_providers.findMany({
       where: { deleted_at: null },
-      orderBy: [{ sort: 'asc' }, { name: 'asc' }]
+      orderBy: [{ sort: 'asc' }, { name: 'asc' }],
     });
     return NextResponse.json({ providers });
   } catch (err: any) {
@@ -54,23 +53,53 @@ export async function GET(req: Request) {
 }
 
 const postSchema = z.object({
-  id: z.union([z.string(), z.number()]).transform(v => Number(v)),
+  id: z.union([z.string(), z.number()]).transform((v) => Number(v)),
   name: z.string().min(1, 'name required'),
   providerCode: z.string().min(1, 'providerCode required'),
   launchUrlTemplate: z.string().min(1, 'launchUrlTemplate required'),
   iconUrl: z.string().min(1, 'iconUrl required'),
   providerType: z.enum(['SC', 'GC'], { message: 'providerType must be SC or GC' }),
-  status: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : 1),
-  sort: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : 0),
-  createType: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : 1),
-  operate: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : 0),
-  needInitBalance: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : 0),
-  canManualInput: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : 1),
+  status: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : 1)),
+  sort: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : 0)),
+  createType: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : 1)),
+  operate: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : 0)),
+  needInitBalance: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : 0)),
+  canManualInput: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : 1)),
   iframeSupported: z.boolean().optional().default(false),
-  isMachineSupported: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : 0),
-  redeemField: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : 0),
-  invalidPasswordState: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : 0),
-  canChangePassword: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : 1),
+  isMachineSupported: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : 0)),
+  redeemField: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : 0)),
+  invalidPasswordState: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : 0)),
+  canChangePassword: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : 1)),
 });
 
 export async function POST(req: Request) {
@@ -112,7 +141,10 @@ export async function POST(req: Request) {
       );
     }
     if (row) {
-      row = await db.game_providers.update({ where: { id: data.id }, data: { ...values, deleted_at: null } });
+      row = await db.game_providers.update({
+        where: { id: data.id },
+        data: { ...values, deleted_at: null },
+      });
     } else {
       row = await db.game_providers.create({ data: values });
     }
@@ -143,23 +175,53 @@ export async function POST(req: Request) {
 }
 
 const putSchema = z.object({
-  id: z.union([z.string(), z.number()]).transform(v => Number(v)),
+  id: z.union([z.string(), z.number()]).transform((v) => Number(v)),
   name: z.string().optional(),
   providerCode: z.string().optional(),
   launchUrlTemplate: z.string().optional(),
   iconUrl: z.string().optional(),
   providerType: z.enum(['SC', 'GC']).optional(),
-  status: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
-  sort: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
-  createType: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
-  operate: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
-  needInitBalance: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
-  canManualInput: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
+  status: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : undefined)),
+  sort: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : undefined)),
+  createType: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : undefined)),
+  operate: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : undefined)),
+  needInitBalance: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : undefined)),
+  canManualInput: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : undefined)),
   iframeSupported: z.boolean().optional(),
-  isMachineSupported: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
-  redeemField: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
-  invalidPasswordState: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
-  canChangePassword: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
+  isMachineSupported: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : undefined)),
+  redeemField: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : undefined)),
+  invalidPasswordState: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : undefined)),
+  canChangePassword: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : undefined)),
 });
 
 export async function PUT(req: Request) {
@@ -170,7 +232,8 @@ export async function PUT(req: Request) {
     const body = await req.json();
     const data = putSchema.parse(body);
 
-    if (!Number.isFinite(data.id)) return NextResponse.json({ error: 'id required' }, { status: 400 });
+    if (!Number.isFinite(data.id))
+      return NextResponse.json({ error: 'id required' }, { status: 400 });
 
     const set: any = { synced_at: new Date() };
     if (data.name !== undefined) set.name = data.name;
@@ -187,12 +250,13 @@ export async function PUT(req: Request) {
     if (data.iframeSupported !== undefined) set.iframe_supported = data.iframeSupported;
     if (data.isMachineSupported !== undefined) set.is_machine_supported = data.isMachineSupported;
     if (data.redeemField !== undefined) set.redeem_field = data.redeemField;
-    if (data.invalidPasswordState !== undefined) set.invalid_password_state = data.invalidPasswordState;
+    if (data.invalidPasswordState !== undefined)
+      set.invalid_password_state = data.invalidPasswordState;
     if (data.canChangePassword !== undefined) set.can_change_password = data.canChangePassword;
 
     const row = await db.game_providers.update({
       where: { id: data.id },
-      data: set
+      data: set,
     });
     await logAdminAction({
       adminId,
@@ -230,7 +294,7 @@ export async function DELETE(req: Request) {
   try {
     const row = await db.game_providers.update({
       where: { id },
-      data: { deleted_at: new Date() }
+      data: { deleted_at: new Date() },
     });
     await logAdminAction({
       adminId,

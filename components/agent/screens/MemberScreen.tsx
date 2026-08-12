@@ -99,107 +99,105 @@ export function MemberScreen() {
             data={rows}
             rowKey={(r) => r.id}
             manualPagination
-          totalRows={total}
-          currentPage={page}
-          onPageChange={(p) => {
-            setPage(p);
-            void load(p);
-          }}
-          globalSearch={search}
-          onSearchChange={setSearch}
-          extraToolbar={
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-500">Phone:</span>
-              <TextInput
-                className="w-32 py-1.5"
-                placeholder="Phone"
-                value={phone}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setPhone(val);
-                  setPage(1);
-                  void load(1, search, val);
-                }}
-              />
-            </div>
-          }
-          columns={[
-            {
-              header: 'Username',
-              accessorKey: 'username',
-              className: 'sticky left-0 bg-white z-10 shadow-[1px_0_0_0_#f1f5f9]',
-              cell: (r) => (
-                <div className="flex items-center gap-1.5">
-                  <span className="font-medium text-slate-700">{r.username}</span>
-                  {!r.scRewardEnabled && (
-                    <span title="No SC Reward" className="flex items-center">
-                      <AlertCircle size={14} className="text-red-500" />
-                    </span>
-                  )}
-                </div>
-              ),
-            },
-            { header: 'Phone', accessorKey: 'phone', cell: (r) => r.phone ?? '' },
-            { header: 'Sale Agent', accessorKey: 'saleAgent', cell: (r) => r.saleAgent ?? '-' },
-            {
-              header: 'Online SC',
-              accessorKey: 'onlineSc',
-              cell: (r) => (
-                <span className="font-semibold text-green-600">{fmtMoney(r.onlineSc)}</span>
-              ),
-            },
-            { header: 'Deposit', accessorKey: 'deposit', cell: (r) => fmtMoney(r.deposit) },
-            { header: 'Withdraw', accessorKey: 'withdraw', cell: (r) => fmtMoney(r.withdraw) },
-            {
-              header: 'TotalNet',
-              accessorKey: 'totalNet',
-              cell: (r) => (
-                <span className="font-semibold text-green-600">{fmtMoney(r.totalNet)}</span>
-              ),
-            },
-            {
-              header: 'TotalIn Score',
-              accessorKey: 'totalIn',
-              cell: (r) => Number(r.totalIn).toFixed(2),
-            },
-            {
-              header: 'TotalOut Score',
-              accessorKey: 'totalOut',
-              cell: (r) => Number(r.totalOut).toFixed(2),
-            },
-            {
-              header: 'Operations',
-              enableSorting: false,
-              enableGlobalFilter: false,
-              cell: (r) => (
-                <div className="flex items-center gap-3">
-                  <button
-                    className="text-slate-400 hover:text-blue-500"
-                    title="Game Platform Binding"
-                    onClick={() => void openDetail(r)}
-                  >
-                    <Gamepad2 size={16} />
-                  </button>
-                  <button
-                    className="text-slate-400 hover:text-slate-700"
-                    title="More Options"
-                    onClick={() => {
-                      setEditRow(r);
-                      setRemark(r.remark ?? '');
-                      setErr(null);
-                    }}
-                  >
-                    <MoreHorizontal size={16} />
-                  </button>
-                </div>
-              ),
-            },
-          ]}
-        />
-      </Card>
+            totalRows={total}
+            currentPage={page}
+            onPageChange={(p) => {
+              setPage(p);
+              void load(p);
+            }}
+            globalSearch={search}
+            onSearchChange={setSearch}
+            extraToolbar={
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-500">Phone:</span>
+                <TextInput
+                  className="w-32 py-1.5"
+                  placeholder="Phone"
+                  value={phone}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPhone(val);
+                    setPage(1);
+                    void load(1, search, val);
+                  }}
+                />
+              </div>
+            }
+            columns={[
+              {
+                header: 'Username',
+                accessorKey: 'username',
+                className: 'sticky left-0 bg-white z-10 shadow-[1px_0_0_0_#f1f5f9]',
+                cell: (r) => (
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium text-slate-700">{r.username}</span>
+                    {!r.scRewardEnabled && (
+                      <span title="No SC Reward" className="flex items-center">
+                        <AlertCircle size={14} className="text-red-500" />
+                      </span>
+                    )}
+                  </div>
+                ),
+              },
+              { header: 'Phone', accessorKey: 'phone', cell: (r) => r.phone ?? '' },
+              { header: 'Sale Agent', accessorKey: 'saleAgent', cell: (r) => r.saleAgent ?? '-' },
+              {
+                header: 'Online SC',
+                accessorKey: 'onlineSc',
+                cell: (r) => (
+                  <span className="font-semibold text-green-600">{fmtMoney(r.onlineSc)}</span>
+                ),
+              },
+              { header: 'Deposit', accessorKey: 'deposit', cell: (r) => fmtMoney(r.deposit) },
+              { header: 'Withdraw', accessorKey: 'withdraw', cell: (r) => fmtMoney(r.withdraw) },
+              {
+                header: 'TotalNet',
+                accessorKey: 'totalNet',
+                cell: (r) => (
+                  <span className="font-semibold text-green-600">{fmtMoney(r.totalNet)}</span>
+                ),
+              },
+              {
+                header: 'TotalIn Score',
+                accessorKey: 'totalIn',
+                cell: (r) => Number(r.totalIn).toFixed(2),
+              },
+              {
+                header: 'TotalOut Score',
+                accessorKey: 'totalOut',
+                cell: (r) => Number(r.totalOut).toFixed(2),
+              },
+              {
+                header: 'Operations',
+                enableSorting: false,
+                enableGlobalFilter: false,
+                cell: (r) => (
+                  <div className="flex items-center gap-3">
+                    <button
+                      className="text-slate-400 hover:text-blue-500"
+                      title="Game Platform Binding"
+                      onClick={() => void openDetail(r)}
+                    >
+                      <Gamepad2 size={16} />
+                    </button>
+                    <button
+                      className="text-slate-400 hover:text-slate-700"
+                      title="More Options"
+                      onClick={() => {
+                        setEditRow(r);
+                        setRemark(r.remark ?? '');
+                        setErr(null);
+                      }}
+                    >
+                      <MoreHorizontal size={16} />
+                    </button>
+                  </div>
+                ),
+              },
+            ]}
+          />
+        </Card>
       )}
-
-
 
       <Modal
         title={editRow ? `Edit Member[${editRow.username}]` : ''}

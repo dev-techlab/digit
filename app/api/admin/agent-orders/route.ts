@@ -7,7 +7,7 @@ import { clientIp, logAdminAction } from '@/lib/audit-log';
 
 const actionSchema = z.object({
   id: z.string().min(1, 'id required'),
-  action: z.enum(['accept', 'reject'], { message: "Invalid action" }),
+  action: z.enum(['accept', 'reject'], { message: 'Invalid action' }),
   remark: z.string().optional(),
 });
 
@@ -40,16 +40,16 @@ export async function GET(req: Request) {
   try {
     const { error } = await authorize(req, 'agents.read');
     if (error) return error;
-  
+
     const url = new URL(req.url);
     const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('pageSize')) || 20));
     const search = url.searchParams.get('search')?.trim();
     const statusFilter = url.searchParams.get('status');
     const typeFilter = url.searchParams.get('type');
-  
+
     const where: any = {};
-    
+
     if (statusFilter) where.status = statusFilter;
     if (typeFilter) {
       where.type = typeFilter;
@@ -57,14 +57,18 @@ export async function GET(req: Request) {
       // Both deposits and withdrawals
       where.type = { in: ['deposit', 'withdraw'] };
     }
-  
+
     if (search) {
       where.OR = [
         { id: { contains: search, mode: 'insensitive' } },
-        { agents_agent_transactions_agent_idToagents: { username: { contains: search, mode: 'insensitive' } } }
+        {
+          agents_agent_transactions_agent_idToagents: {
+            username: { contains: search, mode: 'insensitive' },
+          },
+        },
       ];
     }
-  
+
     const [rows, count] = await Promise.all([
       db.agent_transactions.findMany({
         where,
@@ -84,8 +88,8 @@ export async function GET(req: Request) {
           status: true,
           created_at: true,
           agents_agent_transactions_agent_idToagents: {
-            select: { username: true }
-          }
+            select: { username: true },
+          },
         },
         orderBy: { created_at: 'desc' },
         take: pageSize,
@@ -93,8 +97,8 @@ export async function GET(req: Request) {
       }),
       db.agent_transactions.count({ where }),
     ]);
-  
-    const formattedRows = rows.map(r => ({
+
+    const formattedRows = rows.map((r) => ({
       id: r.id,
       type: r.type,
       agentId: r.agent_id,
@@ -111,7 +115,7 @@ export async function GET(req: Request) {
       status: r.status,
       createdAt: r.created_at,
     }));
-  
+
     return NextResponse.json({ orders: formattedRows, total: count });
   } catch (err: any) {
     if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
@@ -128,7 +132,10 @@ export async function POST(req: Request) {
   const parseResult = actionSchema.safeParse(body);
 
   if (!parseResult.success) {
-    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+    return NextResponse.json(
+      { error: parseResult.error.issues[0]?.message || 'Invalid input' },
+      { status: 400 }
+    );
   }
 
   const { id, action, remark } = parseResult.data;
@@ -139,9 +146,9 @@ export async function POST(req: Request) {
         where: { id, status: 'pending' },
         include: {
           agents_agent_transactions_agent_idToagents: {
-            select: { online_balance: true }
-          }
-        }
+            select: { online_balance: true },
+          },
+        },
       });
 
       if (!txRow) {
@@ -158,44 +165,44 @@ export async function POST(req: Request) {
 
           await tx.agent_transactions.update({
             where: { id },
-            data: { 
+            data: {
               status: 'completed',
               balance_before: currentBalance,
               balance_after: balanceAfter,
-              remark
-            }
+              remark,
+            },
           });
 
           await tx.agents.update({
             where: { id: txRow.agent_id },
-            data: { online_balance: { increment: txRow.amount } }
+            data: { online_balance: { increment: txRow.amount } },
           });
         } else {
           await tx.agent_transactions.update({
             where: { id },
-            data: { 
+            data: {
               status: 'failed',
               balance_before: currentBalance,
               balance_after: currentBalance,
-              remark 
-            }
+              remark,
+            },
           });
         }
       } else if (txRow.type === 'withdraw') {
         if (action === 'accept') {
           await tx.agent_transactions.update({
             where: { id },
-            data: { status: 'completed', remark }
+            data: { status: 'completed', remark },
           });
         } else {
           await tx.agent_transactions.update({
             where: { id },
-            data: { status: 'failed', remark }
+            data: { status: 'failed', remark },
           });
 
           await tx.agents.update({
             where: { id: txRow.agent_id },
-            data: { online_balance: { increment: txRow.amount } }
+            data: { online_balance: { increment: txRow.amount } },
           });
         }
       } else {

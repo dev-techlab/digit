@@ -2,22 +2,24 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getAgentFromRequest } from '@/lib/agent-auth';
 
-
 export async function GET(req: Request) {
   try {
     const agent = await getAgentFromRequest(req);
     if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    
+
     const url = new URL(req.url);
     const search = url.searchParams.get('search')?.trim();
     const phone = url.searchParams.get('phone')?.trim();
     const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('pageSize')) || 10));
-  
-    const dbAgent = await db.agents.findUnique({ where: { id: agent.id }, select: { invite_code: true } });
-    
+
+    const dbAgent = await db.agents.findUnique({
+      where: { id: agent.id },
+      select: { invite_code: true },
+    });
+
     const where: any = { agent_invite_code: dbAgent?.invite_code };
-  
+
     if (search || phone) {
       where.AND = [];
       if (search) {
@@ -27,7 +29,7 @@ export async function GET(req: Request) {
         where.AND.push({ phone: { contains: phone, mode: 'insensitive' } });
       }
     }
-  
+
     const [rawRows, total] = await Promise.all([
       db.users.findMany({
         where,
@@ -47,38 +49,42 @@ export async function GET(req: Request) {
       }),
       db.users.count({ where }),
     ]);
-    
+
     // We need to fetch aggregate deposits/withdrawals for each user
-    const userIds = rawRows.map(u => u.id);
+    const userIds = rawRows.map((u) => u.id);
     let totalDeposits: any[] = [];
     let totalWithdrawals: any[] = [];
-    
+
     if (userIds.length > 0) {
       totalDeposits = (await db.transactions.groupBy({
         by: ['user_id'],
         where: {
           user_id: { in: userIds },
           type: 'deposit',
-          status: 'completed'
+          status: 'completed',
         },
-        _sum: { amount: true }
+        _sum: { amount: true },
       })) as any;
-      
+
       totalWithdrawals = (await db.transactions.groupBy({
         by: ['user_id'],
         where: {
           user_id: { in: userIds },
           type: 'withdraw',
-          status: 'completed'
+          status: 'completed',
         },
-        _sum: { amount: true }
+        _sum: { amount: true },
       })) as any;
     }
-    
-    const depositMap = new Map(totalDeposits.map(d => [d.user_id, d._sum.amount?.toString() || '0']));
-    const withdrawalMap = new Map(totalWithdrawals.map(w => [w.user_id, w._sum.amount?.toString() || '0']));
-  
-    const rows = rawRows.map(u => ({
+
+    const depositMap = new Map(
+      totalDeposits.map((d) => [d.user_id, d._sum.amount?.toString() || '0'])
+    );
+    const withdrawalMap = new Map(
+      totalWithdrawals.map((w) => [w.user_id, w._sum.amount?.toString() || '0'])
+    );
+
+    const rows = rawRows.map((u) => ({
       id: u.id,
       username: u.username,
       nickname: u.nickname,
@@ -91,7 +97,7 @@ export async function GET(req: Request) {
       totalDeposit: depositMap.get(u.id) || '0',
       totalWithdrawal: withdrawalMap.get(u.id) || '0',
     }));
-  
+
     return NextResponse.json({
       customers: rows,
       total,

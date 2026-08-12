@@ -6,9 +6,8 @@ import { z } from 'zod';
 const resetSchema = z.object({
   destination: z.string().trim().min(1, 'destination and code are required'),
   code: z.string().trim().min(1, 'destination and code are required'),
-  newPassword: z.string().min(6, 'Password must be at least 6 characters')
+  newPassword: z.string().min(6, 'Password must be at least 6 characters'),
 });
-
 
 /**
  * POST /api/auth/reset-password — { destination, code, newPassword }.
@@ -35,7 +34,10 @@ export async function POST(req: Request) {
 
     const userId = result.userId ?? (await userIdByDestination(destination));
     if (!userId) {
-      return NextResponse.json({ error: 'No account found for this contact method' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'No account found for this contact method' },
+        { status: 404 }
+      );
     }
 
     await setUserPassword(userId, newPassword);
@@ -43,6 +45,9 @@ export async function POST(req: Request) {
   } catch (err: any) {
     if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     console.error('POST /api/auth/reset-password', err);
-    return NextResponse.json({ error: (err as any)?.message || 'Failed to reset password' }, { status: 500 });
+    return NextResponse.json(
+      { error: (err as any)?.message || 'Failed to reset password' },
+      { status: 500 }
+    );
   }
 }

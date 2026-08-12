@@ -19,12 +19,14 @@ test.describe('Customer Portal', () => {
     await page.click('button:has-text("Login"):not([variant="outline"])');
 
     // Verify successful login
-    await expect(page.locator('span.bg-brand-solid').filter({ hasText: '🎰' })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('span.bg-brand-solid').filter({ hasText: '🎰' })).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test('should filter games for an agent-assigned user', async ({ page }) => {
     await page.goto('/');
-    
+
     // Login as user assigned to Deluxe001
     await page.click('button:has-text("Login")');
     await page.fill('input[name="username"]', '5534453');
@@ -32,7 +34,9 @@ test.describe('Customer Portal', () => {
     await page.click('button:has-text("Login"):not([variant="outline"])');
 
     // Verify successful login
-    await expect(page.locator('span.bg-brand-solid').filter({ hasText: '🎰' })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('span.bg-brand-solid').filter({ hasText: '🎰' })).toBeVisible({
+      timeout: 10000,
+    });
 
     // Verify only the agent's games are visible. Deluxe001 has 7 games.
     const gameCards = page.locator('.grid > div');

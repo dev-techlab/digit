@@ -17,9 +17,9 @@ async function adminIdForToken(token: string): Promise<string | null> {
       token,
       expires_at: { gt: new Date() },
       revoked_at: null,
-      admins: { status: 'active' }
+      admins: { status: 'active' },
     },
-    select: { admin_id: true }
+    select: { admin_id: true },
   });
   return session?.admin_id ?? null;
 }
@@ -79,14 +79,14 @@ async function main() {
   const ordersRead = perms.find((p) => p.key === 'orders.read')!;
   await db.admin_permissions.upsert({
     where: {
-      admin_id_permission_id: { admin_id: finId!, permission_id: ordersRead.id }
+      admin_id_permission_id: { admin_id: finId!, permission_id: ordersRead.id },
     },
     create: { admin_id: finId!, permission_id: ordersRead.id, effect: 'deny' },
-    update: { effect: 'deny' }
+    update: { effect: 'deny' },
   });
   check('direct deny overrides role grant', !(await can(finId!, 'orders.read')));
   await db.admin_permissions.deleteMany({
-    where: { admin_id: finId!, permission_id: ordersRead.id }
+    where: { admin_id: finId!, permission_id: ordersRead.id },
   });
 
   // console.log('\n— Suspended-admin fix (loophole must be CLOSED) —');
@@ -96,7 +96,7 @@ async function main() {
       admin_id: finId!,
       token,
       expires_at: new Date(Date.now() + 3600_000),
-    }
+    },
   });
   check('active admin session resolves before suspend', (await adminIdForToken(token)) === finId!);
   await db.admins.update({ where: { id: finId! }, data: { status: 'suspended' } });
@@ -112,7 +112,7 @@ async function main() {
 
   // console.log('\n— User side —');
   const demo = await db.users.findFirst({
-    where: { username: 'player_2481' }
+    where: { username: 'player_2481' },
   });
   check('demo user seeded (player_2481)', !!demo);
 

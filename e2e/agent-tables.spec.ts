@@ -13,14 +13,14 @@ test.describe('Agent Panel Tables and Forms', () => {
   test('Customer List: filtering and pagination', async ({ page }) => {
     await page.goto('/agent/customers');
     await page.waitForSelector('input[placeholder="Search..."]');
-    
+
     // Test search filter
     await page.getByPlaceholder('Search...').fill('player');
     await page.waitForTimeout(1000); // Wait for debounce/API
-    
+
     // Assuming there are multiple pages, try clicking pagination Next button
     const nextBtn = page.getByRole('button', { name: '›' });
-    if (await nextBtn.isVisible() && await nextBtn.isEnabled()) {
+    if ((await nextBtn.isVisible()) && (await nextBtn.isEnabled())) {
       await nextBtn.click();
       await page.waitForTimeout(1000);
       // Wait for the active page button "2" to be highlighted
@@ -31,11 +31,11 @@ test.describe('Agent Panel Tables and Forms', () => {
   test('Member List: create member, filtering, pagination', async ({ page }) => {
     await page.goto('/agent/members');
     await page.waitForSelector('text=Add Member');
-    
+
     // Open Add Member modal
     await page.getByRole('button', { name: 'Add Member' }).click();
     await page.waitForSelector('text=Add Member');
-    
+
     // Fill out form
     const uniqueUser = `tuser_${Date.now()}`;
     await page.waitForTimeout(500); // wait for modal animation
@@ -44,14 +44,14 @@ test.describe('Agent Panel Tables and Forms', () => {
     await inputs.nth(0).fill(uniqueUser);
     await inputs.nth(1).fill('password123');
     await modal.getByRole('button', { name: 'Create', exact: true }).click();
-    
+
     // Wait for success
     await page.waitForTimeout(2000);
-    
+
     // Search for the newly created member
     await page.getByPlaceholder('Search...').fill(uniqueUser);
     await page.waitForTimeout(1000); // Wait for debounce
-    
+
     const text = await page.locator('body').innerText();
     expect(text).toContain(uniqueUser);
   });
@@ -59,10 +59,10 @@ test.describe('Agent Panel Tables and Forms', () => {
   test('Transactions List: date filtering and pagination', async ({ page }) => {
     await page.goto('/agent/transactions');
     await page.waitForSelector('input[placeholder="Search..."]');
-    
+
     // Check pagination
     const nextBtn = page.getByRole('button', { name: '›' });
-    if (await nextBtn.isVisible() && await nextBtn.isEnabled()) {
+    if ((await nextBtn.isVisible()) && (await nextBtn.isEnabled())) {
       await nextBtn.click();
       await page.waitForTimeout(1000);
     }

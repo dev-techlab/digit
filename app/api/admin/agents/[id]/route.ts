@@ -3,7 +3,6 @@ import { db } from '@/lib/db';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission } from '@/lib/rbac-core';
 
-
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const adminId = await getAdminIdFromRequest(req);
   if (!adminId) {
@@ -34,9 +33,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       last_login_at: true,
       created_at: true,
       store_settings: {
-        select: { agent_withdraw_commission_per: true }
-      }
-    }
+        select: { agent_withdraw_commission_per: true },
+      },
+    },
   });
 
   if (!agent) {
@@ -44,11 +43,11 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 
   const totalUsers = await db.members.count({
-    where: { store_id: agentId }
+    where: { store_id: agentId },
   });
 
   const totalTransactions = await db.agent_transactions.count({
-    where: { agent_id: agentId }
+    where: { agent_id: agentId },
   });
 
   return NextResponse.json({
@@ -70,4 +69,3 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     },
   });
 }
-

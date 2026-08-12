@@ -283,7 +283,9 @@ export function ProvidersScreen() {
           {
             header: 'Active',
             accessorKey: 'status',
-            cell: (p) => <Toggle checked={p.status === 1} onChange={(v) => void toggleActive(p, v)} />,
+            cell: (p) => (
+              <Toggle checked={p.status === 1} onChange={(v) => void toggleActive(p, v)} />
+            ),
           },
           {
             header: 'Actions',

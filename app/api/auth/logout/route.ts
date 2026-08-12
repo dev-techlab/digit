@@ -3,7 +3,6 @@ import { cookies } from 'next/headers';
 import { revokeUserSession } from '@/lib/user-service';
 import { USER_SESSION_COOKIE, sessionCookieOptions } from '@/lib/auth-tokens';
 
-
 /** POST /api/auth/logout — revoke the current session + clear the cookie. */
 export async function POST() {
   try {

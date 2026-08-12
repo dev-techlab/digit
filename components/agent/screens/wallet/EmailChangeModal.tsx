@@ -93,7 +93,9 @@ export function EmailChangeModal({ open, onClose, currentEmail, mutate, flash }:
                 maxLength={6}
                 placeholder="Please enter 6-digit verification code"
                 value={code}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCode(e.target.value.replace(/\D/g, ''))}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setCode(e.target.value.replace(/\D/g, ''))
+                }
               />
               <Btn
                 className="shrink-0 justify-center"

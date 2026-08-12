@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-
 export async function GET(req: Request) {
   const providerType = new URL(req.url).searchParams.get('providerType');
 
@@ -16,11 +15,11 @@ export async function GET(req: Request) {
 
   const providers = await db.game_providers.findMany({
     where,
-    orderBy: { sort: 'asc' }
+    orderBy: { sort: 'asc' },
   });
 
   const tiers = await db.provider_deposit_tiers.findMany({
-    orderBy: { sort: 'asc' }
+    orderBy: { sort: 'asc' },
   });
   const tiersByProvider = new Map<number, { amount: string; bonusAmount: string }[]>();
   for (const t of tiers) {

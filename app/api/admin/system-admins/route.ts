@@ -5,16 +5,15 @@ import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { isSuperAdmin } from '@/lib/rbac-core';
 import bcrypt from 'bcryptjs';
 
-
 export async function GET(req: Request) {
   try {
     const adminId = await getAdminIdFromRequest(req);
     if (!adminId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  
+
     if (!(await isSuperAdmin(adminId))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-  
+
     const url = new URL(req.url);
     const search = url.searchParams.get('search') || '';
     const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
@@ -22,7 +21,7 @@ export async function GET(req: Request) {
       100,
       Math.max(1, parseInt(url.searchParams.get('pageSize') || '20', 10))
     );
-  
+
     const where: any = {};
     if (search) {
       where.OR = [
@@ -30,7 +29,7 @@ export async function GET(req: Request) {
         { email: { contains: search, mode: 'insensitive' } },
       ];
     }
-  
+
     const [results, count] = await Promise.all([
       db.admins.findMany({
         where,
@@ -48,8 +47,8 @@ export async function GET(req: Request) {
       }),
       db.admins.count({ where }),
     ]);
-  
-    const formatted = results.map(r => ({
+
+    const formatted = results.map((r) => ({
       id: r.id,
       username: r.username,
       email: r.email,
@@ -57,7 +56,7 @@ export async function GET(req: Request) {
       lastLoginAt: r.last_login_at,
       createdAt: r.created_at,
     }));
-  
+
     return NextResponse.json({
       admins: formatted,
       total: count,
@@ -99,7 +98,7 @@ export async function POST(req: Request) {
         id: true,
         username: true,
         email: true,
-      }
+      },
     });
 
     await db.admin_audit_logs.create({
@@ -109,7 +108,7 @@ export async function POST(req: Request) {
         entity_type: 'admin',
         entity_id: newAdmin.id,
         changes: { username: data.username, email: data.email },
-      }
+      },
     });
 
     return NextResponse.json({ admin: newAdmin });

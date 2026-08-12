@@ -50,10 +50,7 @@ export const JOBS: JobDef[] = [
     handler: async () => {
       await db.otp_codes.deleteMany({
         where: {
-          OR: [
-            { expires_at: { lt: new Date() } },
-            { consumed: true }
-          ]
+          OR: [{ expires_at: { lt: new Date() } }, { consumed: true }],
         },
       });
     },
@@ -65,18 +62,12 @@ export const JOBS: JobDef[] = [
       const now = new Date();
       await db.sessions.deleteMany({
         where: {
-          OR: [
-            { expires_at: { lt: now } },
-            { revoked_at: { not: null } }
-          ]
+          OR: [{ expires_at: { lt: now } }, { revoked_at: { not: null } }],
         },
       });
       await db.admin_sessions.deleteMany({
         where: {
-          OR: [
-            { expires_at: { lt: now } },
-            { revoked_at: { not: null } }
-          ]
+          OR: [{ expires_at: { lt: now } }, { revoked_at: { not: null } }],
         },
       });
     },
@@ -116,9 +107,9 @@ export const JOBS: JobDef[] = [
       await deliver(job.data as MailPayload);
     },
   },
-  { name: 'image.process', handler: async () => { } },
-  { name: 'order.reconcile', handler: async () => { } },
-  { name: 'kyc.review', handler: async () => { } },
+  { name: 'image.process', handler: async () => {} },
+  { name: 'order.reconcile', handler: async () => {} },
+  { name: 'kyc.review', handler: async () => {} },
 ];
 
 /** Enqueue an on-demand job from an API route/server action. */

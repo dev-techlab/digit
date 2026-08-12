@@ -118,14 +118,14 @@ describe('direct per-admin overrides (allow adds, deny wins)', () => {
         admin_id: ovId,
         permission_id: await permIdByKey('bonuses.write'),
         effect: 'allow',
-      }
+      },
     });
     await db.admin_permissions.create({
       data: {
         admin_id: ovId,
         permission_id: await permIdByKey('users.read'), // support HAS this via role
         effect: 'deny',
-      }
+      },
     });
   });
 

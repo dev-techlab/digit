@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 const putSchema = z.object({
   id: z.string().min(1, 'id and decision required'),
-  decision: z.enum(['approved', 'rejected'], { message: "Invalid input" })
+  decision: z.enum(['approved', 'rejected'], { message: 'Invalid input' }),
 });
 class InsufficientBalanceError extends Error {}
 
@@ -16,12 +16,12 @@ export async function GET(req: Request) {
     if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const status = new URL(req.url).searchParams.get('status');
     const statuses = ['pending', 'approved', 'rejected'] as const;
-  
+
     const where: any = { store_id: agent.storeId };
     if (status && statuses.includes(status as any)) {
       where.status = status;
     }
-  
+
     const rows = await db.redemption_audits.findMany({
       where,
       select: {
@@ -35,18 +35,20 @@ export async function GET(req: Request) {
         reviewed_at: true,
       },
       orderBy: { submitted_at: 'desc' },
-      take: 100
+      take: 100,
     });
-    return NextResponse.json({ audits: rows.map(r => ({
-      id: r.id,
-      player: r.members?.username || null,
-      platform: r.game_platforms?.name || null,
-      amount: r.amount,
-      txRef: r.tx_ref,
-      status: r.status,
-      submittedAt: r.submitted_at,
-      reviewedAt: r.reviewed_at,
-    })) });
+    return NextResponse.json({
+      audits: rows.map((r) => ({
+        id: r.id,
+        player: r.members?.username || null,
+        platform: r.game_platforms?.name || null,
+        amount: r.amount,
+        txRef: r.tx_ref,
+        status: r.status,
+        submittedAt: r.submitted_at,
+        reviewedAt: r.reviewed_at,
+      })),
+    });
   } catch (err: any) {
     if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     console.error('GET /api/agent/redemption-audits', err);
@@ -68,7 +70,10 @@ export async function PUT(req: Request) {
   const parseResult = putSchema.safeParse(body);
 
   if (!parseResult.success) {
-    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+    return NextResponse.json(
+      { error: parseResult.error.issues[0]?.message || 'Invalid input' },
+      { status: 400 }
+    );
   }
 
   const { id, decision } = parseResult.data;
@@ -89,8 +94,8 @@ export async function PUT(req: Request) {
         data: {
           status: decision,
           reviewed_by_agent_id: agent.id,
-          reviewed_at: new Date()
-        }
+          reviewed_at: new Date(),
+        },
       });
 
       if (decision === 'approved' && audit.member_id) {
@@ -107,8 +112,8 @@ export async function PUT(req: Request) {
         await tx.members.update({
           where: { id: audit.member_id },
           data: {
-            online_sc: { decrement: amount }
-          }
+            online_sc: { decrement: amount },
+          },
         });
 
         await tx.member_transactions.create({
@@ -122,7 +127,7 @@ export async function PUT(req: Request) {
             store_balance_vary: String(-amount),
             out_score: String(amount),
             status: 'completed',
-          }
+          },
         });
       }
     });

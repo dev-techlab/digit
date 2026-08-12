@@ -6,9 +6,10 @@ async function main() {
   const p2 = '2026-07-30 00:00:00';
   const p3 = '2026-08-03 23:59:59';
   const tzSafe = 'America/New_York';
-  
+
   try {
-    const logsRaw = await db.$queryRawUnsafe(`
+    const logsRaw = await db.$queryRawUnsafe(
+      `
       SELECT 
         t.id,
         t.type,
@@ -29,9 +30,13 @@ async function main() {
       WHERE agent_id = $1::uuid AND created_at AT TIME ZONE '${tzSafe}' >= $2::timestamp AND created_at AT TIME ZONE '${tzSafe}' <= $3::timestamp
       ORDER BY t.created_at DESC
       LIMIT 200
-    `, p1, p2, p3);
+    `,
+      p1,
+      p2,
+      p3
+    );
     // console.log('logsRaw success');
-  } catch(e) {
+  } catch (e) {
     console.error('logsRaw error', e);
   }
 }

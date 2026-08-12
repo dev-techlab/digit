@@ -4,9 +4,7 @@ import { cn } from '@/lib/cn';
 interface TableProps extends HTMLAttributes<HTMLTableElement> {}
 
 export function Table({ className, ...props }: TableProps) {
-  return (
-    <table className={cn('w-full text-sm text-left text-slate-600', className)} {...props} />
-  );
+  return <table className={cn('w-full text-left text-sm text-slate-600', className)} {...props} />;
 }
 
 interface TableHeadProps extends HTMLAttributes<HTMLTableSectionElement> {}
@@ -24,7 +22,9 @@ export function Tbody({ className, ...props }: TableBodyProps) {
 interface TableRowProps extends HTMLAttributes<HTMLTableRowElement> {}
 
 export function Tr({ className, ...props }: TableRowProps) {
-  return <tr className={cn('border-b border-slate-100 hover:bg-slate-50/50', className)} {...props} />;
+  return (
+    <tr className={cn('border-b border-slate-100 hover:bg-slate-50/50', className)} {...props} />
+  );
 }
 
 interface ThProps extends HTMLAttributes<HTMLTableCellElement> {
@@ -34,7 +34,7 @@ interface ThProps extends HTMLAttributes<HTMLTableCellElement> {
 export function Th({ className, ...props }: ThProps) {
   return (
     <th
-      className={cn('px-4 py-3 font-semibold text-slate-500 whitespace-nowrap', className)}
+      className={cn('whitespace-nowrap px-4 py-3 font-semibold text-slate-500', className)}
       {...props}
     />
   );
@@ -46,5 +46,7 @@ interface TdProps extends HTMLAttributes<HTMLTableCellElement> {
 }
 
 export function Td({ className, colSpan, ...props }: TdProps) {
-  return <td colSpan={colSpan} className={cn('px-4 py-2.5 text-slate-600', className)} {...props} />;
+  return (
+    <td colSpan={colSpan} className={cn('px-4 py-2.5 text-slate-600', className)} {...props} />
+  );
 }

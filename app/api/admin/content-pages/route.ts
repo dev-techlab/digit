@@ -8,7 +8,10 @@ import { revalidatePath } from 'next/cache';
 async function authorize(req: Request, permKey: string) {
   const adminId = await getAdminIdFromRequest(req);
   if (!adminId) {
-    return { adminId: undefined, error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
+    return {
+      adminId: undefined,
+      error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
+    };
   }
   try {
     await requirePermission(adminId, permKey);

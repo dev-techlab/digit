@@ -1,6 +1,5 @@
 import { db } from '@/lib/db';
 
-
 /** Best-effort client IP from standard proxy headers (no infra guarantees these are set). */
 export function clientIp(req: Request): string | null {
   const xff = req.headers.get('x-forwarded-for');
@@ -26,7 +25,7 @@ export async function logAdminAction(params: {
         entity_id: params.entityId ?? null,
         changes: params.changes == null ? null : (params.changes as any),
         ip_address: params.ipAddress ?? null,
-      }
+      },
     });
   } catch (err) {
     console.error('[audit-log] failed to record', params.action, err);

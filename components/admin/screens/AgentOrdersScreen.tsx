@@ -49,8 +49,10 @@ import { OrderFilters } from '@/components/admin/ui/OrderFilters';
 export function AgentOrdersScreen() {
   const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [typeFilter, setTypeFilter] = useState<string>('');
-  
-  const table = useDataTable<AgentOrderRow>('/api/admin/agent-orders', 'orders', 20, { status: 'pending' });
+
+  const table = useDataTable<AgentOrderRow>('/api/admin/agent-orders', 'orders', 20, {
+    status: 'pending',
+  });
   const actionModal = useActionModal<AgentOrderRow, 'accept' | 'reject'>();
   const [remark, setRemark] = useState('');
 
@@ -146,20 +148,25 @@ export function AgentOrdersScreen() {
             {
               header: 'Net Payable',
               accessorKey: 'netAmount',
-              cell: (r) => (
+              cell: (r) =>
                 r.type === 'withdraw' ? (
                   <span className="font-semibold text-green-600">
                     {r.netAmount != null ? fmtMoney(r.netAmount) : '-'}
                   </span>
-                ) : <span className="text-slate-400">-</span>
-              ),
+                ) : (
+                  <span className="text-slate-400">-</span>
+                ),
             },
             {
               header: 'Method',
               accessorKey: 'method',
               cell: (r) => (r.method ? METHODS[r.method] || r.method : '-'),
             },
-            { header: 'Status', accessorKey: 'status', cell: (r) => <StatusBadge status={r.status} /> },
+            {
+              header: 'Status',
+              accessorKey: 'status',
+              cell: (r) => <StatusBadge status={r.status} />,
+            },
             {
               header: 'Reason',
               accessorKey: 'remark',
@@ -205,7 +212,11 @@ export function AgentOrdersScreen() {
       </Card>
 
       <Modal
-        title={actionModal.actionType === 'accept' ? `Accept ${actionModal.item?.type || 'Order'}` : `Reject ${actionModal.item?.type || 'Order'}`}
+        title={
+          actionModal.actionType === 'accept'
+            ? `Accept ${actionModal.item?.type || 'Order'}`
+            : `Reject ${actionModal.item?.type || 'Order'}`
+        }
         open={actionModal.open}
         onClose={actionModal.closeModal}
         footer={
@@ -250,10 +261,11 @@ export function AgentOrdersScreen() {
 
             {actionModal.actionType === 'accept' && actionModal.item?.type === 'deposit' && (
               <div className="mt-3 font-medium text-green-600">
-                Accepting this deposit will immediately add {fmtMoney(actionModal.item?.amount || '0')} to the agent&apos;s balance.
+                Accepting this deposit will immediately add{' '}
+                {fmtMoney(actionModal.item?.amount || '0')} to the agent&apos;s balance.
               </div>
             )}
-            
+
             {actionModal.actionType === 'reject' && actionModal.item?.type === 'deposit' && (
               <div className="mt-3 font-medium text-red-500">
                 Rejecting this deposit will fail the request and no balance will be added.
@@ -262,13 +274,14 @@ export function AgentOrdersScreen() {
 
             {actionModal.actionType === 'reject' && actionModal.item?.type === 'withdraw' && (
               <div className="mt-3 font-medium text-red-500">
-                Rejecting this request will immediately refund {fmtMoney(actionModal.item?.amount || '0')} back to the agent&apos;s balance.
+                Rejecting this request will immediately refund{' '}
+                {fmtMoney(actionModal.item?.amount || '0')} back to the agent&apos;s balance.
               </div>
             )}
           </div>
 
-          <Field 
-            label="Reason / Remark" 
+          <Field
+            label="Reason / Remark"
             required={actionModal.actionType === 'reject'}
             error={actionModal.fieldErrs.remark}
           >

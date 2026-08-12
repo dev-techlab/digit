@@ -9,15 +9,21 @@ const putSchema = z.object({
   dailyMaxRedeem: z.coerce.number().optional(),
   dailyMaxWithdraw: z.coerce.number().optional(),
   phoneBindRewardSc: z.coerce.number().optional(),
-  logoUrl: z.string().max(2.8 * 1024 * 1024, 'Logo must be at most 2MB').optional()
+  logoUrl: z
+    .string()
+    .max(2.8 * 1024 * 1024, 'Logo must be at most 2MB')
+    .optional(),
 });
 
 const postSchema = z.object({
-  action: z.enum(['clear_tips', 'cancel', 'withdraw', 'deposit', 'transfer'], { message: "Invalid input" }),
+  action: z.enum(['clear_tips', 'cancel', 'withdraw', 'deposit', 'transfer'], {
+    message: 'Invalid input',
+  }),
   id: z.string().trim().optional(),
   amount: z.coerce.number().optional(),
-  method: z.string().nullable().optional()
-});class InsufficientBalanceError extends Error {}
+  method: z.string().nullable().optional(),
+});
+class InsufficientBalanceError extends Error {}
 
 const DEPOSIT_METHODS = ['paypal_pyusd', 'cashapp_usdc', 'bitcoin', 'bitcoin_lightning'] as const;
 const WITHDRAW_METHODS = ['paypal_pyusd', 'cashapp_usdc', 'bitcoin', 'bank_card', 'ach'] as const;
@@ -26,13 +32,13 @@ export async function GET(req: Request) {
   try {
     const agent = await getAgentFromRequest(req);
     if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  
+
     const { searchParams } = new URL(req.url);
     const fromStr = searchParams.get('from');
     const toStr = searchParams.get('to');
     const tzParam = searchParams.get('tz') || 'America/New_York';
-    const tzStr = tzParam === 'browser' ? 'UTC' : tzParam; 
-  
+    const tzStr = tzParam === 'browser' ? 'UTC' : tzParam;
+
     const store = await db.agents.findUnique({
       where: { id: agent.storeId },
       select: {
@@ -42,18 +48,18 @@ export async function GET(req: Request) {
         online_balance: true,
         tips_balance: true,
         commission_per: true,
-      }
+      },
     });
-  
+
     const settings = await db.store_settings.findUnique({
-      where: { store_id: agent.storeId }
+      where: { store_id: agent.storeId },
     });
-  
+
     const tzSafe = tzStr.replace(/'/g, "''");
     let dateFilterStr = `agent_id = $1`;
     const params: any[] = [agent.storeId];
     let pIdx = 2;
-  
+
     if (fromStr) {
       dateFilterStr += ` AND t.created_at AT TIME ZONE '${tzSafe}' >= $${pIdx++}`;
       params.push(`${fromStr} 00:00:00`);
@@ -62,8 +68,9 @@ export async function GET(req: Request) {
       dateFilterStr += ` AND t.created_at AT TIME ZONE '${tzSafe}' <= $${pIdx++}`;
       params.push(`${toStr} 23:59:59`);
     }
-  
-    const logsRaw = await db.$queryRawUnsafe(`
+
+    const logsRaw = await db.$queryRawUnsafe(
+      `
       SELECT 
         t.id,
         t.type,
@@ -84,9 +91,12 @@ export async function GET(req: Request) {
       WHERE ${dateFilterStr}
       ORDER BY t.created_at DESC
       LIMIT 200
-    `, ...params);
-  
-    const reportRaw = await db.$queryRawUnsafe(`
+    `,
+      ...params
+    );
+
+    const reportRaw = await db.$queryRawUnsafe(
+      `
       SELECT 
         TO_CHAR(DATE_TRUNC('day', t.created_at AT TIME ZONE '${tzSafe}'), 'YYYY-MM-DD') AS day,
         COALESCE(SUM(amount) FILTER (WHERE type = 'deposit'), 0) AS deposit,
@@ -96,27 +106,33 @@ export async function GET(req: Request) {
       WHERE ${dateFilterStr}
       GROUP BY 1
       ORDER BY 1 DESC
-    `, ...params);
-  
-    return NextResponse.json({ 
-      store: store ? {
-        email: store.email,
-        username: store.username,
-        inviteCode: store.invite_code,
-        onlineBalance: store.online_balance,
-        tipsBalance: store.tips_balance,
-        commissionPer: store.commission_per,
-      } : null, 
-      settings: settings ? {
-        storeId: settings.store_id,
-        storeName: settings.store_name,
-        logoUrl: settings.logo_url,
-        dailyMaxRedeem: settings.daily_max_redeem,
-        dailyMaxWithdraw: settings.daily_max_withdraw,
-        phoneBindRewardSc: settings.phone_bind_reward_sc,
-        updatedAt: settings.updated_at,
-      } : null, 
-      logs: (logsRaw as any[]).map(r => ({
+    `,
+      ...params
+    );
+
+    return NextResponse.json({
+      store: store
+        ? {
+            email: store.email,
+            username: store.username,
+            inviteCode: store.invite_code,
+            onlineBalance: store.online_balance,
+            tipsBalance: store.tips_balance,
+            commissionPer: store.commission_per,
+          }
+        : null,
+      settings: settings
+        ? {
+            storeId: settings.store_id,
+            storeName: settings.store_name,
+            logoUrl: settings.logo_url,
+            dailyMaxRedeem: settings.daily_max_redeem,
+            dailyMaxWithdraw: settings.daily_max_withdraw,
+            phoneBindRewardSc: settings.phone_bind_reward_sc,
+            updatedAt: settings.updated_at,
+          }
+        : null,
+      logs: (logsRaw as any[]).map((r) => ({
         id: r.id,
         type: r.type,
         method: r.method,
@@ -131,12 +147,12 @@ export async function GET(req: Request) {
         counterparty: r.counterparty,
         status: r.status,
         createdAt: r.created_at,
-      })), 
-      report: (reportRaw as any[]).map(r => ({
+      })),
+      report: (reportRaw as any[]).map((r) => ({
         ...r,
         deposit: r.deposit?.toString(),
-        depositFee: r.depositFee?.toString()
-      }))
+        depositFee: r.depositFee?.toString(),
+      })),
     });
   } catch (err: any) {
     if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
@@ -155,39 +171,44 @@ export async function PUT(req: Request) {
         { status: 403 }
       );
     }
-  
+
     const body = await req.json().catch(() => ({}));
     const parseResult = putSchema.safeParse(body);
-  
+
     if (!parseResult.success) {
-      return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+      return NextResponse.json(
+        { error: parseResult.error.issues[0]?.message || 'Invalid input' },
+        { status: 400 }
+      );
     }
-  
+
     const data = parseResult.data;
-  
+
     if (data.email) {
       await db.agents.update({
         where: { id: agent.storeId },
-        data: { email: data.email }
+        data: { email: data.email },
       });
     }
-  
+
     const patch: any = { updated_at: new Date() };
     if (data.storeName !== undefined) patch.store_name = data.storeName;
     if (data.dailyMaxRedeem !== undefined) patch.daily_max_redeem = String(data.dailyMaxRedeem);
-    if (data.dailyMaxWithdraw !== undefined) patch.daily_max_withdraw = String(data.dailyMaxWithdraw);
-    if (data.phoneBindRewardSc !== undefined) patch.phone_bind_reward_sc = String(data.phoneBindRewardSc);
+    if (data.dailyMaxWithdraw !== undefined)
+      patch.daily_max_withdraw = String(data.dailyMaxWithdraw);
+    if (data.phoneBindRewardSc !== undefined)
+      patch.phone_bind_reward_sc = String(data.phoneBindRewardSc);
     if (data.logoUrl !== undefined) patch.logo_url = data.logoUrl;
-  
+
     await db.store_settings.upsert({
       where: { store_id: agent.storeId },
       create: {
         store_id: agent.storeId,
-        ...patch
+        ...patch,
       },
-      update: patch
+      update: patch,
     });
-    
+
     return NextResponse.json({ ok: true });
   } catch (err: any) {
     if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
@@ -210,7 +231,10 @@ export async function POST(req: Request) {
   const parseResult = postSchema.safeParse(body);
 
   if (!parseResult.success) {
-    return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+    return NextResponse.json(
+      { error: parseResult.error.issues[0]?.message || 'Invalid input' },
+      { status: 400 }
+    );
   }
 
   const data = parseResult.data;
@@ -230,8 +254,8 @@ export async function POST(req: Request) {
         where: { id: agent.storeId },
         data: {
           online_balance: { increment: tips },
-          tips_balance: '0'
-        }
+          tips_balance: '0',
+        },
       });
       await tx.agent_transactions.create({
         data: {
@@ -240,7 +264,7 @@ export async function POST(req: Request) {
           amount: String(tips),
           remark: 'Tips cleared to online balance',
           status: 'completed',
-        }
+        },
       });
       return tips;
     });
@@ -254,19 +278,19 @@ export async function POST(req: Request) {
       where: {
         id,
         agent_id: agent.storeId,
-        status: 'pending'
-      }
+        status: 'pending',
+      },
     });
     if (!txRow) return NextResponse.json({ error: 'Pending order not found' }, { status: 404 });
     await db.$transaction(async (tx) => {
       await tx.agent_transactions.update({
         where: { id },
-        data: { status: 'cancelled' }
+        data: { status: 'cancelled' },
       });
       if (txRow.type === 'withdraw') {
         await tx.agents.update({
           where: { id: agent.storeId },
-          data: { online_balance: { increment: Number(txRow.amount) } }
+          data: { online_balance: { increment: Number(txRow.amount) } },
         });
       }
     });
@@ -286,7 +310,7 @@ export async function POST(req: Request) {
     if (!method) return NextResponse.json({ error: 'Select a payment method' }, { status: 400 });
     const store = await db.agents.findUnique({
       where: { id: agent.storeId },
-      select: { online_balance: true }
+      select: { online_balance: true },
     });
     await db.agent_transactions.create({
       data: {
@@ -296,7 +320,7 @@ export async function POST(req: Request) {
         amount: String(amount),
         balance_before: String(store?.online_balance || 0),
         status: 'pending',
-      }
+      },
     });
     return NextResponse.json({ ok: true });
   }
@@ -319,7 +343,7 @@ export async function POST(req: Request) {
         const netAmount = amount - fee;
         const balance = Number(row?.online_balance || 0);
         if (balance < amount) throw new InsufficientBalanceError();
-        
+
         await tx.agent_transactions.create({
           data: {
             agent_id: agent.storeId,
@@ -333,16 +357,17 @@ export async function POST(req: Request) {
             balance_before: String(balance),
             balance_after: String(balance - amount),
             status: 'pending',
-          }
+          },
         });
-        
+
         await tx.agents.update({
           where: { id: agent.storeId },
-          data: { online_balance: { decrement: amount } }
+          data: { online_balance: { decrement: amount } },
         });
       });
     } catch (err: any) {
-    if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
+      if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_')))
+        throw err;
       if (err instanceof InsufficientBalanceError) {
         return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
       }
@@ -359,14 +384,14 @@ export async function POST(req: Request) {
   const target = await db.agents.findFirst({
     where: {
       username: recipient,
-      store_id: agent.storeId
+      store_id: agent.storeId,
     },
-    select: { id: true }
+    select: { id: true },
   });
   if (!target || target.id === agent.storeId) {
     return NextResponse.json({ error: 'Recipient agent not found in your store' }, { status: 404 });
   }
-  
+
   try {
     await db.$transaction(async (tx) => {
       const rows = await tx.$queryRaw<any[]>`
@@ -377,7 +402,7 @@ export async function POST(req: Request) {
       `;
       const balance = Number(rows[0]?.online_balance || 0);
       if (balance < amount) throw new InsufficientBalanceError();
-      
+
       await tx.agent_transactions.create({
         data: {
           agent_id: agent.storeId,
@@ -388,17 +413,17 @@ export async function POST(req: Request) {
           balance_before: String(balance),
           balance_after: String(balance - amount),
           status: 'completed',
-        }
+        },
       });
-      
+
       await tx.agents.update({
         where: { id: agent.storeId },
-        data: { online_balance: { decrement: amount } }
+        data: { online_balance: { decrement: amount } },
       });
-      
+
       await tx.agents.update({
         where: { id: target.id },
-        data: { online_balance: { increment: amount } }
+        data: { online_balance: { increment: amount } },
       });
     });
   } catch (err: any) {

@@ -7,7 +7,6 @@ import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission, PermissionError } from '@/lib/rbac-core';
 import { clientIp, logAdminAction } from '@/lib/audit-log';
 
-
 async function authorize(
   req: Request,
   permKey: string
@@ -37,12 +36,12 @@ export async function GET(req: Request) {
   try {
     const { error } = await authorize(req, 'agents.read');
     if (error) return error;
-  
+
     const url = new URL(req.url);
     const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('pageSize')) || 20));
     const search = url.searchParams.get('search')?.trim();
-  
+
     const where: any = { type: 'store' };
     if (search) {
       where.OR = [
@@ -51,7 +50,7 @@ export async function GET(req: Request) {
         { email: { contains: search, mode: 'insensitive' } },
       ];
     }
-  
+
     const [rows, count] = await Promise.all([
       db.agents.findMany({
         where,
@@ -74,8 +73,8 @@ export async function GET(req: Request) {
       }),
       db.agents.count({ where }),
     ]);
-  
-    const formattedRows = rows.map(r => ({
+
+    const formattedRows = rows.map((r) => ({
       id: r.id,
       username: r.username,
       nickname: r.nickname,
@@ -88,7 +87,7 @@ export async function GET(req: Request) {
       lastLoginAt: r.last_login_at,
       createdAt: r.created_at,
     }));
-  
+
     return NextResponse.json({ agents: formattedRows, total: count });
   } catch (err: any) {
     if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
@@ -103,7 +102,10 @@ const postSchema = z.object({
   nickname: z.string().optional().or(z.literal('')),
   email: z.string().email().optional().or(z.literal('')),
   remark: z.string().max(300).optional().or(z.literal('')),
-  commissionPer: z.union([z.string(), z.number()]).optional().transform(v => Number(v)),
+  commissionPer: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => Number(v)),
   platformIds: z.array(z.string()).optional(),
   inviteCode: z.string().optional(),
   onlineBalance: z.number().min(0).optional(),
@@ -124,25 +126,26 @@ export async function POST(req: Request) {
         password_hash: await bcrypt.hash(data.password, 10),
         nickname: data.nickname?.trim() || data.username.trim(),
         email: data.email?.trim() || null,
-        commission_per: Number.isFinite(data.commissionPer)
-          ? String(data.commissionPer)
-          : '0',
+        commission_per: Number.isFinite(data.commissionPer) ? String(data.commissionPer) : '0',
         invite_code: data.inviteCode?.trim() || `MC${randomBytes(8).toString('hex').toUpperCase()}`,
         remark: data.remark?.trim() || null,
         online_balance: data.onlineBalance || 0,
-      }
+      },
     });
 
     await db.agents.update({
       where: { id: created.id },
-      data: { store_id: created.id }
+      data: { store_id: created.id },
     });
 
     await db.store_settings.create({ data: { store_id: created.id } });
 
     if (data.platformIds && data.platformIds.length > 0) {
       await db.agent_platform_mappings.createMany({
-        data: data.platformIds.map((platformId: string) => ({ agent_id: created.id, platform_id: platformId }))
+        data: data.platformIds.map((platformId: string) => ({
+          agent_id: created.id,
+          platform_id: platformId,
+        })),
       });
     }
 
@@ -151,7 +154,11 @@ export async function POST(req: Request) {
       action: 'agent.create',
       entityType: 'agent',
       entityId: created.id,
-      changes: { username: data.username, nickname: data.nickname || data.username, email: data.email || null },
+      changes: {
+        username: data.username,
+        nickname: data.nickname || data.username,
+        email: data.email || null,
+      },
       ipAddress: clientIp(req),
     });
     return NextResponse.json(
@@ -174,7 +181,10 @@ export async function POST(req: Request) {
 const putSchema = z.object({
   id: z.string().uuid(),
   status: z.enum(['active', 'disabled']).optional(),
-  commissionPer: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
+  commissionPer: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : undefined)),
   password: z.string().min(6).optional().or(z.literal('')),
   nickname: z.string().optional().or(z.literal('')),
   email: z.string().email().optional().or(z.literal('')),
@@ -211,7 +221,7 @@ export async function PUT(req: Request) {
     }
 
     const existing = await db.agents.findFirst({
-      where: { id: data.id, type: 'store' }
+      where: { id: data.id, type: 'store' },
     });
 
     if (!existing) return NextResponse.json({ error: 'not found' }, { status: 404 });
@@ -219,13 +229,13 @@ export async function PUT(req: Request) {
     await db.agents.update({
       where: { id: existing.id },
       data: set,
-      select: { id: true }
+      select: { id: true },
     });
 
     if (set.status) {
       await db.agent_sessions.updateMany({
         where: { agent_id: data.id, revoked_at: null },
-        data: { revoked_at: new Date() }
+        data: { revoked_at: new Date() },
       });
     }
 
@@ -242,7 +252,9 @@ export async function PUT(req: Request) {
 
     await logAdminAction({
       adminId,
-      action: set.status ? `agent.${set.status === 'active' ? 'unblock' : 'block'}` : 'agent.update',
+      action: set.status
+        ? `agent.${set.status === 'active' ? 'unblock' : 'block'}`
+        : 'agent.update',
       entityType: 'agent',
       entityId: data.id,
       changes,
@@ -268,14 +280,14 @@ export async function DELETE(req: Request) {
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
 
   const existing = await db.agents.findFirst({
-    where: { id, type: 'store' }
+    where: { id, type: 'store' },
   });
 
   if (!existing) return NextResponse.json({ error: 'not found' }, { status: 404 });
 
   try {
     await db.agents.delete({
-      where: { id }
+      where: { id },
     });
 
     await logAdminAction({
@@ -290,6 +302,9 @@ export async function DELETE(req: Request) {
   } catch (err: any) {
     if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     console.error('DELETE /api/admin/agents', err);
-    return NextResponse.json({ error: 'Failed to delete agent. It might be referenced by other records.' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to delete agent. It might be referenced by other records.' },
+      { status: 500 }
+    );
   }
 }

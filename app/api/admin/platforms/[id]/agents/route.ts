@@ -3,7 +3,6 @@ import { db } from '@/lib/db';
 import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission } from '@/lib/rbac-core';
 
-
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const adminId = await getAdminIdFromRequest(req);
   if (!adminId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -30,12 +29,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
           nickname: true,
           email: true,
           status: true,
-        }
-      }
-    }
+        },
+      },
+    },
   });
 
-  const formattedAgents = connectedAgents.map(a => ({
+  const formattedAgents = connectedAgents.map((a) => ({
     id: a.agents?.id,
     username: a.agents?.username,
     nickname: a.agents?.nickname,

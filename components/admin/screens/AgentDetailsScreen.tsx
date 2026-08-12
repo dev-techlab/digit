@@ -320,7 +320,9 @@ export function AgentDetailsScreen({ agentId }: { agentId: string }) {
                 {
                   header: 'Order No',
                   accessorKey: 'id',
-                  cell: (w) => <span className="font-mono text-xs">{w.id.slice(0, 16).toUpperCase()}</span>,
+                  cell: (w) => (
+                    <span className="font-mono text-xs">{w.id.slice(0, 16).toUpperCase()}</span>
+                  ),
                 },
                 {
                   header: 'Requested Amount',
@@ -330,17 +332,23 @@ export function AgentDetailsScreen({ agentId }: { agentId: string }) {
                 {
                   header: 'Commission %',
                   accessorKey: 'commissionPer',
-                  cell: (w) => w.commissionPer ? `${w.commissionPer}%` : '-',
+                  cell: (w) => (w.commissionPer ? `${w.commissionPer}%` : '-'),
                 },
                 {
                   header: 'Commission Amount',
                   accessorKey: 'fee',
-                  cell: (w) => <span className="font-medium text-amber-500">{fmtMoney(w.fee)}</span>,
+                  cell: (w) => (
+                    <span className="font-medium text-amber-500">{fmtMoney(w.fee)}</span>
+                  ),
                 },
                 {
                   header: 'Net Payable Amount',
                   accessorKey: 'netAmount',
-                  cell: (w) => <span className="font-semibold text-green-600">{w.netAmount != null ? fmtMoney(w.netAmount) : '-'}</span>,
+                  cell: (w) => (
+                    <span className="font-semibold text-green-600">
+                      {w.netAmount != null ? fmtMoney(w.netAmount) : '-'}
+                    </span>
+                  ),
                 },
                 {
                   header: 'Status',

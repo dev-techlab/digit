@@ -5,7 +5,6 @@ import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { isSuperAdmin } from '@/lib/rbac-core';
 import bcrypt from 'bcryptjs';
 
-
 const putSchema = z.object({
   email: z.string().email().optional(),
   status: z.enum(['active', 'suspended', 'invited']).optional(),
@@ -45,7 +44,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         username: true,
         email: true,
         status: true,
-      }
+      },
     });
 
     const changesToLog = { ...updateData };
@@ -58,7 +57,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         entity_type: 'admin',
         entity_id: targetId,
         changes: changesToLog,
-      }
+      },
     });
 
     return NextResponse.json({ admin: updated });
@@ -95,7 +94,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   try {
     const deleted = await db.admins.delete({
       where: { id: targetId },
-      select: { id: true }
+      select: { id: true },
     });
 
     await db.admin_audit_logs.create({
@@ -104,7 +103,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
         action: 'delete_admin',
         entity_type: 'admin',
         entity_id: targetId,
-      }
+      },
     });
 
     return NextResponse.json({ ok: true });

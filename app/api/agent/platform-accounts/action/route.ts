@@ -6,7 +6,17 @@ import { getAdminIdFromRequest } from '@/lib/admin-auth';
 
 const actionSchema = z.object({
   accountId: z.string().uuid(),
-  action: z.enum(['purchase', 'redeem', 'reverse', 'lock', 'unlock', 'pwd', 'close', 'hist', 'logs']),
+  action: z.enum([
+    'purchase',
+    'redeem',
+    'reverse',
+    'lock',
+    'unlock',
+    'pwd',
+    'close',
+    'hist',
+    'logs',
+  ]),
 });
 
 export async function POST(req: Request) {
@@ -22,8 +32,8 @@ export async function POST(req: Request) {
     const account = await db.member_platform_accounts.findUnique({
       where: { id: data.accountId },
       include: {
-        members: true
-      }
+        members: true,
+      },
     });
 
     if (!account) {
@@ -59,7 +69,7 @@ export async function POST(req: Request) {
         const newPassword = String(Math.floor(100000 + Math.random() * 900000));
         await db.member_platform_accounts.update({
           where: { id: account.id },
-          data: { game_password: newPassword }
+          data: { game_password: newPassword },
         });
         return NextResponse.json({ success: true, message: 'Password reset' });
 

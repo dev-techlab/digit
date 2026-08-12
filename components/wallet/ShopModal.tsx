@@ -108,7 +108,14 @@ export function ShopModal({
                 plus <span className="font-semibold text-brand">{totalSc.toLocaleString()} SC</span>{' '}
                 free.
               </p>
-              <Button fullWidth className="mt-2" onClick={() => { onClose(); router.refresh(); }}>
+              <Button
+                fullWidth
+                className="mt-2"
+                onClick={() => {
+                  onClose();
+                  router.refresh();
+                }}
+              >
                 Done
               </Button>
             </>

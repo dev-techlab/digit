@@ -13,14 +13,14 @@ test.describe('Admin Panel Tables and Forms', () => {
   test('Agents List: filtering and pagination', async ({ page }) => {
     await page.goto('/admin/agents');
     await page.waitForSelector('input[placeholder="Search..."]');
-    
+
     // Type in search
     await page.getByPlaceholder('Search...').fill('Deluxe');
     await page.waitForTimeout(1000);
-    
+
     // Check pagination
     const nextBtn = page.getByRole('button', { name: '›' });
-    if (await nextBtn.isVisible() && await nextBtn.isEnabled()) {
+    if ((await nextBtn.isVisible()) && (await nextBtn.isEnabled())) {
       await nextBtn.click();
       await page.waitForTimeout(1000);
     }
@@ -29,14 +29,14 @@ test.describe('Admin Panel Tables and Forms', () => {
   test('Users List: search and pagination', async ({ page }) => {
     await page.goto('/admin/users');
     await page.waitForSelector('input[placeholder="Search..."]');
-    
+
     // Search
     await page.getByPlaceholder('Search...').fill('player');
     await page.waitForTimeout(1000);
-    
+
     // Check pagination
     const nextBtn = page.getByRole('button', { name: '›' });
-    if (await nextBtn.isVisible() && await nextBtn.isEnabled()) {
+    if ((await nextBtn.isVisible()) && (await nextBtn.isEnabled())) {
       await nextBtn.click();
       await page.waitForTimeout(1000);
     }
@@ -45,14 +45,14 @@ test.describe('Admin Panel Tables and Forms', () => {
   test('Deposits List: status filter and pagination', async ({ page }) => {
     await page.goto('/admin/deposits');
     await page.waitForSelector('input[placeholder="Search..."]');
-    
+
     // Filter status
     const selectStatus = page.locator('select').first();
     await selectStatus.selectOption('completed');
     await page.waitForTimeout(1000);
-    
+
     const nextBtn = page.getByRole('button', { name: '›' });
-    if (await nextBtn.isVisible() && await nextBtn.isEnabled()) {
+    if ((await nextBtn.isVisible()) && (await nextBtn.isEnabled())) {
       await nextBtn.click();
       await page.waitForTimeout(1000);
     }

@@ -4,12 +4,11 @@ import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
 import { getAgentFromRequest } from '@/lib/agent-auth';
 
-
 export async function GET(req: Request) {
   try {
     const agent = await getAgentFromRequest(req);
     if (!agent) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  
+
     const rows = await db.store_administrators.findMany({
       where: { store_id: agent.storeId },
       select: {
@@ -20,17 +19,19 @@ export async function GET(req: Request) {
         status: true,
         created_at: true,
       },
-      orderBy: { created_at: 'desc' }
+      orderBy: { created_at: 'desc' },
     });
-    
-    return NextResponse.json({ admins: rows.map(r => ({
-      id: r.id,
-      username: r.username,
-      nickname: r.nickname,
-      email: r.email,
-      status: r.status,
-      createdAt: r.created_at,
-    })) });
+
+    return NextResponse.json({
+      admins: rows.map((r) => ({
+        id: r.id,
+        username: r.username,
+        nickname: r.nickname,
+        email: r.email,
+        status: r.status,
+        createdAt: r.created_at,
+      })),
+    });
   } catch (err: any) {
     if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     console.error('GET /api/agent/store-admins', err);
@@ -69,7 +70,7 @@ export async function POST(req: Request) {
         email: data.email?.trim() || null,
         status: data.status,
       },
-      select: { id: true }
+      select: { id: true },
     });
     return NextResponse.json({ ok: true, id: created.id });
   } catch (e: any) {
@@ -122,9 +123,9 @@ export async function PUT(req: Request) {
     await db.store_administrators.updateMany({
       where: {
         id: data.id,
-        store_id: agent.storeId
+        store_id: agent.storeId,
       },
-      data: set
+      data: set,
     });
     return NextResponse.json({ ok: true });
   } catch (err: any) {

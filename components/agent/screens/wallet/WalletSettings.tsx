@@ -65,7 +65,9 @@ export function WalletSettings({ data, flash, mutate }: Props) {
             maxLength={20}
             placeholder="Enter store brand name"
             value={form.storeName}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, storeName: e.target.value })}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setForm({ ...form, storeName: e.target.value })
+            }
           />
         </Field>
         <label className="block">
@@ -77,7 +79,9 @@ export function WalletSettings({ data, flash, mutate }: Props) {
           <TextInput
             type="number"
             value={form.dailyMaxRedeem}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, dailyMaxRedeem: e.target.value })}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setForm({ ...form, dailyMaxRedeem: e.target.value })
+            }
           />
         </label>
         <label className="block">
@@ -89,7 +93,9 @@ export function WalletSettings({ data, flash, mutate }: Props) {
           <TextInput
             type="number"
             value={form.dailyMaxWithdraw}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, dailyMaxWithdraw: e.target.value })}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setForm({ ...form, dailyMaxWithdraw: e.target.value })
+            }
           />
         </label>
         <div>
@@ -136,7 +142,9 @@ export function WalletSettings({ data, flash, mutate }: Props) {
           <TextInput
             type="number"
             value={form.phoneBindRewardSc}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, phoneBindRewardSc: e.target.value })}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setForm({ ...form, phoneBindRewardSc: e.target.value })
+            }
           />
         </label>
       </div>

@@ -5,7 +5,6 @@ import { getAdminIdFromRequest } from '@/lib/admin-auth';
 import { requirePermission, PermissionError } from '@/lib/rbac-core';
 import { clientIp, logAdminAction } from '@/lib/audit-log';
 
-
 const slugify = (name: string) =>
   name
     .toLowerCase()
@@ -47,19 +46,19 @@ export async function GET(req: Request) {
   try {
     const { error } = await authorize(req, 'platforms.read');
     if (error) return error;
-  
+
     const platforms = await db.game_platforms.findMany({
       where: { deleted_at: null },
       include: {
         store_platform_accounts: true,
         member_platform_accounts: true,
       },
-      orderBy: [{ sort: 'asc' }, { name: 'asc' }]
+      orderBy: [{ sort: 'asc' }, { name: 'asc' }],
     });
-  
-    const formatted = platforms.map(p => {
-      const agentIds = new Set(p.store_platform_accounts.map(a => a.store_id));
-      const customerIds = new Set(p.member_platform_accounts.map(m => m.member_id));
+
+    const formatted = platforms.map((p) => {
+      const agentIds = new Set(p.store_platform_accounts.map((a) => a.store_id));
+      const customerIds = new Set(p.member_platform_accounts.map((m) => m.member_id));
       return {
         id: p.id,
         name: p.name,
@@ -75,7 +74,7 @@ export async function GET(req: Request) {
         customerCount: customerIds.size,
       };
     });
-  
+
     return NextResponse.json({ platforms: formatted });
   } catch (err: any) {
     if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
@@ -91,7 +90,10 @@ const postSchema = z.object({
   providerCode: z.string().optional().or(z.literal('')),
   providerType: z.string().optional().or(z.literal('')),
   launchUrl: z.string().optional().or(z.literal('')),
-  sort: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : 0),
+  sort: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : 0)),
   isActive: z.boolean().optional().default(true),
 });
 
@@ -103,7 +105,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     parsedData = postSchema.parse(body);
-    
+
     const name = parsedData.name.trim();
     const slug = parsedData.slug?.trim() || slugify(name);
     if (!slug) return NextResponse.json({ error: 'invalid name/slug' }, { status: 400 });
@@ -138,12 +140,12 @@ export async function POST(req: Request) {
       console.error('POST /api/admin/platforms', err);
       return NextResponse.json({ error: 'Failed to create platform' }, { status: 500 });
     }
-    
+
     // We already know it's a P2002 error from here on out
     const name = parsedData?.name?.trim();
     const slug = parsedData?.slug?.trim() || (name ? slugify(name) : '');
     const conflicting = await db.game_platforms.findFirst({
-      where: { OR: [{ name }, { slug }] }
+      where: { OR: [{ name }, { slug }] },
     });
     if (!conflicting?.deleted_at) {
       return NextResponse.json(
@@ -152,7 +154,10 @@ export async function POST(req: Request) {
       );
     }
     // Cannot proceed with recreating without valid data so just error out for now
-    return NextResponse.json({ error: 'Platform exists and was deleted. Please restore it instead.' }, { status: 409 });
+    return NextResponse.json(
+      { error: 'Platform exists and was deleted. Please restore it instead.' },
+      { status: 409 }
+    );
   }
 }
 
@@ -164,7 +169,10 @@ const putSchema = z.object({
   providerCode: z.string().optional().or(z.literal('')),
   providerType: z.string().optional().or(z.literal('')),
   launchUrl: z.string().optional().or(z.literal('')),
-  sort: z.union([z.string(), z.number()]).optional().transform(v => v !== undefined ? Number(v) : undefined),
+  sort: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v) => (v !== undefined ? Number(v) : undefined)),
   isActive: z.boolean().optional(),
 });
 
@@ -192,7 +200,7 @@ export async function PUT(req: Request) {
 
     const row = await db.game_platforms.update({
       where: { id: data.id },
-      data: set
+      data: set,
     });
     await logAdminAction({
       adminId,
@@ -230,7 +238,7 @@ export async function DELETE(req: Request) {
   try {
     const row = await db.game_platforms.update({
       where: { id },
-      data: { deleted_at: new Date() }
+      data: { deleted_at: new Date() },
     });
     await logAdminAction({
       adminId,

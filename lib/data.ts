@@ -56,41 +56,44 @@ export async function getProviders(providerType: 'SC' | 'GC'): Promise<GameProvi
   });
 
   const userId = await currentUserId();
-  
+
   let allowedNames: Set<string> | null = null;
   if (userId) {
-    const user = await db.users.findUnique({ where: { id: userId }, select: { agent_invite_code: true } });
+    const user = await db.users.findUnique({
+      where: { id: userId },
+      select: { agent_invite_code: true },
+    });
     if (user?.agent_invite_code) {
       const agent = await db.agents.findFirst({
         where: { invite_code: user.agent_invite_code },
-        select: { id: true, store_id: true }
+        select: { id: true, store_id: true },
       });
       if (agent) {
         const storeId = agent.store_id ?? agent.id;
-        
+
         // Fetch master platforms allowed for this store
         const allowedMappings = await db.agent_platform_mappings.findMany({
           where: { agent_id: storeId },
-          select: { platform_id: true, game_platforms: { select: { name: true } } }
+          select: { platform_id: true, game_platforms: { select: { name: true } } },
         });
-        
+
         // Fetch user-enabled accounts for this store
         const enabledAccounts = await db.store_platform_accounts.findMany({
           where: { store_id: storeId, enabled: true },
-          select: { platform_id: true }
+          select: { platform_id: true },
         });
-        
+
         // Intersect them
-        const enabledPlatformIds = new Set(enabledAccounts.map(a => a.platform_id));
-        const validPlatforms = allowedMappings.filter(m => enabledPlatformIds.has(m.platform_id));
-        
-        allowedNames = new Set(validPlatforms.map(m => m.game_platforms.name.toLowerCase()));
+        const enabledPlatformIds = new Set(enabledAccounts.map((a) => a.platform_id));
+        const validPlatforms = allowedMappings.filter((m) => enabledPlatformIds.has(m.platform_id));
+
+        allowedNames = new Set(validPlatforms.map((m) => m.game_platforms.name.toLowerCase()));
       }
     }
   }
 
-  const finalRows = allowedNames 
-    ? rows.filter(r => allowedNames!.has(r.name.toLowerCase()))
+  const finalRows = allowedNames
+    ? rows.filter((r) => allowedNames!.has(r.name.toLowerCase()))
     : rows;
 
   return finalRows.map((p: any) => {
@@ -206,9 +209,7 @@ export async function getBonuses(): Promise<BonusReward[]> {
     where: { deleted_at: null },
     orderBy: { sort: 'asc' },
   });
-  const claims = userId
-    ? await db.user_bonus_claims.findMany({ where: { user_id: userId } })
-    : [];
+  const claims = userId ? await db.user_bonus_claims.findMany({ where: { user_id: userId } }) : [];
   const claimByBonus = new Map(claims.map((c: any) => [c.bonus_id, c]));
 
   return defs.map((b) => {

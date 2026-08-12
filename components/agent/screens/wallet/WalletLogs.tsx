@@ -121,14 +121,18 @@ export function WalletLogs({ data, mutate, filters, setFilters }: Props) {
                   type="date"
                   className="px-2 py-1.5 text-sm text-slate-700 outline-none"
                   value={filters.fromDate}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilters({ ...filters, fromDate: e.target.value })}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setFilters({ ...filters, fromDate: e.target.value })
+                  }
                 />
                 <span className="text-slate-300">-</span>
                 <input
                   type="date"
                   className="px-2 py-1.5 text-sm text-slate-700 outline-none"
                   value={filters.toDate}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFilters({ ...filters, toDate: e.target.value })}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setFilters({ ...filters, toDate: e.target.value })
+                  }
                 />
               </div>
             </div>
@@ -136,7 +140,9 @@ export function WalletLogs({ data, mutate, filters, setFilters }: Props) {
               <select
                 className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-600 outline-none focus:border-blue-500"
                 value={filters.timezone}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFilters({ ...filters, timezone: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                  setFilters({ ...filters, timezone: e.target.value })
+                }
               >
                 <option value="browser">Browser Local</option>
                 <option value="America/New_York">US Eastern (ET)</option>
@@ -212,7 +218,11 @@ export function WalletLogs({ data, mutate, filters, setFilters }: Props) {
                   cell: (r: any) => (r.method ? (METHOD_LABEL[r.method] ?? r.method) : '-'),
                 },
                 { header: 'Status', accessorKey: 'status', cell: (r: any) => statusChip(r.status) },
-                { header: 'Time', accessorKey: 'createdAt', cell: (r: any) => fmtDateTime(r.createdAt) },
+                {
+                  header: 'Time',
+                  accessorKey: 'createdAt',
+                  cell: (r: any) => fmtDateTime(r.createdAt),
+                },
                 {
                   header: 'Actions',
                   enableSorting: false,
@@ -311,7 +321,11 @@ export function WalletLogs({ data, mutate, filters, setFilters }: Props) {
                   accessorKey: 'remark',
                   cell: (r: any) => <div className="max-w-48 truncate">{r.remark ?? '-'}</div>,
                 },
-                { header: 'Time', accessorKey: 'createdAt', cell: (r: any) => fmtDateTime(r.createdAt) },
+                {
+                  header: 'Time',
+                  accessorKey: 'createdAt',
+                  cell: (r: any) => fmtDateTime(r.createdAt),
+                },
               ]}
             />
           )}
@@ -327,7 +341,11 @@ export function WalletLogs({ data, mutate, filters, setFilters }: Props) {
                   cell: (r: any) => <span className="font-mono text-xs">{orderNo(r.id)}</span>,
                 },
                 { header: 'From', cell: () => data.store.username },
-                { header: 'To', accessorKey: 'counterparty', cell: (r: any) => r.counterparty ?? '-' },
+                {
+                  header: 'To',
+                  accessorKey: 'counterparty',
+                  cell: (r: any) => r.counterparty ?? '-',
+                },
                 { header: 'Amount', accessorKey: 'amount', cell: (r: any) => fmtMoney(r.amount) },
                 { header: 'Status', accessorKey: 'status', cell: (r: any) => statusChip(r.status) },
                 {

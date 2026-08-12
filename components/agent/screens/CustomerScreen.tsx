@@ -81,12 +81,19 @@ export function CustomerScreen() {
               header: 'Contact',
               cell: (r) => (
                 <div className="text-xs">
-                  <div>Email: {r.email || '-'} {r.emailVerified ? '(Verified)' : ''}</div>
-                  <div>Phone: {r.phone || '-'} {r.phoneVerified ? '(Verified)' : ''}</div>
+                  <div>
+                    Email: {r.email || '-'} {r.emailVerified ? '(Verified)' : ''}
+                  </div>
+                  <div>
+                    Phone: {r.phone || '-'} {r.phoneVerified ? '(Verified)' : ''}
+                  </div>
                 </div>
               ),
             },
-            { header: 'Invite Code', cell: (r) => <div className="font-mono">{r.usedInviteCode || '-'}</div> },
+            {
+              header: 'Invite Code',
+              cell: (r) => <div className="font-mono">{r.usedInviteCode || '-'}</div>,
+            },
             {
               header: 'Financials',
               cell: (r) => (
@@ -126,11 +133,15 @@ export function CustomerScreen() {
                 <div className="space-y-2">
                   {detail.logins.map((lg, i) => (
                     <div key={i} className="flex justify-between text-sm">
-                      <span className="text-slate-500 truncate max-w-[200px]">{lg.userAgent || lg.ipAddress || 'Unknown Device'}</span>
+                      <span className="max-w-[200px] truncate text-slate-500">
+                        {lg.userAgent || lg.ipAddress || 'Unknown Device'}
+                      </span>
                       <span>{fmtDateTime(lg.createdAt)}</span>
                     </div>
                   ))}
-                  {!detail.logins.length && <div className="text-sm text-slate-500">No recent logins</div>}
+                  {!detail.logins.length && (
+                    <div className="text-sm text-slate-500">No recent logins</div>
+                  )}
                 </div>
               </Card>
 
@@ -144,7 +155,9 @@ export function CustomerScreen() {
                       <span>{fmtDateTime(tx.createdAt)}</span>
                     </div>
                   ))}
-                  {!detail.transactions.length && <div className="text-sm text-slate-500">No transactions</div>}
+                  {!detail.transactions.length && (
+                    <div className="text-sm text-slate-500">No transactions</div>
+                  )}
                 </div>
               </Card>
 
@@ -157,7 +170,9 @@ export function CustomerScreen() {
                       <span className="font-mono font-medium">{fmtMoney(ga.balance)}</span>
                     </div>
                   ))}
-                  {!detail.gameActivity.length && <div className="text-sm text-slate-500">No game activity</div>}
+                  {!detail.gameActivity.length && (
+                    <div className="text-sm text-slate-500">No game activity</div>
+                  )}
                 </div>
               </Card>
             </div>

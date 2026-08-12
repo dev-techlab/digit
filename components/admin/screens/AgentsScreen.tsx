@@ -65,7 +65,6 @@ export function AgentsScreen() {
   const createModal = useActionModal<null>();
   const [form, setForm] = useState(emptyForm());
 
-
   const [created, setCreated] = useState<{ username: string; password: string } | null>(null);
 
   const deleteModal = useActionModal<AgentRow>();
@@ -116,7 +115,7 @@ export function AgentsScreen() {
     try {
       await api(`/api/admin/agents/${actionAccount.id}/transactions`, {
         method: 'POST',
-        body: JSON.stringify({ action, amount: val, remark: 'Admin manual adjustment' })
+        body: JSON.stringify({ action, amount: val, remark: 'Admin manual adjustment' }),
       });
       setPurchaseModalOpen(false);
       setRedeemModalOpen(false);
@@ -438,20 +437,22 @@ export function AgentsScreen() {
               header: 'Purchase / Redeem',
               cell: (r) => (
                 <div className="flex items-center">
-                  <button 
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-[11px] px-2 py-1 rounded-l shadow-sm font-semibold disabled:opacity-50" 
+                  <button
+                    className="rounded-l bg-blue-600 px-2 py-1 text-[11px] font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
                     disabled={actionSaving && actionAccount?.id === r.id}
-                    onClick={() => openPurchaseModal(r)}>
+                    onClick={() => openPurchaseModal(r)}
+                  >
                     Purchase
                   </button>
-                  <button 
-                    className="bg-red-600 hover:bg-red-700 text-white text-[11px] px-2 py-1 rounded-r shadow-sm font-semibold disabled:opacity-50" 
+                  <button
+                    className="rounded-r bg-red-600 px-2 py-1 text-[11px] font-semibold text-white shadow-sm hover:bg-red-700 disabled:opacity-50"
                     disabled={actionSaving && actionAccount?.id === r.id}
-                    onClick={() => openRedeemModal(r)}>
+                    onClick={() => openRedeemModal(r)}
+                  >
                     Redeem
                   </button>
                 </div>
-              )
+              ),
             },
             {
               header: 'Edit',
@@ -491,15 +492,39 @@ export function AgentsScreen() {
                     r.status === 'active'
                       ? 'bg-green-500 hover:bg-green-600'
                       : 'bg-orange-500 hover:bg-orange-600'
-                  } text-white p-1 rounded shadow-sm disabled:opacity-50`}
+                  } rounded p-1 text-white shadow-sm disabled:opacity-50`}
                   title={r.status === 'active' ? 'Block Access' : 'Restore Access'}
                   disabled={busyId === r.id}
                   onClick={() => void toggleStatus(r)}
                 >
                   {r.status === 'active' ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
                   ) : (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                      <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+                    </svg>
                   )}
                 </button>
               ),
@@ -510,7 +535,7 @@ export function AgentsScreen() {
               enableGlobalFilter: false,
               cell: (r) => (
                 <button
-                  className="bg-red-600 hover:bg-red-700 text-white text-[11px] px-2 py-1 rounded shadow-sm font-semibold disabled:opacity-50"
+                  className="rounded bg-red-600 px-2 py-1 text-[11px] font-semibold text-white shadow-sm hover:bg-red-700 disabled:opacity-50"
                   disabled={busyId === r.id || (deleteModal.busy && deleteModal.item?.id === r.id)}
                   onClick={() => deleteModal.openModal(r)}
                 >
@@ -746,7 +771,8 @@ export function AgentsScreen() {
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{deleteModal.err}</p>
           )}
           <p className="text-slate-700">
-            Are you sure you want to delete agent <strong>{deleteModal.item?.username}</strong>? This action cannot be undone.
+            Are you sure you want to delete agent <strong>{deleteModal.item?.username}</strong>?
+            This action cannot be undone.
           </p>
         </div>
       </Modal>
@@ -757,22 +783,30 @@ export function AgentsScreen() {
         onClose={() => setPurchaseModalOpen(false)}
         footer={
           <>
-            <Btn onClick={() => submitActionAmount('deposit')} disabled={actionSaving} className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600">
+            <Btn
+              onClick={() => submitActionAmount('deposit')}
+              disabled={actionSaving}
+              className="border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
+            >
               {actionSaving ? 'Processing...' : 'Purchase'}
             </Btn>
-            <Btn variant="ghost" onClick={() => setPurchaseModalOpen(false)}>Cancel</Btn>
+            <Btn variant="ghost" onClick={() => setPurchaseModalOpen(false)}>
+              Cancel
+            </Btn>
           </>
         }
       >
         <div className="space-y-4 text-center">
           {actionError && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500 text-left">{actionError}</p>
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-left text-sm text-red-500">
+              {actionError}
+            </p>
           )}
-          <div className="flex justify-center items-center gap-2 mb-4">
-            <span className="text-slate-500 text-sm">Account #</span>
-            <span className="font-bold text-green-600 text-lg">{actionAccount?.username}</span>
+          <div className="mb-4 flex items-center justify-center gap-2">
+            <span className="text-sm text-slate-500">Account #</span>
+            <span className="text-lg font-bold text-green-600">{actionAccount?.username}</span>
           </div>
-          
+
           <div className="flex flex-col items-center gap-2">
             <div className="flex items-center gap-2">
               <span className="text-sm">Amount</span>
@@ -783,21 +817,21 @@ export function AgentsScreen() {
                 onChange={(e) => setAmount(e.target.value)}
               />
             </div>
-            
-            <div className="mt-4 text-slate-500 text-xs">Quick amounts:</div>
-            <div className="flex gap-2 flex-wrap justify-center max-w-[250px] mt-1">
-              {[5, 10, 20, 50, 100].map(val => (
+
+            <div className="mt-4 text-xs text-slate-500">Quick amounts:</div>
+            <div className="mt-1 flex max-w-[250px] flex-wrap justify-center gap-2">
+              {[5, 10, 20, 50, 100].map((val) => (
                 <button
                   key={val}
                   onClick={() => setAmount((parseFloat(amount || '0') + val).toFixed(2))}
-                  className="bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 px-3 py-1 rounded shadow-sm text-sm"
+                  className="rounded border border-slate-300 bg-slate-100 px-3 py-1 text-sm text-slate-700 shadow-sm hover:bg-slate-200"
                 >
                   +${val}
                 </button>
               ))}
               <button
                 onClick={() => setAmount('0.00')}
-                className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded shadow-sm text-sm"
+                className="rounded bg-orange-500 px-3 py-1 text-sm text-white shadow-sm hover:bg-orange-600"
               >
                 Clear
               </button>
@@ -812,25 +846,35 @@ export function AgentsScreen() {
         onClose={() => setRedeemModalOpen(false)}
         footer={
           <>
-            <Btn onClick={() => submitActionAmount('withdraw')} disabled={actionSaving} className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600">
+            <Btn
+              onClick={() => submitActionAmount('withdraw')}
+              disabled={actionSaving}
+              className="border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
+            >
               {actionSaving ? 'Processing...' : 'Redeem'}
             </Btn>
-            <Btn variant="ghost" onClick={() => setRedeemModalOpen(false)}>Cancel</Btn>
+            <Btn variant="ghost" onClick={() => setRedeemModalOpen(false)}>
+              Cancel
+            </Btn>
           </>
         }
       >
         <div className="space-y-4 text-center">
           {actionError && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500 text-left">{actionError}</p>
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-left text-sm text-red-500">
+              {actionError}
+            </p>
           )}
-          <div className="flex justify-center items-center gap-2 mb-4">
-            <span className="font-bold text-green-600 text-xl">{actionAccount?.username}</span>
+          <div className="mb-4 flex items-center justify-center gap-2">
+            <span className="text-xl font-bold text-green-600">{actionAccount?.username}</span>
           </div>
-          
+
           <div className="flex flex-col items-center gap-2">
-            <div className="flex flex-col gap-3 items-end w-full max-w-[280px] mx-auto">
-              <div className="flex items-center gap-2 w-full justify-between">
-                <span className="text-sm font-medium whitespace-nowrap">Full Amount <span className="text-red-500">*</span></span>
+            <div className="mx-auto flex w-full max-w-[280px] flex-col items-end gap-3">
+              <div className="flex w-full items-center justify-between gap-2">
+                <span className="whitespace-nowrap text-sm font-medium">
+                  Full Amount <span className="text-red-500">*</span>
+                </span>
                 <TextInput
                   type="number"
                   className="w-32 text-right"
@@ -838,24 +882,28 @@ export function AgentsScreen() {
                   onChange={(e) => setAmount(e.target.value)}
                 />
               </div>
-              <div className="flex items-center gap-2 w-full justify-between">
-                <span className="text-sm font-medium whitespace-nowrap text-slate-500">Platform Commission %</span>
+              <div className="flex w-full items-center justify-between gap-2">
+                <span className="whitespace-nowrap text-sm font-medium text-slate-500">
+                  Platform Commission %
+                </span>
                 <TextInput
                   type="text"
                   disabled
-                  className="w-32 text-right bg-slate-50 text-slate-500"
+                  className="w-32 bg-slate-50 text-right text-slate-500"
                   value={actionAccount?.commissionPer ? `${actionAccount.commissionPer}%` : '0%'}
                 />
               </div>
-              <div className="flex items-center gap-2 w-full justify-between">
-                <span className="text-sm font-bold whitespace-nowrap text-green-600">Actual Withdraw</span>
+              <div className="flex w-full items-center justify-between gap-2">
+                <span className="whitespace-nowrap text-sm font-bold text-green-600">
+                  Actual Withdraw
+                </span>
                 <TextInput
                   type="text"
                   disabled
-                  className="w-32 text-right font-bold text-green-600 bg-green-50/50"
+                  className="w-32 bg-green-50/50 text-right font-bold text-green-600"
                   value={
-                    !isNaN(parseFloat(amount)) 
-                      ? `$${(parseFloat(amount) - (parseFloat(amount) * (Number(actionAccount?.commissionPer || 0) / 100))).toFixed(2)}`
+                    !isNaN(parseFloat(amount))
+                      ? `$${(parseFloat(amount) - parseFloat(amount) * (Number(actionAccount?.commissionPer || 0) / 100)).toFixed(2)}`
                       : '$0.00'
                   }
                 />

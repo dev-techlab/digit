@@ -10,25 +10,27 @@ import { z } from 'zod';
 
 const loginSchema = z.object({
   username: z.string().trim().min(1, 'Username is required'),
-  password: z.string().min(1, 'Password is required')
+  password: z.string().min(1, 'Password is required'),
 });
-
 
 /** POST /api/agent/login — { username, password } → sets the agent_session cookie. */
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
     const parseResult = loginSchema.safeParse(body);
-  
+
     if (!parseResult.success) {
-      return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid input' }, { status: 400 });
+      return NextResponse.json(
+        { error: parseResult.error.issues[0]?.message || 'Invalid input' },
+        { status: 400 }
+      );
     }
-  
+
     const { username, password } = parseResult.data;
-  
+
     const agentId = await verifyAgentLogin(username, password);
     if (!agentId) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
-  
+
     const { token } = await createAgentSession(agentId, {
       userAgent: req.headers.get('user-agent') ?? undefined,
     });

@@ -24,9 +24,9 @@ export function RegisterModal() {
     confirmPassword: '',
     email: '',
     phone: '',
-    inviteCode: ''
+    inviteCode: '',
   });
-  
+
   const [pendingVerification, setPendingVerification] = useState(false);
   const [verificationMethod, setVerificationMethod] = useState<'email' | 'phone' | null>(null);
   const [verificationDestination, setVerificationDestination] = useState('');
@@ -41,7 +41,7 @@ export function RegisterModal() {
       confirmPassword: '',
       email: '',
       phone: '',
-      inviteCode: ''
+      inviteCode: '',
     });
     setError(null);
     setPendingVerification(false);
@@ -89,8 +89,8 @@ export function RegisterModal() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error ?? 'Registration failed');
-    return data as { 
-      user: MockUser; 
+    return data as {
+      user: MockUser;
       credentials?: { username: string; password: string };
       pendingVerification?: boolean;
       verificationMethod?: 'email' | 'phone';
@@ -122,7 +122,6 @@ export function RegisterModal() {
     }
   };
 
-
   const manualRegister = async () => {
     const newFieldErrors: Record<string, string> = {};
     if (form.password.length < 6) {
@@ -131,14 +130,14 @@ export function RegisterModal() {
     if (form.password !== form.confirmPassword) {
       newFieldErrors.confirmPassword = 'Passwords do not match.';
     }
-    
+
     if (Object.keys(newFieldErrors).length > 0) {
       setFieldErrors(newFieldErrors);
       return;
     }
-    
+
     setFieldErrors({});
-    
+
     setLoading(true);
     setError(null);
     try {
@@ -149,7 +148,7 @@ export function RegisterModal() {
         phone: method === 'phone' ? form.phone.trim() : undefined,
         inviteCode: form.inviteCode.trim(),
       });
-      
+
       if (data.pendingVerification) {
         setPendingVerification(true);
         setVerificationMethod(data.verificationMethod ?? null);
@@ -166,19 +165,18 @@ export function RegisterModal() {
     }
   };
 
-
   if (pendingVerification) {
     return (
       <AuthModalFrame open={mode === 'register'} onClose={close} tagline="Verify your account">
         <div className="flex flex-col items-center gap-3 py-4 text-center">
           <h2 className="text-2xl font-black">Verification Required</h2>
           <p className="text-sm text-[var(--text-secondary)]">
-            We sent a verification code to <strong>{verificationDestination}</strong>.
-            Please enter it below to complete your registration.
+            We sent a verification code to <strong>{verificationDestination}</strong>. Please enter
+            it below to complete your registration.
           </p>
 
           {error && (
-            <p className="mt-4 w-full rounded-md bg-danger/10 px-3 py-2 text-sm text-danger text-left">
+            <p className="mt-4 w-full rounded-md bg-danger/10 px-3 py-2 text-left text-sm text-danger">
               {error}
             </p>
           )}
@@ -202,7 +200,11 @@ export function RegisterModal() {
                   disabled={sendingCode || cooldown > 0}
                   onClick={sendCode}
                 >
-                  {cooldown > 0 ? `Resend (${cooldown}s)` : sendingCode ? 'Sending…' : 'Resend code'}
+                  {cooldown > 0
+                    ? `Resend (${cooldown}s)`
+                    : sendingCode
+                      ? 'Sending…'
+                      : 'Resend code'}
                 </Button>
               </div>
             </div>
@@ -236,94 +238,90 @@ export function RegisterModal() {
         }}
       />
 
-
-
       <div className="mt-5 space-y-4">
-          {method === 'email' ? (
-            <IconInput
-              icon={<User size={16} />}
-              label="Email Address"
-              placeholder="Enter your email"
-              autoComplete="email"
-              value={form.email}
-              onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
-            />
-          ) : (
-            <IconInput
-              icon={<User size={16} />}
-              label="Phone Number"
-              placeholder="Enter your phone"
-              autoComplete="tel"
-              value={form.phone}
-              onChange={(e) => setForm(prev => ({ ...prev, phone: e.target.value }))}
-            />
-          )}
-          
+        {method === 'email' ? (
           <IconInput
             icon={<User size={16} />}
-            label="Username (Optional)"
-            placeholder="Min. 8 characters"
-            autoComplete="username"
-            value={form.username}
-            onChange={(e) => setForm(prev => ({ ...prev, username: e.target.value }))}
+            label="Email Address"
+            placeholder="Enter your email"
+            autoComplete="email"
+            value={form.email}
+            onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
           />
+        ) : (
           <IconInput
-            icon={<Lock size={16} />}
-            label="Password"
-            type="password"
-            placeholder="Min. 6 characters"
-            autoComplete="new-password"
-            value={form.password}
-            onChange={(e) => {
-              setForm(prev => ({ ...prev, password: e.target.value }));
-              setFieldErrors((prev) => ({ ...prev, password: '' }));
-            }}
-            errorMessage={fieldErrors.password}
+            icon={<User size={16} />}
+            label="Phone Number"
+            placeholder="Enter your phone"
+            autoComplete="tel"
+            value={form.phone}
+            onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
           />
-          <IconInput
-            icon={<Lock size={16} />}
-            label="Confirm Password"
-            type="password"
-            placeholder="Re-enter password"
-            autoComplete="new-password"
-            value={form.confirmPassword}
-            onChange={(e) => {
-              setForm(prev => ({ ...prev, confirmPassword: e.target.value }));
-              setFieldErrors((prev) => ({ ...prev, confirmPassword: '' }));
-            }}
-            errorMessage={fieldErrors.confirmPassword}
-          />
-          <IconInput
-            icon={<Gift size={16} />}
-            label="Invite Code (Optional)"
-            placeholder="Enter invite code"
-            value={form.inviteCode}
-            onChange={(e) => {
-              setForm(prev => ({ ...prev, inviteCode: e.target.value }));
-              setFieldErrors((prev) => ({ ...prev, inviteCode: '' }));
-            }}
-            errorMessage={fieldErrors.inviteCode}
-          />
-          <p className="text-xs text-[var(--text-secondary)]">
-            By continuing, you agree to our{' '}
-            <Link href="/terms" onClick={close} className="text-brand hover:underline">
-              Terms
-            </Link>{' '}
-            &{' '}
-            <Link href="/privacy" onClick={close} className="text-brand hover:underline">
-              Privacy
-            </Link>
-          </p>
+        )}
 
-          {error && (
-            <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
-          )}
+        <IconInput
+          icon={<User size={16} />}
+          label="Username (Optional)"
+          placeholder="Min. 8 characters"
+          autoComplete="username"
+          value={form.username}
+          onChange={(e) => setForm((prev) => ({ ...prev, username: e.target.value }))}
+        />
+        <IconInput
+          icon={<Lock size={16} />}
+          label="Password"
+          type="password"
+          placeholder="Min. 6 characters"
+          autoComplete="new-password"
+          value={form.password}
+          onChange={(e) => {
+            setForm((prev) => ({ ...prev, password: e.target.value }));
+            setFieldErrors((prev) => ({ ...prev, password: '' }));
+          }}
+          errorMessage={fieldErrors.password}
+        />
+        <IconInput
+          icon={<Lock size={16} />}
+          label="Confirm Password"
+          type="password"
+          placeholder="Re-enter password"
+          autoComplete="new-password"
+          value={form.confirmPassword}
+          onChange={(e) => {
+            setForm((prev) => ({ ...prev, confirmPassword: e.target.value }));
+            setFieldErrors((prev) => ({ ...prev, confirmPassword: '' }));
+          }}
+          errorMessage={fieldErrors.confirmPassword}
+        />
+        <IconInput
+          icon={<Gift size={16} />}
+          label="Invite Code (Optional)"
+          placeholder="Enter invite code"
+          value={form.inviteCode}
+          onChange={(e) => {
+            setForm((prev) => ({ ...prev, inviteCode: e.target.value }));
+            setFieldErrors((prev) => ({ ...prev, inviteCode: '' }));
+          }}
+          errorMessage={fieldErrors.inviteCode}
+        />
+        <p className="text-xs text-[var(--text-secondary)]">
+          By continuing, you agree to our{' '}
+          <Link href="/terms" onClick={close} className="text-brand hover:underline">
+            Terms
+          </Link>{' '}
+          &{' '}
+          <Link href="/privacy" onClick={close} className="text-brand hover:underline">
+            Privacy
+          </Link>
+        </p>
 
-          <Button fullWidth onClick={manualRegister} disabled={loading}>
-            {loading ? 'Creating…' : 'Create Account'}
-            {!loading && <ArrowRight size={16} />}
-          </Button>
-        </div>
+        {error && <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
+
+        <Button fullWidth onClick={manualRegister} disabled={loading}>
+          {loading ? 'Creating…' : 'Create Account'}
+          {!loading && <ArrowRight size={16} />}
+        </Button>
+      </div>
 
       <p className="mt-5 text-center text-sm text-[var(--text-secondary)]">
         Already have an account?{' '}

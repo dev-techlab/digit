@@ -54,7 +54,7 @@ export async function requestOtp(
     where: {
       destination,
       created_at: { gt: since },
-    }
+    },
   });
   if (recentCount >= 1) {
     return { ok: false, error: 'Please wait before requesting another code' };
@@ -68,7 +68,7 @@ export async function requestOtp(
       code: hashCode(code, destination),
       purpose,
       expires_at: new Date(Date.now() + OTP_TTL_S * 1000),
-    }
+    },
   });
 
   if (EMAIL_RE.test(destination) && !options?.skipEmail) {
@@ -121,7 +121,7 @@ export async function verifyOtp(
       data: { consumed: true },
     });
     if (updated.count === 0) return { ok: false, error: 'Code already consumed' };
-    
+
     return { ok: true, userId: row.user_id };
   }) as Promise<{ ok: true; userId: string | null } | { ok: false; error: string }>;
 }

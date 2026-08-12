@@ -5,13 +5,15 @@ import { createUserSession, getUserProfile, userIdByDestination } from '@/lib/us
 import { db } from '@/lib/db';
 import { USER_SESSION_COOKIE, USER_SESSION_TTL_S, sessionCookieOptions } from '@/lib/auth-tokens';
 
-
 const PURPOSES = new Set<string>(['login', 'register', 'reset_password']);
 
 const verifySchema = z.object({
   destination: z.string().min(1, 'Destination (email/phone) is required').trim(),
-  purpose: z.string().refine(val => PURPOSES.has(val), { message: 'Invalid OTP purpose' }),
-  code: z.string().min(6, 'Verification code must be exactly 6 digits').max(6, 'Verification code must be exactly 6 digits'),
+  purpose: z.string().refine((val) => PURPOSES.has(val), { message: 'Invalid OTP purpose' }),
+  code: z
+    .string()
+    .min(6, 'Verification code must be exactly 6 digits')
+    .max(6, 'Verification code must be exactly 6 digits'),
 });
 
 export async function POST(req: Request) {
@@ -40,18 +42,18 @@ export async function POST(req: Request) {
       }
     } else if (purpose === 'register' && result.userId) {
       const user = await db.users.findUnique({
-        where: { id: result.userId! }
+        where: { id: result.userId! },
       });
       if (user) {
         if (user.phone === destination) {
           await db.users.update({
             where: { id: user.id },
-            data: { phone_bound: true }
+            data: { phone_bound: true },
           });
         } else if (user.email === destination) {
           await db.users.update({
             where: { id: user.id },
-            data: { email_verified: true }
+            data: { email_verified: true },
           });
         }
         const { token } = await createUserSession(user.id, {
@@ -67,6 +69,9 @@ export async function POST(req: Request) {
   } catch (err: any) {
     if (err && (err.digest === 'DYNAMIC_SERVER_USAGE' || err.message?.includes('NEXT_'))) throw err;
     console.error('POST /api/auth/otp/verify', err);
-    return NextResponse.json({ error: (err as any)?.message || 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: (err as any)?.message || 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

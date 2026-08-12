@@ -167,7 +167,9 @@ export function DashboardScreen() {
                 {
                   header: 'Total Net',
                   accessorKey: 'totalNet',
-                  cell: (g) => <span className="font-semibold text-green-600">{fmtMoney(g.totalNet)}</span>,
+                  cell: (g) => (
+                    <span className="font-semibold text-green-600">{fmtMoney(g.totalNet)}</span>
+                  ),
                 },
               ]}
             />

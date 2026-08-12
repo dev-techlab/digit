@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 function walkDir(dir, callback) {
-  fs.readdirSync(dir).forEach(f => {
+  fs.readdirSync(dir).forEach((f) => {
     const dirPath = path.join(dir, f);
     const isDirectory = fs.statSync(dirPath).isDirectory();
     isDirectory ? walkDir(dirPath, callback) : callback(path.join(dir, f));
@@ -11,20 +11,18 @@ function walkDir(dir, callback) {
 
 function processRoutes() {
   const rootDir = process.cwd();
-  const apiDirs = [
-    path.join(rootDir, 'app/api')
-  ];
+  const apiDirs = [path.join(rootDir, 'app/api')];
 
   let totalFiles = 0;
   let modifiedFiles = 0;
 
-  apiDirs.forEach(dir => {
+  apiDirs.forEach((dir) => {
     if (!fs.existsSync(dir)) return;
-    
+
     walkDir(dir, (filePath) => {
       if (!filePath.endsWith('route.ts')) return;
       totalFiles++;
-      
+
       let content = fs.readFileSync(filePath, 'utf8');
       let originalContent = content;
 
