@@ -774,6 +774,7 @@ model users {
   phone                                                             String?
   phone_bound                                                       Boolean                    @default(false)
   email                                                             String?
+  email_verified                                                    Boolean                    @default(false)
   avatar_url                                                        String?
   avatar_emoji                                                      String                     @default("🎰")
   kyc_status                                                        kyc_status                 @default(unverified)

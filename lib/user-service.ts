@@ -16,7 +16,7 @@ export class UserConflictError extends Error {
 export async function verifyUserLogin(username: string, password: string): Promise<string | null> {
   const user = await db.users.findFirst({ where: { username } });
   if (!user || user.status !== 'active') return null;
-  // if (user.email && !user.emailVerified) return null;
+  if (user.email && !user.email_verified) return null;
   if (user.phone && !user.phone_bound) return null;
   return (await bcrypt.compare(password, user.password_hash)) ? user.id : null;
 }
@@ -66,7 +66,8 @@ export async function registerUser(
         password_hash: passwordHash,
         email: input.email ?? null,
         phone: input.phone ?? null,
-        phone_bound: !!input.phone,
+        phone_bound: false,
+        email_verified: false,
         invite_code: `DL${randomBytes(4).toString('hex').toUpperCase()}`,
         agent_invite_code: usedInviteCode,
       },

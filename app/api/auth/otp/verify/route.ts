@@ -48,6 +48,11 @@ export async function POST(req: Request) {
             where: { id: user.id },
             data: { phone_bound: true }
           });
+        } else if (user.email === destination) {
+          await db.users.update({
+            where: { id: user.id },
+            data: { email_verified: true }
+          });
         }
         const { token } = await createUserSession(user.id, {
           userAgent: req.headers.get('user-agent') ?? undefined,
