@@ -15,10 +15,10 @@ if (env.NODE_ENV === 'production' && !client) {
   );
 }
 
-export async function sendSms(to: string, body: string): Promise<boolean> {
+export async function sendSms(to: string, body: string): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!client || !twilioNumber) {
     console.warn(`[sms] Would send SMS to ${to}: ${body}`);
-    return true; // Mock success in dev if no credentials
+    return { ok: true }; // Mock success in dev if no credentials
   }
 
   try {
@@ -27,9 +27,15 @@ export async function sendSms(to: string, body: string): Promise<boolean> {
       from: twilioNumber,
       to,
     });
-    return true;
-  } catch (error) {
+    return { ok: true };
+  } catch (error: any) {
     console.error('[sms] Failed to send SMS:', error);
-    return false;
+    let errMsg = 'Failed to send SMS';
+    if (error?.code === 21408) {
+      errMsg = 'SMS not enabled for this region in Twilio Geo Permissions.';
+    } else if (error?.message) {
+      errMsg = error.message;
+    }
+    return { ok: false, error: errMsg };
   }
 }

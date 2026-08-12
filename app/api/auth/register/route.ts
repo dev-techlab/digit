@@ -66,7 +66,10 @@ export async function POST(req: Request) {
     } else if (phone) {
       const otpReq = await requestOtp(phone, 'register', created.id);
       if (otpReq.ok) {
-        await sendSms(phone, `Your OctanLink verification code is: ${otpReq.code}`);
+        const smsResult = await sendSms(phone, `Your OctanLink verification code is: ${otpReq.code}`);
+        if (!smsResult.ok) {
+          return NextResponse.json({ error: smsResult.error }, { status: 400 });
+        }
         verificationMethod = 'phone';
         pendingVerification = true;
       }

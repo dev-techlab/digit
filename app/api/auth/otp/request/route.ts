@@ -28,7 +28,10 @@ export async function POST(req: Request) {
 
     if (!destination.includes('@')) {
       const { sendSms } = await import('@/lib/sms');
-      await sendSms(destination, `Your OctanLink verification code is: ${result.code}`);
+      const smsResult = await sendSms(destination, `Your OctanLink verification code is: ${result.code}`);
+      if (!smsResult.ok) {
+        return NextResponse.json({ error: smsResult.error }, { status: 400 });
+      }
     }
 
     // Never return the code in production; echo it only in non-prod so the flow is testable without an SMS gateway.
