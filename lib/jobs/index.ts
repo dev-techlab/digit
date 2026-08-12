@@ -125,6 +125,8 @@ export const JOBS: JobDef[] = [
 export async function enqueue<T extends object>(name: string, data: T) {
   const boss = getBoss();
   await boss.start();
+  // Ensure the queue exists before sending to avoid "Queue <name> does not exist"
+  await boss.createQueue(name);
   await boss.send(name, data);
 }
 
