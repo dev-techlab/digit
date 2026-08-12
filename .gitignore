@@ -45,3 +45,5 @@ yarn-error.log*
 /.claude/*
 /.windsurf/*
 /.gemini/*  
+
+.agents/*
